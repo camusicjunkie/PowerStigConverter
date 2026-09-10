@@ -81,12 +81,18 @@ if ($CodeCoverage) {
     # Pointing it at Source instead reports 0%: those files are never executed, ModuleBuilder
     # having concatenated them into the psm1. Line numbers therefore refer to the built file,
     # which carries #Region comments naming the source file each block came from.
+    # The tests build the module themselves, but coverage has to name the file it measures
+    # before the run starts, so the build has to have happened by now. On a fresh clone it has
+    # not, hence building here; the initializer skips the work when the output is already
+    # current, so this costs nothing on a repeat run.
+    . (Join-Path $PSScriptRoot 'tests/Initialize-TestModule.ps1')
+
     $built = Get-ChildItem -Path (Join-Path $PSScriptRoot 'build') -Recurse -Filter 'PowerStigConverter.psm1' -ErrorAction Ignore |
         Sort-Object -Property LastWriteTimeUtc -Descending |
         Select-Object -First 1
 
     if (-not $built) {
-        throw 'No built module found to measure coverage over. Run the suite once first so the build output exists.'
+        throw 'No built module found to measure coverage over, and building one produced nothing.'
     }
 
     $configuration.CodeCoverage.Enabled = $true
