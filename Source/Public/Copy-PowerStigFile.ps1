@@ -13,7 +13,7 @@ function Copy-PowerStigFile {
         git -C $repoPath sparse-checkout set --no-cone source/StigData/Processed
         git -C $repoPath checkout origin/dev -- source/StigData/Processed
     }
-    catch {
+    catch [System.Management.Automation.CommandNotFoundException] {
         Write-Warning 'Git is not installed. It must be installed before the PowerStig files can be downloaded.'
     }
 }
