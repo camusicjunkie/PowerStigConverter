@@ -21,6 +21,12 @@ function New-AnsibleRootCertificateTask {
 
             $location = Get-AnsibleOrganizationValue -Rule $rule -RuleType 'RootCertificate' -StigName $StigName
 
+            # The org settings file leaves Location blank for the site to fill in, and
+            # Get-AnsibleOrganizationValue returns nothing when it is still empty. There is no
+            # certificate store to check without it, so skip the rule; Test-PowerStigOrgValue
+            # has already warned which id needs filling in.
+            if ([string]::IsNullOrEmpty($location)) { continue }
+
             $parsedCertificateName = if ($rule.Id -match '\.[a-z]$') {
                 $rule.CertificateName -replace '\s\d$'
             }
