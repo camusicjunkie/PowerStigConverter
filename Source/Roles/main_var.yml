@@ -1,0 +1,6 @@
+---
+# Role variables. Unlike defaults/, values here are not meant to be overridden by
+# inventory or play vars.
+#
+# New-AnsiblePlaybook does not generate anything into this file. It exists so the
+# role has the standard vars/main.yml the plaster manifest scaffolds.

@@ -94,8 +94,25 @@ Tasks are written out split by rule severity, matching the DISA category system:
 
 Alongside these, the module emits the variables the tasks depend on: organisation-specific values
 that a STIG leaves for the implementing site to decide, and conditional values that vary by host.
-`Source/Roles/` carries the hand-written role scaffolding — `main_task_os.yml` asserts the target
-OS, sets a Server Core fact, and imports each severity file behind its own `cat1`/`cat2`/`cat3` tag.
+`Source/Roles/` carries the hand-written role scaffolding as a
+[Plaster](https://github.com/PowerShell/Plaster) template — `main_task.yml` asserts the target OS,
+sets a Server Core fact, and imports each severity file behind its own `cat1`/`cat2`/`cat3` tag.
+Running the template lays out the standard role directories:
+
+```powershell
+Invoke-Plaster -TemplatePath .\Source\Roles -DestinationPath . -RoleName stig_server_2022_ms
+```
+
+```
+stig_server_2022_ms/
+  tasks/main.yml
+  defaults/main/main.yml
+  vars/main.yml
+  handlers/main.yml
+```
+
+The generated `cat*.yml` files belong in `tasks/`, and the `main_default_*.yml` files in
+`defaults/main/`. `New-AnsiblePlaybook` does not place them there for you yet.
 
 ## Supported rule types
 
