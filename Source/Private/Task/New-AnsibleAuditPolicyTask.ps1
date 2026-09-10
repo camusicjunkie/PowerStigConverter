@@ -5,7 +5,9 @@ function New-AnsibleAuditPolicyTask {
         [object] $InputObject,
 
         [Parameter(Mandatory)]
-        [string] $StigName
+        [string] $StigName,
+
+        [string] $Path
     )
 
     process {

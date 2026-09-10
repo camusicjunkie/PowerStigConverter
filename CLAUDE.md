@@ -24,8 +24,13 @@ the private functions and reproduces the script-scope data `Source/prefix.ps1` s
 coverage has to be measured over the build output for the same reason — pointed at `Source/` it
 reports 0%.
 
-Tests tagged `KnownDefect` are excluded by default and are expected to fail. A green run means
-no regressions, not no known problems.
+Tests tagged `KnownDefect` are excluded by default and are expected to fail; none exist at
+present. Tag a test that way when it describes a defect you are not fixing in that pass, and
+untag it when the defect is fixed.
+
+Task generators write back to the rule they were handed (`New-AnsibleIisLoggingTask` and
+`New-AnsibleServiceTask` set `OrganizationValueRequired` on it), so a rule object cannot be fed
+through a generator twice. Tests build a fresh rule per case rather than sharing one.
 
 ## Agent skills
 

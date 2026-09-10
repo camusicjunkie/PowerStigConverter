@@ -182,19 +182,22 @@ Tests live in `tests/`, one file per function under test, and read from hand-wri
 fixtures in `tests/fixtures/` rather than from downloaded PowerStig data — so they are
 deterministic and run on a machine that has never run `Copy-PowerStigFile`.
 
-Tests for defects that have not been fixed yet are tagged `KnownDefect` and excluded by
-default. **A clean run means no regressions, not no known problems.** See
-`tests/KnownDefects.Tests.ps1`, where each test names the defect it describes and what the fix
-is; as one is fixed, its test moves into the file for the function it belongs to and loses the
-tag.
+A test for a defect that has not been fixed yet should be tagged `KnownDefect`, which excludes
+it from the default run. There are none at present, so a clean run currently means what it
+says. As a defect is fixed its test moves into the file for the function it belongs to and
+loses the tag.
 
 ## Roadmap
 
-- Fix the defects recorded in `tests/KnownDefects.Tests.ps1`, starting with the security option
-  value mapping — it silently emits `0` for any option whose value is `Enabled`
 - Error handling and relative-path support in `Copy-PowerStigFile`
-- Cover the remaining task generators with tests: `IisLogging`, `MimeType`, `Permission`,
-  `RootCertificate` and `WebConfigurationProperty` are the bulk of the uncovered code
+- Cover the remaining task generators with tests: `MimeType`, `Permission`, `RootCertificate`
+  and `WebConfigurationProperty` are the bulk of the uncovered code
+- Decide what a role should do with an organisation value the site has left blank. Today the
+  task is still emitted with an empty `value:`, and only a warning says which id to fill in —
+  `New-AnsibleRootCertificateTask` skips the rule instead, so the two disagree
+- Stop the task generators writing back to the rule they were handed.
+  `New-AnsibleIisLoggingTask` and `New-AnsibleServiceTask` both set `OrganizationValueRequired`
+  on their input, which makes them non-idempotent over the same object
 
 ## Authors and acknowledgment
 

@@ -231,6 +231,41 @@ Describe 'New-AnsiblePlaybook' {
                 Should-BeLikeString "*${prefix}_103_when: true*"
         }
 
+        # The toggles are derived from the generated tasks, not from the rule list, so a rule
+        # the generators skipped cannot leave a toggle behind that guards nothing.
+        It 'declares no toggle for a rule marked as a duplicate' {
+            Get-RoleFile 'defaults/main/main_default_cat1.yml' |
+                Should-NotBeLikeString '*_107_when*'
+        }
+
+        It 'declares no toggle for a rule type with no generator' {
+            Get-RoleFile 'defaults/main/main_default_cat2.yml' |
+                Should-NotBeLikeString '*_110_when*'
+        }
+    }
+
+    # Where a STIG leaves a value for the implementing site to choose, the task references a
+    # role variable and the org settings file supplies its default. Both halves have to come
+    # from the STIG data at the path the caller gave, not from a fixed location.
+    Context 'values the implementing site has to decide' {
+
+        BeforeAll {
+            # The WindowsClient-11 fixture needs an organisation value for V-201, which its org
+            # settings file sets to 15.
+            $script:orgRole = New-AnsiblePlaybook -StigName 'WindowsClient-11' -Path $fixtureRoot `
+                -OutputPath (Join-Path $TestDrive 'org') -RoleName 'org_role' `
+                -WarningAction SilentlyContinue 6>$null
+        }
+
+        It 'has the task reference the role variable rather than a literal value' {
+            Get-Content -Path (Join-Path $orgRole.TaskPath 'cat2.yml') -Raw |
+                Should-BeLikeString '*stig_client_11_201_account_lockout_duration*'
+        }
+
+        It 'defaults that variable to the value from the org settings at the given path' {
+            Get-Content -Path (Join-Path $orgRole.DefaultPath 'main_default_org.yml') -Raw |
+                Should-BeLikeString '*stig_client_11_201_account_lockout_duration: 15*'
+        }
     }
 
     Context 'naming the role' {

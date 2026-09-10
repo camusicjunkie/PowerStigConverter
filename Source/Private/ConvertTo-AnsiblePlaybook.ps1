@@ -6,12 +6,15 @@ function ConvertTo-AnsiblePlaybook {
 
         [string] $StigName,
 
+        [string] $Path,
+
         [string] $StigId
     )
 
     begin {
         $natParams = @{
             StigName = $StigName
+            Path = $Path
             ErrorAction = 'Stop'
         }
     }

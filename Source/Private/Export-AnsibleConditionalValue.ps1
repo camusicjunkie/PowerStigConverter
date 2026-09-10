@@ -14,17 +14,16 @@ function Export-AnsibleConditionalValue {
         $items = [System.Collections.ArrayList]::new()
     }
     process {
-        foreach ($rule in $InputObject.StigRule) {
-            $baseId = $rule.Id -replace '\.[a-z]$'
-            $navParams = @{ StigName = $StigName }
-            $navParams.TaskId = if ($rule.Id -match '\.[a-z]$') { $baseId } else { $rule.Id }
+        # One generated task, one toggle. Sub-rules (V-254343.b) were already collapsed into a
+        # single block task guarded by the base id, so the toggle is named for the base id too.
+        $rule = $InputObject.Rule
+        $baseId = $rule.Id -replace '\.[a-z]$'
 
-            $null = $items.Add(@{
-                Id = $baseId
-                Severity = $rule.Severity
-                Value = New-AnsibleVariable @navParams -Type ConditionalValue
-            })
-        }
+        $null = $items.Add(@{
+            Id = $baseId
+            Severity = $rule.Severity
+            Value = New-AnsibleVariable -TaskId $baseId -StigName $StigName -Type ConditionalValue
+        })
     }
     end {
         $bySeverity = Group-AnsibleRuleBySeverity -InputObject $items.ToArray()

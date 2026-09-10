@@ -7,6 +7,8 @@ function New-AnsibleIisLoggingTask {
         [Parameter(Mandatory)]
         [string] $StigName,
 
+        [string] $Path,
+
         [string] $StigId
     )
 
@@ -17,12 +19,14 @@ function New-AnsibleIisLoggingTask {
 
             $navParams = @{ TaskId = $rule.Id; StigName = $StigName }
 
-            $logging = Get-AnsibleOrganizationValue -Rule $rule -RuleType 'IisLogging' -StigName $StigName
+            $logging = Get-AnsibleOrganizationValue -Rule $rule -RuleType 'IisLogging' -StigName $StigName -Path $Path
             $logFlags = $logging.LogFlags
             $logFormat = $logging.LogFormat
             $logPeriod = $logging.LogPeriod
-            $logTarget = $logging.LogTargetW3C
-            $logCustomFields = $logging.LogCustomFieldEntry
+            # Get-AnsibleOrganizationValue reports these two under its own names, not under the
+            # names the STIG rule uses for them, so read the names it actually returns.
+            $logTarget = $logging.LogTarget
+            $logCustomFields = $logging.LogCustomFields
 
             $customFields = if (-not [string]::IsNullOrEmpty($logCustomFields)) {
                 foreach ($entry in $logCustomFields.Entry) {
