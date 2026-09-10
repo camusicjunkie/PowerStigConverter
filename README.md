@@ -129,8 +129,18 @@ gives `stig_server_2022`, `WindowsClient-11` gives `stig_client_11`. The scaffol
 prefix as the `VariablePrefix` plaster parameter, so the generated files and the hand-written
 scaffolding always agree on the names.
 
-One thing the template does not yet derive from the STIG: `tasks/main.yml` asserts the host is
-Windows Server 2022. Roles generated for any other STIG will need that assertion adjusted by hand.
+The OS assertion in `tasks/main.yml` is derived the same way, matched against
+`ansible_distribution`:
+
+| STIG | asserts |
+| --- | --- |
+| `WindowsServer-2022-MS` | `Microsoft Windows Server 2022` |
+| `WindowsServer-2012R2-DC` | `Microsoft Windows Server 2012 R2` |
+| `WindowsClient-11` | `Microsoft Windows 11` |
+| application STIGs (IIS, SQL Server, .NET) | `Microsoft Windows` |
+
+Application STIGs are not tied to one Windows release, so they assert only that the host is
+Windows.
 
 ## Supported rule types
 

@@ -14,6 +14,8 @@
   <parameters>
     <parameter name='RoleName' type='text' prompt='Name of the Ansible Role'/>
     <parameter name='VariablePrefix' type='text' prompt='Prefix for the role variables' default='stig'/>
+    <parameter name='OsPattern' type='text' prompt='Product name the role asserts against ansible_distribution' default='Microsoft Windows'/>
+    <parameter name='OsDescription' type='text' prompt='Human readable name of the supported OS' default='Windows'/>
   </parameters>
   <content>
     <file source='' destination='${PLASTER_PARAM_RoleName}/tasks'/>

@@ -3,10 +3,10 @@
   ansible.builtin.assert:
     that:
     - ansible_os_family == 'Windows'
-    - ansible_distribution | regex_search('(Microsoft Windows Server 2022)')
+    - ansible_distribution | regex_search('(<%= $PLASTER_PARAM_OsPattern %>)')
     success_msg: "{{ ansible_distribution }} {{ ansible_distribution_major_version }} is the detected operating system."
     fail_msg: |
-      This role can only be run against Windows Server 2022 editions.
+      This role can only be run against <%= $PLASTER_PARAM_OsDescription %> editions.
       {{ ansible_distribution }} {{ ansible_distribution_major_version }} is not supported.
   tags: always
 
