@@ -2,7 +2,10 @@ function Export-AnsibleTaskBySeverity {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory, ValueFromPipeline)]
-        [object] $Task
+        [object] $Task,
+
+        [Parameter(Mandatory)]
+        [string] $OutputPath
     )
 
     begin {
@@ -18,14 +21,17 @@ function Export-AnsibleTaskBySeverity {
         }
     }
     end {
-        if ($high.Count -gt 0) { ($high.Values | ForEach-Object { ConvertTo-Yaml $_ -KeepArray }) |
-            Out-File -FilePath $PSScriptRoot\Roles\cat1.yml -Append
+        $severityFiles = @{
+            cat1 = $high
+            cat2 = $medium
+            cat3 = $low
         }
-        if ($medium.Count -gt 0) { ($medium.Values | ForEach-Object { ConvertTo-Yaml $_ -KeepArray }) |
-            Out-File -FilePath $PSScriptRoot\Roles\cat2.yml -Append
-        }
-        if ($low.Count -gt 0) { ($low.Values | ForEach-Object { ConvertTo-Yaml $_ -KeepArray }) |
-            Out-File -FilePath $PSScriptRoot\Roles\cat3.yml -Append
+
+        foreach ($severityFile in $severityFiles.GetEnumerator()) {
+            if ($severityFile.Value.Count -eq 0) { continue }
+
+            $severityFile.Value.Values | ForEach-Object { ConvertTo-Yaml $_ -KeepArray } |
+                Set-Content -Path (Join-Path $OutputPath "$($severityFile.Key).yml") -Encoding utf8
         }
     }
 }

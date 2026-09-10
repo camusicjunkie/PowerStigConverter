@@ -4,7 +4,10 @@ function Export-AnsibleConditionalValue {
         [Parameter(Mandatory, ValueFromPipeline)]
         [object] $InputObject,
 
-        [string] $StigName
+        [string] $StigName,
+
+        [Parameter(Mandatory)]
+        [string] $OutputPath
     )
 
     begin {
@@ -27,8 +30,17 @@ function Export-AnsibleConditionalValue {
         }
     }
     end {
-        if ($high.Count -gt 0) { $high.Values | Out-File -FilePath $PSScriptRoot\Roles\main_default_cat1.yml -Append }
-        if ($medium.Count -gt 0) { $medium.Values | Out-File -FilePath $PSScriptRoot\Roles\main_default_cat2.yml -Append }
-        if ($low.Count -gt 0) { $low.Values | Out-File -FilePath $PSScriptRoot\Roles\main_default_cat3.yml -Append }
+        $severityFiles = @{
+            main_default_cat1 = $high
+            main_default_cat2 = $medium
+            main_default_cat3 = $low
+        }
+
+        foreach ($severityFile in $severityFiles.GetEnumerator()) {
+            if ($severityFile.Value.Count -eq 0) { continue }
+
+            $severityFile.Value.Values |
+                Set-Content -Path (Join-Path $OutputPath "$($severityFile.Key).yml") -Encoding utf8
+        }
     }
 }

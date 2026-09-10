@@ -5,8 +5,13 @@ function New-AnsiblePlaybook {
         [string] $StigName,
 
         [Parameter()]
-        [string] $Path
+        [string] $Path,
+
+        [Parameter()]
+        [string] $OutputPath
     )
+
+    $resolvedOutputPath = Resolve-AnsibleOutputPath -Path $OutputPath
 
     [xml] $xml = Get-Content (Get-PowerStigFile -Type Name -Path $Path | Where-Object BaseName -like $StigName*)
 
@@ -21,13 +26,14 @@ function New-AnsiblePlaybook {
             StigRule = $xml.DISASTIG.$_.Rule
         }
     })
-    $rules | ConvertTo-AnsiblePlaybook -StigName $StigName -StigId $stigId | Export-AnsibleTaskBySeverity
-    $rules | Export-AnsibleConditionalValue -StigName $StigName
+    $rules | ConvertTo-AnsiblePlaybook -StigName $StigName -StigId $stigId |
+        Export-AnsibleTaskBySeverity -OutputPath $resolvedOutputPath
+    $rules | Export-AnsibleConditionalValue -StigName $StigName -OutputPath $resolvedOutputPath
 
     $ruleNames.Where({ $_ -notmatch 'RootCertificate|Service' }).Foreach({
         [pscustomobject] @{
             PowerStigRule = $_
             StigRule = $xml.DISASTIG.$_.Rule | Where-Object { $_.OrganizationValueRequired -eq $true }
         }
-    }) | Export-AnsibleOrganizationValue -StigName $StigName
+    }) | Export-AnsibleOrganizationValue -StigName $StigName -Path $Path -OutputPath $resolvedOutputPath
 }

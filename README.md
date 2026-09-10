@@ -75,6 +75,13 @@ Tab completion always reads the default location.
 New-AnsiblePlaybook -StigName WindowsServer-2022-MS -Path D:\stigs
 ```
 
+Generated files land in the current directory. Use `-OutputPath` to send them elsewhere; the
+directory is created if it does not exist, and each run overwrites the previous one.
+
+```powershell
+New-AnsiblePlaybook -StigName WindowsServer-2022-MS -OutputPath .\roles\stig_2022_ms
+```
+
 ## What it generates
 
 Tasks are written out split by rule severity, matching the DISA category system:
