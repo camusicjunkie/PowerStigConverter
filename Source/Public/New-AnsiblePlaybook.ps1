@@ -2,10 +2,13 @@ function New-AnsiblePlaybook {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory)]
-        [string] $StigName
+        [string] $StigName,
+
+        [Parameter()]
+        [string] $Path
     )
 
-    [xml] $xml = Get-Content (Get-PowerStigFile -Type Name | Where-Object BaseName -like $StigName*)
+    [xml] $xml = Get-Content (Get-PowerStigFile -Type Name -Path $Path | Where-Object BaseName -like $StigName*)
 
     $stigId = $xml.DISASTIG.stigid
 

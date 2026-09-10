@@ -52,6 +52,13 @@ Import-Module ../build/PowerStigConverter/*/PowerStigConverter.psd1
 Copy-PowerStigFile
 ```
 
+Pass `-Path` to download somewhere else. Relative paths are resolved against your current
+location, and the directory does not need to exist yet.
+
+```powershell
+Copy-PowerStigFile -Path D:\stigs
+```
+
 ### 2. Generate a role
 
 ```powershell
@@ -60,6 +67,13 @@ New-AnsiblePlaybook -StigName WindowsServer-2022-MS
 
 `-StigName` tab-completes from the STIG files you downloaded in step 1. When several versions of a
 STIG are present, the highest version is used.
+
+If you gave `Copy-PowerStigFile` a `-Path`, pass the same one here so the STIG data can be found.
+Tab completion always reads the default location.
+
+```powershell
+New-AnsiblePlaybook -StigName WindowsServer-2022-MS -Path D:\stigs
+```
 
 ## What it generates
 

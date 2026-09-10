@@ -5,16 +5,21 @@ function Get-PowerStigFile {
         [ValidateSet('Name', 'Org')]
         [string] $Type,
 
+        [Parameter()]
+        [string] $Path,
+
         [switch] $Previous
     )
+
+    $processedPath = Join-Path (Resolve-PowerStigPath -Path $Path) 'source\StigData\Processed'
 
     $soParams = if ($Previous) { @{ Last = 1 } } else { @{ First = 1 } }
     $stigFiles = switch ($Type) {
         'Name' {
-            Get-ChildItem -Path $env:LOCALAPPDATA\PowerStig\source\StigData\Processed -Exclude '*.org.default.xml'; break
+            Get-ChildItem -Path $processedPath -Exclude '*.org.default.xml'; break
         }
         'Org' {
-            Get-ChildItem -Path $env:LOCALAPPDATA\PowerStig\source\StigData\Processed -Include '*.org.default.xml' -Recurse; break
+            Get-ChildItem -Path $processedPath -Include '*.org.default.xml' -Recurse; break
         }
     }
 
