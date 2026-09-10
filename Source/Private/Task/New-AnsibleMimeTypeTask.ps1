@@ -11,8 +11,7 @@ function New-AnsibleMimeTypeTask {
     )
 
     begin {
-        $taskGroups = @{}
-        $previousId = $null
+        $items = [System.Collections.ArrayList]::new()
     }
     process {
         foreach ($rule in $InputObject) {
@@ -40,47 +39,41 @@ function New-AnsibleMimeTypeTask {
             Write-Verbose "  Task: $($task.name)"
 
             if ($rule.Id -match '\.[a-z]$') {
-                if ($null -ne $previousId -and $previousId -ne $baseId) {
-                    $taskGroups[$previousId]
+                $groupTask = [ordered] @{
+                    'name' = '{0} | {1} | Ensure {2} MIME types are set' -f $baseId, $rule.Severity.ToUpper(), $parsedMimeType
+                    'block' = [System.Collections.ArrayList]::new()
+                    'when' = New-AnsibleVariable -TaskId $baseId -TaskName $parsedMimeType -Type Conditional -StigName $StigName
                 }
 
-                if (-not $taskGroups.ContainsKey($baseId)) {
-                    $taskGroups[$baseId] = @{
+                $item = @{
+                    GroupId = $baseId
+                    Task = $task
+                    Output = @{
                         Rule = @{
                             Id = $baseId
                             Severity = $rule.Severity
                             OrganizationValueRequired = $rule.OrganizationValueRequired
                         }
                         Name = $parsedMimeType
-                        Task = [ordered] @{
-                            'name' = '{0} | {1} | Ensure {2} MIME types are set' -f $baseId, $rule.Severity.ToUpper(), $parsedMimeType
-                            'block' = [System.Collections.ArrayList]::new()
-                            'when' = New-AnsibleVariable -TaskId $baseId -TaskName $parsedMimeType -Type Conditional -StigName $StigName
-                        }
+                        Task = $groupTask
                     }
-
-                    Write-Verbose "  TaskGroup: $($taskGroups[$baseId].Task.name)"
-
-                    $null = $taskGroups[$baseId].Task.block.Add($task)
                 }
-                else {
-                    $null = $taskGroups[$baseId].Task.block.Add($task)
-                }
-                $previousId = $baseId
             }
             else {
                 $task.when = New-AnsibleVariable @navParams -Type Conditional
 
-                @{
-                    Rule = $rule
-                    Task = $task
+                $item = @{
+                    Output = @{
+                        Rule = $rule
+                        Task = $task
+                    }
                 }
             }
+
+            $null = $items.Add($item)
         }
     }
     end {
-        if ($null -ne $previousId) {
-            $taskGroups[$previousId]
-        }
+        Group-AnsibleTask -InputObject $items.ToArray()
     }
 }

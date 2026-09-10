@@ -9,7 +9,7 @@ function New-AnsibleRootCertificateTask {
     )
 
     begin {
-        $taskGroups = @{}
+        $items = [System.Collections.ArrayList]::new()
     }
     process {
         foreach ($rule in $InputObject) {
@@ -28,51 +28,48 @@ function New-AnsibleRootCertificateTask {
                 $rule.CertificateName
             }
             $parsedLocation = Split-Path -Path $location -Leaf
+            $registerName = 'server_2022_stig_{0}_certificate_info' -f ($rule.CertificateName -replace '\s')
 
-            $task = [ordered] @{
+            $tasks = [ordered] @{
                 'name' = 'Gather info for {0}' -f $rule.CertificateName
                 'community.windows.win_certificate_info' = [ordered] @{
                     'store_name' = $parsedLocation
                     'thumbprint' = $rule.Thumbprint
                 }
-                'register' = 'server_2022_stig_{0}_certificate_info' -f ($rule.CertificateName -replace '\s')
+                'register' = $registerName
             },
             [ordered] @{
                 'name' = 'Assert {0} is set to {1}' -f $rule.CertificateName, $location
                 'ansible.builtin.assert' = [ordered] @{
-                    'that' = "$('server_2022_stig_{0}_certificate_info.certificates.issued_by' -f ($rule.CertificateName -replace '\s')) exists"
+                    'that' = "$registerName.certificates.issued_by exists"
                     'fail_msg' = '{0} does not exist in the {1} certificate store' -f $rule.CertificateName, $parsedLocation
                 }
             }
 
-            Write-Verbose "  Task: $($task.name)"
+            $groupTask = @{
+                'name' = '{0} | {1} | Assert {2} exists in the appropriate certificate store' -f $baseId, $rule.Severity.ToUpper(), $parsedCertificateName
+                'block' = [System.Collections.ArrayList]::new()
+                'when' = New-AnsibleVariable @navParams -TaskName $parsedCertificateName -Type Conditional
+            }
 
-            if (-not $taskGroups.ContainsKey($baseId)) {
-                $taskGroups[$baseId] = @{
-                    $rule.Id = $baseId
-                    $rule.OrganizationValueRequired = $false
+            foreach ($task in $tasks) {
+                Write-Verbose "  Task: $($task.name)"
 
-                    Rule = $rule
-                    Name = $parsedCertificateName
-                    NodeValue = $node.Location
-                    Task = @{
-                        'name' = '{0} | {1} | Assert {2} exists in the appropriate certificate store' -f $baseId, $rule.Severity.ToUpper(), $parsedCertificateName
-                        'block' = @()
-                        'when' = New-AnsibleVariable @navParams -TaskName $parsedCertificateName -Type Conditional
+                $item = @{
+                    GroupId = $baseId
+                    Task = $task
+                    Output = @{
+                        Rule = $rule
+                        Name = $parsedCertificateName
+                        Task = $groupTask
                     }
                 }
 
-                Write-Verbose "  TaskGroup: $($taskGroups[$baseId].Task.name)"
-
-                $taskGroups[$baseId].Task.block += $task
+                $null = $items.Add($item)
             }
-            else {
-                $taskGroups[$baseId].Task.block += $task
-            }
-
         }
     }
     end {
-        $taskGroups.Values
+        Group-AnsibleTask -InputObject $items.ToArray()
     }
 }

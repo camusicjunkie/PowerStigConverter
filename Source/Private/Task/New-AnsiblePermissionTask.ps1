@@ -9,7 +9,7 @@ function New-AnsiblePermissionTask {
     )
 
     begin {
-        $taskGroups = @{}
+        $items = [System.Collections.ArrayList]::new()
     }
     process {
         foreach ($rule in $InputObject) {
@@ -20,12 +20,19 @@ function New-AnsiblePermissionTask {
             $parsedPath = [System.Environment]::ExpandEnvironmentVariables($rule.Path)
             $path = if (Test-Path $parsedPath) { $parsedPath } else { $rule.Path }
 
-            $task = foreach ($entry in $rule.AccessControlEntry.Entry) {
+            $groupTask = [ordered] @{
+                'name' = '{0} | {1} | Set permissions on {2}' -f $baseId, $rule.Severity.ToUpper(), $parsedPath
+                'block' = [System.Collections.ArrayList]::new()
+                'when' = New-AnsibleVariable -TaskId $baseId -TaskName $parsedPath -Type Conditional -StigName $StigName
+            }
+
+            # every access control entry on the rule becomes its own task inside the block
+            foreach ($entry in $rule.AccessControlEntry.Entry) {
                 $flags = Get-AnsibleInheritanceFlag -Resource $rule.DscResource -Inheritance $entry.Inheritance
                 $name = '{0} | {1} | Set {2} permissions for {3} on {4}' -f $rule.Id, $rule.Severity.ToUpper(), $entry.Rights, $entry.Principal, $parsedPath
                 $type = if ([string]::IsNullOrEmpty($entry.Type)) { 'Allow' } else { $entry.Type }
 
-                [ordered] @{
+                $task = [ordered] @{
                     'name' = $name
                     'ansible.windows.win_acl' = [ordered] @{
                         'path' = $path
@@ -39,35 +46,26 @@ function New-AnsiblePermissionTask {
                 }
 
                 Write-Verbose "  Task: $name"
-            }
 
-            if (-not $taskGroups.ContainsKey($baseId)) {
-                $taskGroups[$baseId] = @{
-                    Rule = @{
-                        Id = $baseId
-                        Severity = $rule.Severity
-                        OrganizationValueRequired = $rule.OrganizationValueRequired
-                    }
-                    Name = $parsedPath
-                    Task = [ordered] @{
-                        'name' = '{0} | {1} | Set permissions on {2}' -f $baseId, $rule.Severity.ToUpper(), $parsedPath
-                        'block' = @()
-                        'when' = New-AnsibleVariable -TaskId $baseId -TaskName $parsedPath -Type Conditional -StigName $StigName
+                $item = @{
+                    GroupId = $baseId
+                    Task = $task
+                    Output = @{
+                        Rule = @{
+                            Id = $baseId
+                            Severity = $rule.Severity
+                            OrganizationValueRequired = $rule.OrganizationValueRequired
+                        }
+                        Name = $parsedPath
+                        Task = $groupTask
                     }
                 }
 
-                Write-Verbose "  TaskGroup: $($taskGroups[$baseId].Task.name)"
-
-                $taskGroups[$baseId].Task.block += $task
-            }
-            else {
-                $taskGroups[$baseId].Task.block += $task
+                $null = $items.Add($item)
             }
         }
     }
     end {
-        if ($null -ne $previousId) {
-            $taskGroups[$previousId]
-        }
+        Group-AnsibleTask -InputObject $items.ToArray()
     }
 }

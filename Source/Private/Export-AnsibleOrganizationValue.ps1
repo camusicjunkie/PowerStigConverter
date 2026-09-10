@@ -38,19 +38,15 @@ function Export-AnsibleOrganizationValue {
         }
     }
     end {
-        $orgFile = Join-Path $OutputPath 'main_default_org.yml'
-
-        $header = @'
+        $content = @(@'
 {0}_cat1: true
 {0}_cat2: true
 {0}_cat3: true
 
-'@ -f (New-AnsibleVariable -StigName $StigName -Type OrganizationValueGroup)
+'@ -f (New-AnsibleVariable -StigName $StigName -Type OrganizationValueGroup))
 
-        $header | Set-Content -Path $orgFile -Encoding utf8
+        if ($organization.Count -gt 0) { $content += $organization.Values }
 
-        if ($organization.Count -gt 0) {
-            $organization.Values | Add-Content -Path $orgFile -Encoding utf8
-        }
+        Save-AnsibleRoleFile -OutputPath $OutputPath -Content ([ordered] @{ main_default_org = $content })
     }
 }
