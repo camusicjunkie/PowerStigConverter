@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Fixture organisational settings. The main fixture STIG has no rules requiring an
+    organisation value, so this file carries none; it exists so that every STIG name in the
+    fixture tree has the name/org pair the real data always ships in.
+-->
+<OrganizationalSettings fullversion="2.7">
+</OrganizationalSettings>

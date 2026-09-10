@@ -5,7 +5,9 @@ function New-AnsibleAccountPolicyTask {
         [object] $InputObject,
 
         [Parameter(Mandatory)]
-        [string] $StigName
+        [string] $StigName,
+
+        [string] $Path
     )
 
     process {
@@ -16,7 +18,7 @@ function New-AnsibleAccountPolicyTask {
             $navParams = @{ TaskId = $rule.Id; TaskName = $rule.PolicyName; StigName = $StigName }
             $policyName = $rule.PolicyName -replace '/|\s', '_' -replace ':'
 
-            $policyValue = Get-AnsibleOrganizationValue -Rule $rule -RuleType 'AccountPolicy' -StigName $StigName
+            $policyValue = Get-AnsibleOrganizationValue -Rule $rule -RuleType 'AccountPolicy' -StigName $StigName -Path $Path
             $parsedPolicyValue = if ([int32]::TryParse($policyValue, [ref] $null)) { [int] $policyValue } else { $policyValue }
 
             $task = [ordered] @{

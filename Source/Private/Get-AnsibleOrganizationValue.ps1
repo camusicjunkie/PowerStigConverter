@@ -10,7 +10,9 @@ function Get-AnsibleOrganizationValue {
         [ValidateSet('AccountPolicy', 'IisLogging', 'Registry', 'RootCertificate', 'SecurityOption', 'Service', 'UserRight')]
         [string] $RuleType,
 
-        [string] $StigName
+        [string] $StigName,
+
+        [string] $Path
     )
 
     $orgName = $script:organizationData[$RuleType]['Name']
@@ -18,7 +20,7 @@ function Get-AnsibleOrganizationValue {
 
     if ($Rule.OrganizationValueRequired -eq $true) {
 
-        [xml] $xmlOrg = Get-Content (Get-PowerStigFile -Type Org | Where-Object BaseName -like $StigName*)
+        [xml] $xmlOrg = Get-Content (Get-PowerStigFile -Type Org -Path $Path | Where-Object BaseName -like $StigName*)
         $node = (Select-Xml -Xml $xmlOrg -XPath "//OrganizationalSetting[@id = '$($Rule.id)']").Node
 
         # Validate the org settings file is filled out for this Id
@@ -53,7 +55,11 @@ function Get-AnsibleOrganizationValue {
         if ($Rule.$orgValue -match 'Enabled|Disabled') {
             $data = $script:accountPolicyData + $script:securityOptionData
             $attributeName = $Rule.$orgName -replace '/|\s', '_' -replace ':'
-            [int] $data[$attributeName]['Option'][$orgValue]
+            # The Option table is keyed by the value the rule asks for - Enabled, Disabled -
+            # so it has to be indexed by that value, not by the name of the property the value
+            # was read from. Indexing by the property name misses every time, and [int] $null
+            # then turns every one of these rules into 0.
+            [int] $data[$attributeName]['Option'][$Rule.$orgValue]
         }
         elseif ($orgValue -eq 'Identity' -and $rule.$orgValue -eq 'NULL') { @() }
         elseif ($RuleType -eq 'Service') {

@@ -5,7 +5,9 @@ function New-AnsibleAuditSettingTask {
         [object] $InputObject,
 
         [Parameter(Mandatory)]
-        [string] $StigName
+        [string] $StigName,
+
+        [string] $Path
     )
 
     process {

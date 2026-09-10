@@ -5,7 +5,9 @@ function New-AnsibleServiceTask {
         [object] $InputObject,
 
         [Parameter(Mandatory)]
-        [string] $StigName
+        [string] $StigName,
+
+        [string] $Path
     )
 
     process {
@@ -15,7 +17,7 @@ function New-AnsibleServiceTask {
 
             $navParams = @{ TaskId = $rule.Id; TaskName = $name; StigName = $StigName }
 
-            $service = Get-AnsibleOrganizationValue -Rule $rule -RuleType 'Service' -StigName $StigName
+            $service = Get-AnsibleOrganizationValue -Rule $rule -RuleType 'Service' -StigName $StigName -Path $Path
             $serviceName = $service.ServiceName
             $startupType = $service.StartupType
 

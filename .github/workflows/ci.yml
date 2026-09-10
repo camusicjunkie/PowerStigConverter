@@ -1,0 +1,62 @@
+name: CI
+
+# The module is Windows-only - it generates roles from Windows STIG data and its tests load
+# System.Security.AccessControl enum values - so there is nothing to gain from a linux runner.
+on:
+  push:
+    branches:
+      - main
+      - 'tests/**'
+      - 'fix/**'
+      - 'feature/**'
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+
+          # The runner ships Pester 5, which cannot run this suite: Should-Invoke and
+          # Should-MatchString arrived in 6.2.0. -SkipPublisherCheck is needed because the
+          # preinstalled Pester is signed by Microsoft and 6.x is not.
+          Install-Module -Name Pester -MinimumVersion 6.2.0 -Force -SkipPublisherCheck
+
+          # ModuleBuilder assembles the module the tests import; powershell-yaml and Plaster
+          # are the module's own runtime requirements, declared in its manifest.
+          Install-Module -Name ModuleBuilder, powershell-yaml, Plaster -Force
+
+      - name: Report versions
+        shell: pwsh
+        run: |
+          $PSVersionTable | Out-String
+          Get-Module -ListAvailable Pester, ModuleBuilder, powershell-yaml, Plaster |
+            Select-Object Name, Version |
+            Sort-Object Name |
+            Format-Table -AutoSize |
+            Out-String
+
+      # Builds the module from Source and runs the suite against the build output. -CI writes
+      # NUnit results and exits non-zero on any failure, so the step fails the job by itself.
+      - name: Run tests
+        shell: pwsh
+        run: ./Invoke-Tests.ps1 -CI -CodeCoverage
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            build/testResults.xml
+            build/coverage.xml
+          if-no-files-found: error

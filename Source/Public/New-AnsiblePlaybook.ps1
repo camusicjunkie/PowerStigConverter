@@ -34,9 +34,14 @@ function New-AnsiblePlaybook {
             StigRule = $xml.DISASTIG.$_.Rule
         }
     })
-    $rules | ConvertTo-AnsiblePlaybook -StigName $StigName -StigId $stigId |
-        Export-AnsibleTaskBySeverity -OutputPath $role.TaskPath
-    $rules | Export-AnsibleConditionalValue -StigName $StigName -OutputPath $role.DefaultPath
+    # Convert once and feed both exporters from the same tasks. Deriving the conditional
+    # toggles from the generated tasks rather than from the rule list is what keeps the two in
+    # step: rules the generators skip - duplicates, and rule types with no generator - produce
+    # no task, and so can no longer leave a toggle behind in defaults/ that guards nothing.
+    $tasks = $rules | ConvertTo-AnsiblePlaybook -StigName $StigName -StigId $stigId -Path $Path
+
+    $tasks | Export-AnsibleTaskBySeverity -OutputPath $role.TaskPath
+    $tasks | Export-AnsibleConditionalValue -StigName $StigName -OutputPath $role.DefaultPath
 
     $ruleNames.Where({ $_ -notmatch 'RootCertificate|Service' }).Foreach({
         [pscustomobject] @{
