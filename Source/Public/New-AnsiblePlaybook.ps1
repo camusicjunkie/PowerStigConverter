@@ -8,10 +8,18 @@ function New-AnsiblePlaybook {
         [string] $Path,
 
         [Parameter()]
-        [string] $OutputPath
+        [string] $OutputPath,
+
+        [Parameter()]
+        [string] $RoleName
     )
 
+    if ([string]::IsNullOrWhiteSpace($RoleName)) {
+        $RoleName = $StigName.ToLower() -replace '[^\w]+', '_'
+    }
+
     $resolvedOutputPath = Resolve-AnsibleOutputPath -Path $OutputPath
+    $role = New-AnsibleRoleScaffold -Path $resolvedOutputPath -RoleName $RoleName
 
     [xml] $xml = Get-Content (Get-PowerStigFile -Type Name -Path $Path | Where-Object BaseName -like $StigName*)
 
@@ -27,13 +35,15 @@ function New-AnsiblePlaybook {
         }
     })
     $rules | ConvertTo-AnsiblePlaybook -StigName $StigName -StigId $stigId |
-        Export-AnsibleTaskBySeverity -OutputPath $resolvedOutputPath
-    $rules | Export-AnsibleConditionalValue -StigName $StigName -OutputPath $resolvedOutputPath
+        Export-AnsibleTaskBySeverity -OutputPath $role.TaskPath
+    $rules | Export-AnsibleConditionalValue -StigName $StigName -OutputPath $role.DefaultPath
 
     $ruleNames.Where({ $_ -notmatch 'RootCertificate|Service' }).Foreach({
         [pscustomobject] @{
             PowerStigRule = $_
             StigRule = $xml.DISASTIG.$_.Rule | Where-Object { $_.OrganizationValueRequired -eq $true }
         }
-    }) | Export-AnsibleOrganizationValue -StigName $StigName -Path $Path -OutputPath $resolvedOutputPath
+    }) | Export-AnsibleOrganizationValue -StigName $StigName -Path $Path -OutputPath $role.DefaultPath
+
+    $role
 }

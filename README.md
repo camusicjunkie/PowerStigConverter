@@ -20,9 +20,13 @@ instead of a DSC one.
 - [`git`](https://git-scm.com/) on `PATH` — used to fetch the PowerStig data files
 - [`powershell-yaml`](https://www.powershellgallery.com/packages/powershell-yaml) — provides the
   `ConvertTo-Yaml` command used to serialise tasks
+- [`Plaster`](https://www.powershellgallery.com/packages/Plaster) — scaffolds the role directories
+
+Both are declared in the module manifest, so `Import-Module` will not load
+PowerSTIGConverter without them.
 
 ```powershell
-Install-Module -Name powershell-yaml -Scope CurrentUser
+Install-Module -Name powershell-yaml, Plaster -Scope CurrentUser
 ```
 
 ## Installation
@@ -75,16 +79,37 @@ Tab completion always reads the default location.
 New-AnsiblePlaybook -StigName WindowsServer-2022-MS -Path D:\stigs
 ```
 
-Generated files land in the current directory. Use `-OutputPath` to send them elsewhere; the
-directory is created if it does not exist, and each run overwrites the previous one.
+A complete Ansible role is created in the current directory, named after the STIG. Use
+`-OutputPath` to build it somewhere else and `-RoleName` to name it yourself; the directory is
+created if it does not exist.
 
 ```powershell
-New-AnsiblePlaybook -StigName WindowsServer-2022-MS -OutputPath .\roles\stig_2022_ms
+New-AnsiblePlaybook -StigName WindowsServer-2022-MS -OutputPath .\roles -RoleName stig_2022_ms
 ```
 
 ## What it generates
 
-Tasks are written out split by rule severity, matching the DISA category system:
+```
+<RoleName>/
+  tasks/
+    main.yml                 asserts the OS, imports each severity file by tag
+    cat1.yml                 generated
+    cat2.yml                 generated
+    cat3.yml                 generated
+  defaults/main/
+    main.yml                 hand-editable defaults
+    main_default_cat1.yml    generated
+    main_default_cat2.yml    generated
+    main_default_cat3.yml    generated
+    main_default_org.yml     generated
+  vars/main.yml
+  handlers/main.yml
+```
+
+Re-running is safe. The generated files are replaced every run; the four scaffolding files are
+written once and never overwritten, so edits to them survive.
+
+Tasks are split by rule severity, matching the DISA category system:
 
 | File | Severity | DISA category |
 | --- | --- | --- |
@@ -94,25 +119,10 @@ Tasks are written out split by rule severity, matching the DISA category system:
 
 Alongside these, the module emits the variables the tasks depend on: organisation-specific values
 that a STIG leaves for the implementing site to decide, and conditional values that vary by host.
-`Source/Roles/` carries the hand-written role scaffolding as a
-[Plaster](https://github.com/PowerShell/Plaster) template — `main_task.yml` asserts the target OS,
-sets a Server Core fact, and imports each severity file behind its own `cat1`/`cat2`/`cat3` tag.
-Running the template lays out the standard role directories:
-
-```powershell
-Invoke-Plaster -TemplatePath .\Source\Roles -DestinationPath . -RoleName stig_server_2022_ms
-```
-
-```
-stig_server_2022_ms/
-  tasks/main.yml
-  defaults/main/main.yml
-  vars/main.yml
-  handlers/main.yml
-```
-
-The generated `cat*.yml` files belong in `tasks/`, and the `main_default_*.yml` files in
-`defaults/main/`. `New-AnsiblePlaybook` does not place them there for you yet.
+`Source/Roles/` holds the scaffolding as a [Plaster](https://github.com/PowerShell/Plaster)
+template, which `New-AnsiblePlaybook` runs to lay out the role directories before writing anything
+into them. `main_task.yml` becomes `tasks/main.yml`: it asserts the target OS, sets a Server Core
+fact, and imports each severity file behind its own `cat1`/`cat2`/`cat3` tag.
 
 ## Supported rule types
 
