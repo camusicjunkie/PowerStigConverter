@@ -124,6 +124,14 @@ template, which `New-AnsiblePlaybook` runs to lay out the role directories befor
 into them. `main_task.yml` becomes `tasks/main.yml`: it asserts the target OS, sets a Server Core
 fact, and imports each severity file behind its own `cat1`/`cat2`/`cat3` tag.
 
+Every variable in the role is named from a prefix derived from the STIG — `WindowsServer-2022-MS`
+gives `stig_server_2022`, `WindowsClient-11` gives `stig_client_11`. The scaffolding takes that
+prefix as the `VariablePrefix` plaster parameter, so the generated files and the hand-written
+scaffolding always agree on the names.
+
+One thing the template does not yet derive from the STIG: `tasks/main.yml` asserts the host is
+Windows Server 2022. Roles generated for any other STIG will need that assertion adjusted by hand.
+
 ## Supported rule types
 
 Each PowerStig rule type is converted by its own task generator:

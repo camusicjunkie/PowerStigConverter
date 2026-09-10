@@ -19,7 +19,8 @@ function New-AnsiblePlaybook {
     }
 
     $resolvedOutputPath = Resolve-AnsibleOutputPath -Path $OutputPath
-    $role = New-AnsibleRoleScaffold -Path $resolvedOutputPath -RoleName $RoleName
+    $variablePrefix = Get-AnsibleVariablePrefix -StigName $StigName
+    $role = New-AnsibleRoleScaffold -Path $resolvedOutputPath -RoleName $RoleName -VariablePrefix $variablePrefix
 
     [xml] $xml = Get-Content (Get-PowerStigFile -Type Name -Path $Path | Where-Object BaseName -like $StigName*)
 

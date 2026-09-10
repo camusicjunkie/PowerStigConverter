@@ -12,21 +12,21 @@
 
 - name: Set fact if Server Core
   ansible.builtin.set_fact:
-    stig_server_2022_server_core: true
+    <%= $PLASTER_PARAM_VariablePrefix %>_server_core: true
   when: ansible_os_installation_type == 'Server Core'
   tags: always
 
 - name: Execute the CAT 1 tasks
   ansible.builtin.import_tasks: cat1.yml
-  when: stig_server_2022_cat1
+  when: <%= $PLASTER_PARAM_VariablePrefix %>_cat1
   tags: cat1
 
 - name: Execute the CAT 2 tasks
   ansible.builtin.import_tasks: cat2.yml
-  when: stig_server_2022_cat2
+  when: <%= $PLASTER_PARAM_VariablePrefix %>_cat2
   tags: cat2
 
 - name: Execute the CAT 3 tasks
   ansible.builtin.import_tasks: cat3.yml
-  when: stig_server_2022_cat3
+  when: <%= $PLASTER_PARAM_VariablePrefix %>_cat3
   tags: cat3

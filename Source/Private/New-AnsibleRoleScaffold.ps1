@@ -6,7 +6,12 @@ function New-AnsibleRoleScaffold {
         [string] $Path,
 
         [Parameter(Mandatory)]
-        [string] $RoleName
+        [string] $RoleName,
+
+        # Prefix the scaffolding uses to name variables. Must match the prefix the generated
+        # files use, so pass the value Get-AnsibleVariablePrefix returns for the same STIG.
+        [Parameter(Mandatory)]
+        [string] $VariablePrefix
     )
 
     $rolePath = Join-Path $Path $RoleName
@@ -16,7 +21,16 @@ function New-AnsibleRoleScaffold {
     # re-running it over an existing role would discard whatever the user changed. The
     # generated files are written separately and are always replaced.
     if (-not (Test-Path -Path $rolePath)) {
-        $null = Invoke-Plaster -TemplatePath (Join-Path $PSScriptRoot 'Roles') -DestinationPath $Path -RoleName $RoleName -NoLogo -Force
+        $plasterParams = @{
+            TemplatePath = Join-Path $PSScriptRoot 'Roles'
+            DestinationPath = $Path
+            RoleName = $RoleName
+            VariablePrefix = $VariablePrefix
+            NoLogo = $true
+            Force = $true
+        }
+
+        $null = Invoke-Plaster @plasterParams
     }
 
     $taskPath = Join-Path $rolePath 'tasks'
@@ -32,5 +46,6 @@ function New-AnsibleRoleScaffold {
         Path = $rolePath
         TaskPath = $taskPath
         DefaultPath = $defaultPath
+        VariablePrefix = $VariablePrefix
     }
 }
