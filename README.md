@@ -157,11 +157,44 @@ Each PowerStig rule type is converted by its own task generator:
 A rule type with no matching generator is skipped with a warning rather than failing the run, so
 adding support for a new type means adding one `New-Ansible<Type>Task` function.
 
+## Tests
+
+The suite runs on [Pester](https://pester.dev/) 6.2.0 or later — 6.2.0 is the first release
+carrying the whole `Should-*` assertion family the tests use.
+
+```powershell
+Install-Module -Name Pester -MinimumVersion 6.2.0 -Scope CurrentUser -SkipPublisherCheck
+
+./Invoke-Tests.ps1
+```
+
+The runner builds the module from `Source` and runs the tests against the build output, so what
+is tested is what ships. The build is skipped when it is already newer than every source file.
+
+```powershell
+./Invoke-Tests.ps1 -Defects            # only the known-defect tests
+./Invoke-Tests.ps1 -All                # everything, defects included
+./Invoke-Tests.ps1 -CodeCoverage       # writes build/coverage.xml
+./Invoke-Tests.ps1 -CI                 # writes build/testResults.xml, exits non-zero on failure
+```
+
+Tests live in `tests/`, one file per function under test, and read from hand-written STIG
+fixtures in `tests/fixtures/` rather than from downloaded PowerStig data — so they are
+deterministic and run on a machine that has never run `Copy-PowerStigFile`.
+
+Tests for defects that have not been fixed yet are tagged `KnownDefect` and excluded by
+default. **A clean run means no regressions, not no known problems.** See
+`tests/KnownDefects.Tests.ps1`, where each test names the defect it describes and what the fix
+is; as one is fixed, its test moves into the file for the function it belongs to and loses the
+tag.
+
 ## Roadmap
 
+- Fix the defects recorded in `tests/KnownDefects.Tests.ps1`, starting with the security option
+  value mapping — it silently emits `0` for any option whose value is `Enabled`
 - Error handling and relative-path support in `Copy-PowerStigFile`
-- Broaden the OS assertion in the role scaffolding beyond Windows Server 2022
-- Tests
+- Cover the remaining task generators with tests: `IisLogging`, `MimeType`, `Permission`,
+  `RootCertificate` and `WebConfigurationProperty` are the bulk of the uncovered code
 
 ## Authors and acknowledgment
 

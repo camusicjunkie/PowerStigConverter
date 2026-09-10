@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Fixture STIG for the organisation-value path, and a second STIG name so that
+    Get-PowerStigFile has more than one group to sort into.
+
+    Both rules here have OrganizationValueRequired of True: PowerStig leaves the value for the
+    implementing site to choose, and the matching org.default.xml supplies it. V-201 is filled
+    in; V-202 is deliberately left blank, which is how PowerStig ships values it cannot guess.
+-->
+<DISASTIG version="1" classification="UNCLASSIFIED" customname="" stigid="MS_Windows_11_STIG" description="Fixture STIG." filename="U_MS_Windows_11_STIG_V1R0_Manual-xccdf.xml" releaseinfo="Release: 0" title="Microsoft Windows 11 Security Technical Implementation Guide" notice="terms-of-use" source="STIG.DOD.MIL" fullversion="1.0" created="1/1/2026">
+  <AccountPolicyRule dscresourcemodule="SecurityPolicyDsc">
+    <Rule id="V-201" severity="medium" conversionstatus="pass" title="SRG-OS-000329-GPOS-00128" dscresource="AccountPolicy">
+      <Description>An organisation value the fixture org settings file fills in.</Description>
+      <DuplicateOf />
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <OrganizationValueRequired>True</OrganizationValueRequired>
+      <OrganizationValueTestString>'{0}' -ge '15' -or '{0}' -eq '0'</OrganizationValueTestString>
+      <PolicyName>Account lockout duration</PolicyName>
+      <PolicyValue />
+    </Rule>
+    <Rule id="V-202" severity="low" conversionstatus="pass" title="SRG-OS-000021-GPOS-00005" dscresource="AccountPolicy">
+      <Description>An organisation value the fixture org settings file leaves blank.</Description>
+      <DuplicateOf />
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <OrganizationValueRequired>True</OrganizationValueRequired>
+      <OrganizationValueTestString>'{0}' -le '3' -and '{0}' -ne '0'</OrganizationValueTestString>
+      <PolicyName>Account lockout threshold</PolicyName>
+      <PolicyValue />
+    </Rule>
+  </AccountPolicyRule>
+</DISASTIG>

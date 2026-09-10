@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Fixture organisational settings, mirroring how PowerStig ships them: a setting per STIG id,
+    with the value left blank where the site has to decide it.
+-->
+<OrganizationalSettings fullversion="1.0">
+  <!-- Ensure ''V-201'' -ge '15' -or ''V-201'' -eq '0'-->
+  <OrganizationalSetting id="V-201" PolicyValue="15" />
+  <!-- Left blank on purpose: the site has to choose this one. -->
+  <OrganizationalSetting id="V-202" PolicyValue="" />
+</OrganizationalSettings>

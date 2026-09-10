@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    A superseded release of the main fixture STIG. Get-PowerStigFile must never pick this one
+    when the 2.7 release is present; the single rule here is deliberately different from
+    anything in 2.7 so a test can tell which file was read.
+-->
+<DISASTIG version="1" classification="UNCLASSIFIED" customname="" stigid="MS_Windows_Server_2022_MS_STIG" description="Superseded fixture STIG." filename="U_MS_Windows_Server_2022_MS_STIG_V1R2_Manual-xccdf.xml" releaseinfo="Release: 2" title="Microsoft Windows Server 2022 Security Technical Implementation Guide" notice="terms-of-use" source="STIG.DOD.MIL" fullversion="1.2" created="1/1/2024">
+  <WindowsFeatureRule dscresourcemodule="PSDscResources">
+    <Rule id="V-900" severity="low" conversionstatus="pass" title="SRG-OS-000095-GPOS-00049" dscresource="WindowsFeature">
+      <Description>Only present in the superseded release.</Description>
+      <DuplicateOf />
+      <Ensure>Absent</Ensure>
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <Name>Telnet-Client</Name>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+    </Rule>
+  </WindowsFeatureRule>
+</DISASTIG>
