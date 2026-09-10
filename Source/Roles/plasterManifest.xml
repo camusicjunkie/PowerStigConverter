@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<plasterManifest
+  schemaVersion="1.2"
+  templateType="Project" xmlns="http://www.microsoft.com/schemas/PowerShell/Plaster/v1">
+  <metadata>
+    <name>AnsibleRole</name>
+    <id>2d0e7ea9-ba12-4ac4-9a61-126bba07cecf</id>
+    <version>1.0.0</version>
+    <title>AnsibleRole</title>
+    <description>Used to build the scaffolding for an Ansible Role</description>
+    <author>John Steele</author>
+    <tags>ansible, role, powerstig, convert</tags>
+  </metadata>
+  <parameters>
+    <parameter name='RoleName' type='text' prompt='Name of the Ansible Role'/>
+  </parameters>
+  <content>
+    <file source='' destination='${PLASTER_PARAM_RoleName}/tasks'/>
+    <file source='' destination='${PLASTER_PARAM_RoleName}/defaults'/>
+    <file source='' destination='${PLASTER_PARAM_RoleName}/defaults/main'/>
+    <file source='' destination='${PLASTER_PARAM_RoleName}/vars'/>
+    <file source='' destination='${PLASTER_PARAM_RoleName}/handlers'/>
+    <file source='main_task.yml' destination='${PLASTER_PARAM_RoleName}/tasks/main.yml'/>
+    <file source='main_default.yml' destination='${PLASTER_PARAM_RoleName}/defaults/main/main.yml'/>
+    <file source='main_var.yml' destination='${PLASTER_PARAM_RoleName}/vars/main.yml'/>
+    <file source='main_handler.yml' destination='${PLASTER_PARAM_RoleName}/handlers/main.yml'/>
+  </content>
+</plasterManifest>
