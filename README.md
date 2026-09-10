@@ -1,19 +1,109 @@
 # PowerSTIGConverter
 
+Convert Microsoft's [PowerStig](https://github.com/microsoft/PowerStig/) STIG data into Ansible roles.
+
 ## Description
-The main idea for this module was to create a way to easily create Ansible roles for every STIG available through PowerStig. [PowerStig](https://github.com/microsoft/PowerStig/) is a PowerShell module maintained by Microsoft and provides a way to automate the application of a stig using PowerShell DSC. PowerStig is unfortunately not usable in Ansible because PowerStig is built using composite resources.
+
+PowerStig is a PowerShell module maintained by Microsoft that automates the application of a
+[DISA STIG](https://public.cyber.mil/stigs/) using PowerShell DSC. It ships something valuable
+beyond the DSC itself: a set of processed XML files in which every STIG rule has already been
+parsed into structured, machine-readable data.
+
+That parsed data is unusable from Ansible, because PowerStig delivers it through DSC composite
+resources. This module bridges the gap. It reads PowerStig's processed STIG XML directly and emits
+Ansible tasks, variables, and role scaffolding — so the same rule data can drive an Ansible run
+instead of a DSC one.
+
+## Requirements
+
+- Windows PowerShell 5.1 or PowerShell 7+
+- [`git`](https://git-scm.com/) on `PATH` — used to fetch the PowerStig data files
+- [`powershell-yaml`](https://www.powershellgallery.com/packages/powershell-yaml) — provides the
+  `ConvertTo-Yaml` command used to serialise tasks
+
+```powershell
+Install-Module -Name powershell-yaml -Scope CurrentUser
+```
 
 ## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+
+The module is laid out as source and assembled with
+[ModuleBuilder](https://github.com/PoshCode/ModuleBuilder) — `Source/build.psd1` holds the build
+configuration.
+
+```powershell
+Install-Module -Name ModuleBuilder -Scope CurrentUser
+
+git clone https://github.com/camusicjunkie/PowerStigConverter.git
+cd PowerStigConverter/Source
+Build-Module
+
+Import-Module ../build/PowerStigConverter/*/PowerStigConverter.psd1
+```
 
 ## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+
+### 1. Fetch the PowerStig data
+
+`Copy-PowerStigFile` sparse-clones the processed STIG data out of the PowerStig repository into
+`$env:LOCALAPPDATA\PowerStig`. Run it once, and again whenever you want newer STIG releases.
+
+```powershell
+Copy-PowerStigFile
+```
+
+### 2. Generate a role
+
+```powershell
+New-AnsiblePlaybook -StigName WindowsServer-2022-MS
+```
+
+`-StigName` tab-completes from the STIG files you downloaded in step 1. When several versions of a
+STIG are present, the highest version is used.
+
+## What it generates
+
+Tasks are written out split by rule severity, matching the DISA category system:
+
+| File | Severity | DISA category |
+| --- | --- | --- |
+| `cat1.yml` | high | CAT I |
+| `cat2.yml` | medium | CAT II |
+| `cat3.yml` | low | CAT III |
+
+Alongside these, the module emits the variables the tasks depend on: organisation-specific values
+that a STIG leaves for the implementing site to decide, and conditional values that vary by host.
+`Source/Roles/` carries the hand-written role scaffolding — `main_task_os.yml` asserts the target
+OS, sets a Server Core fact, and imports each severity file behind its own `cat1`/`cat2`/`cat3` tag.
+
+## Supported rule types
+
+Each PowerStig rule type is converted by its own task generator:
+
+| | | |
+| --- | --- | --- |
+| AccountPolicy | AuditPolicy | AuditSetting |
+| IisLogging | MimeType | Permission |
+| Registry | RootCertificate | SecurityOption |
+| Service | UserRight | WebConfigurationProperty |
+| WindowsFeature | | |
+
+A rule type with no matching generator is skipped with a warning rather than failing the run, so
+adding support for a new type means adding one `New-Ansible<Type>Task` function.
 
 ## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+
+- Error handling and relative-path support in `Copy-PowerStigFile`
+- Broaden the OS assertion in the role scaffolding beyond Windows Server 2022
+- Tests
 
 ## Authors and acknowledgment
+
 John Steele
 
+Built on the parsed STIG data published by the [PowerStig](https://github.com/microsoft/PowerStig/)
+project at Microsoft.
+
 ## License
-For open source projects, say how it is licensed.
+
+[MIT](LICENSE)
