@@ -11,7 +11,7 @@ function New-AnsibleAuditPolicyTask {
     process {
         foreach ($rule in $InputObject) {
             # skip this rule if it is a duplicate of another rule
-            if (-not [string]::IsNullOrEmpty($rule.DuplicateOf)) { return }
+            if (-not [string]::IsNullOrEmpty($rule.DuplicateOf)) { continue }
 
             $name = "{0} {1}" -f $rule.SubCategory, $rule.AuditFlag
 

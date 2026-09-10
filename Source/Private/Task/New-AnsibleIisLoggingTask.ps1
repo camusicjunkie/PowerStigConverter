@@ -13,11 +13,11 @@ function New-AnsibleIisLoggingTask {
     process {
         foreach ($rule in $InputObject) {
             # skip this rule if it is a duplicate of another rule
-            if (-not [string]::IsNullOrEmpty($rule.DuplicateOf)) { return }
+            if (-not [string]::IsNullOrEmpty($rule.DuplicateOf)) { continue }
 
             $navParams = @{ TaskId = $rule.Id; StigName = $StigName }
 
-            $logging = Get-AnsibleOrganizationValue -Rule $rule -StigName $StigName
+            $logging = Get-AnsibleOrganizationValue -Rule $rule -RuleType 'IisLogging' -StigName $StigName
             $logFlags = $logging.LogFlags
             $logFormat = $logging.LogFormat
             $logPeriod = $logging.LogPeriod

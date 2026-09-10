@@ -11,12 +11,12 @@ function New-AnsibleAccountPolicyTask {
     process {
         foreach ($rule in $InputObject) {
             # skip this rule if it is a duplicate of another rule
-            if (-not [string]::IsNullOrEmpty($rule.DuplicateOf)) { return }
+            if (-not [string]::IsNullOrEmpty($rule.DuplicateOf)) { continue }
 
             $navParams = @{ TaskId = $rule.Id; TaskName = $rule.PolicyName; StigName = $StigName }
             $policyName = $rule.PolicyName -replace '/|\s', '_' -replace ':'
 
-            $policyValue = Get-AnsibleOrganizationValue -Rule $rule -StigName $StigName
+            $policyValue = Get-AnsibleOrganizationValue -Rule $rule -RuleType 'AccountPolicy' -StigName $StigName
             $parsedPolicyValue = if ([int32]::TryParse($policyValue, [ref] $null)) { [int] $policyValue } else { $policyValue }
 
             $task = [ordered] @{

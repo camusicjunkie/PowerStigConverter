@@ -14,12 +14,12 @@ function New-AnsibleRootCertificateTask {
     process {
         foreach ($rule in $InputObject) {
             # skip this rule if it is a duplicate of another rule
-            if (-not [string]::IsNullOrEmpty($rule.DuplicateOf)) { return }
+            if (-not [string]::IsNullOrEmpty($rule.DuplicateOf)) { continue }
 
             $baseId = $rule.Id -replace '\.[a-z]$'
             $navParams = @{ TaskId = $baseId; StigName = $StigName }
 
-            $location = Get-AnsibleOrganizationValue -Rule $rule -StigName $StigName
+            $location = Get-AnsibleOrganizationValue -Rule $rule -RuleType 'RootCertificate' -StigName $StigName
 
             $parsedCertificateName = if ($rule.Id -match '\.[a-z]$') {
                 $rule.CertificateName -replace '\s\d$'

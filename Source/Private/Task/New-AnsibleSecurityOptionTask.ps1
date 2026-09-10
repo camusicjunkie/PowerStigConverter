@@ -11,12 +11,12 @@ function New-AnsibleSecurityOptionTask {
     process {
         foreach ($rule in $InputObject) {
             # skip this rule if it is a duplicate of another rule
-            if (-not [string]::IsNullOrEmpty($rule.DuplicateOf)) { return }
+            if (-not [string]::IsNullOrEmpty($rule.DuplicateOf)) { continue }
 
             $navParams = @{ TaskId = $rule.Id; TaskName = $rule.OptionName; StigName = $StigName }
             $optionName = $rule.OptionName -replace '/|\s', '_' -replace ':'
 
-            $optionValue = Get-AnsibleOrganizationValue -Rule $rule -StigName $StigName
+            $optionValue = Get-AnsibleOrganizationValue -Rule $rule -RuleType 'SecurityOption' -StigName $StigName
 
             $task = [ordered] @{
                 'name' = '{0} | {1} | {2}' -f $rule.Id, $rule.Severity.ToUpper(), $rule.OptionName

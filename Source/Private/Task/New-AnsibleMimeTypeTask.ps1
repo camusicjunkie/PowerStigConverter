@@ -17,7 +17,7 @@ function New-AnsibleMimeTypeTask {
     process {
         foreach ($rule in $InputObject) {
             # skip this rule if it is a duplicate of another rule
-            if (-not [string]::IsNullOrEmpty($rule.DuplicateOf)) { return }
+            if (-not [string]::IsNullOrEmpty($rule.DuplicateOf)) { continue }
 
             $baseId = $rule.Id -replace '\.[a-z]$'
             $navParams = @{ TaskId = $rule.Id; StigName = $StigName }

@@ -4,12 +4,17 @@ function Get-AnsibleOrganizationValue {
         [Parameter(Mandatory)]
         [object] $Rule,
 
+        # The PowerStig rule type this value belongs to. Must be a key of OrganizationData.psd1,
+        # which supplies the rule and org node property names to read for that type.
+        [Parameter(Mandatory)]
+        [ValidateSet('AccountPolicy', 'IisLogging', 'Registry', 'RootCertificate', 'SecurityOption', 'Service', 'UserRight')]
+        [string] $RuleType,
+
         [string] $StigName
     )
 
-    $ruleName = (Get-PSCallStack)[1].Command -replace 'New-Ansible|Task'
-    $orgName = $script:organizationData[$ruleName]['Name']
-    $orgValue = $script:organizationData[$ruleName]['Value']
+    $orgName = $script:organizationData[$RuleType]['Name']
+    $orgValue = $script:organizationData[$RuleType]['Value']
 
     if ($Rule.OrganizationValueRequired -eq $true) {
 
@@ -25,14 +30,14 @@ function Get-AnsibleOrganizationValue {
             StigName = $StigName
         }
         if ($orgValue -eq 'Identity' -and $null -eq $node.$orgValue) { @() }
-        elseif ($ruleName -eq 'RootCertificate') { $node.$orgValue }
-        elseif ($ruleName -eq 'Service') {
+        elseif ($RuleType -eq 'RootCertificate') { $node.$orgValue }
+        elseif ($RuleType -eq 'Service') {
             [pscustomobject] @{
                 ServiceName = $node.ServiceName
                 StartupType = $node.StartupType
             }
         }
-        elseif ($ruleName -eq 'IisLogging') {
+        elseif ($RuleType -eq 'IisLogging') {
             [pscustomobject] @{
                 LogFlags = $node.LogFlags
                 LogFormat = $node.LogFormat
@@ -51,13 +56,13 @@ function Get-AnsibleOrganizationValue {
             [int] $data[$attributeName]['Option'][$orgValue]
         }
         elseif ($orgValue -eq 'Identity' -and $rule.$orgValue -eq 'NULL') { @() }
-        elseif ($ruleName -eq 'Service') {
+        elseif ($RuleType -eq 'Service') {
             [pscustomobject] @{
                 ServiceName = $rule.ServiceName
                 StartupType = $rule.StartupType
             }
         }
-        elseif ($ruleName -eq 'IisLogging') {
+        elseif ($RuleType -eq 'IisLogging') {
             [pscustomobject] @{
                 LogFlags = $rule.LogFlags
                 LogFormat = $rule.LogFormat
