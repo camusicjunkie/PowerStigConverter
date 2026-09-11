@@ -6,8 +6,8 @@ status: accepted
 
 Organization values reached the generated role three different ways. Four rule types emitted a
 `{{ prefix_id_name }}` reference resolved from `defaults/`; `RootCertificate` and `Service`
-inlined literals and were excluded from the exporter by name; `IisLogging` was excluded by a
-special case that emitted an always-blank `logpath` variable nothing referenced. Two task
+inlined literals and were excluded from the exporter by name; `IisLogging` referenced a variable
+for its log path but inlined the five values that come from the org settings file. Two task
 generators mutated `OrganizationValueRequired` on the rule they were handed purely to steer the
 exporter's filter, which made them non-idempotent over the same rule object.
 
@@ -30,3 +30,19 @@ regeneration once the org settings file is filled in.
 - Generated role output changes shape for `RootCertificate`, `Service` and `IisLogging`. The module
   is pre-1.0 and unpublished, so this is a `0.2.0` bump and a README table update rather than a
   migration.
+
+## Two values that cannot be a plain scalar variable
+
+- **`RootCertificate`'s store name.** The org settings file holds a store *path*
+  (`Cert:\LocalMachine\Root`) but `win_certificate_info` takes a store *name* (`Root`), so that
+  value was always going to be taken apart before it reached Ansible. The leaf is taken at
+  generation time and the variable holds the store name, which is the value the module consumes
+  and the value the assert's non-empty check should be about. `defaults/` therefore does not echo
+  the org settings file verbatim for this one type.
+- **`IisLogging`'s `LogCustomFields`.** It is a nested structure built from the org node's entries,
+  not a scalar, so it stays generated in place. It is the one field `OrganizationData.psd1` marks
+  optional, so nothing asserts on it and it needs no variable to be filled in.
+
+`IisLogging`'s `LogPath` is the other way round and was already correct: no org settings attribute
+feeds it, so it is a blank organization variable by design, declared in `defaults/` and referenced
+by the task, for the site to fill in.
