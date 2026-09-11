@@ -7,7 +7,7 @@ function New-AnsibleSecurityOptionTask {
         [Parameter(Mandatory)]
         [string] $StigName,
 
-        [string] $Path
+        [hashtable] $OrgSetting = @{}
     )
 
     process {
@@ -18,7 +18,7 @@ function New-AnsibleSecurityOptionTask {
             $navParams = @{ TaskId = $rule.Id; TaskName = $rule.OptionName; StigName = $StigName }
             $optionName = $rule.OptionName -replace '/|\s', '_' -replace ':'
 
-            $optionValue = Get-AnsibleOrganizationValue -Rule $rule -RuleType 'SecurityOption' -StigName $StigName -Path $Path
+            $optionValue = Get-AnsibleOrganizationValue -Rule $rule -RuleType 'SecurityOption' -StigName $StigName -OrgSetting $OrgSetting
 
             $task = [ordered] @{
                 'name' = '{0} | {1} | {2}' -f $rule.Id, $rule.Severity.ToUpper(), $rule.OptionName
@@ -34,7 +34,7 @@ function New-AnsibleSecurityOptionTask {
 
             @{
                 Rule = $rule
-                Task = $task
+                Task = Add-AnsibleOrganizationValueAssert -Task $task -Rule $rule -RuleType 'SecurityOption' -StigName $StigName -OrgSetting $OrgSetting
             }
         }
     }

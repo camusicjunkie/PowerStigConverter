@@ -7,7 +7,7 @@ function New-AnsibleUserRightTask {
         [Parameter(Mandatory)]
         [string] $StigName,
 
-        [string] $Path
+        [hashtable] $OrgSetting = @{}
     )
 
     process {
@@ -16,14 +16,14 @@ function New-AnsibleUserRightTask {
             if (-not [string]::IsNullOrEmpty($rule.DuplicateOf)) { continue }
 
             $navParams = @{ TaskId = $rule.Id; TaskName = $rule.DisplayName; StigName = $StigName }
-            $identity = Get-AnsibleOrganizationValue -Rule $rule -RuleType 'UserRight' -StigName $StigName -Path $Path
+            $identity = Get-AnsibleOrganizationValue -Rule $rule -RuleType 'UserRight' -StigName $StigName -OrgSetting $OrgSetting
 
             $task = [ordered] @{
                 'name' = '{0} | {1} | {2}' -f $rule.Id, $rule.Severity.ToUpper(), $rule.DisplayName
                 'ansible.windows.win_user_right' = [ordered] @{
                     'name' = $rule.Constant
                     'action' = if ($rule.Force -eq 'True') { 'set' } else { 'add' }
-                    'users' = $identity -split ','
+                    'users' = $identity
                 }
                 'when' = New-AnsibleVariable @navParams -Type Conditional
             }
@@ -32,7 +32,7 @@ function New-AnsibleUserRightTask {
 
             @{
                 Rule = $rule
-                Task = $task
+                Task = Add-AnsibleOrganizationValueAssert -Task $task -Rule $rule -RuleType 'UserRight' -StigName $StigName -OrgSetting $OrgSetting
             }
         }
     }

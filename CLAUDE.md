@@ -28,9 +28,14 @@ Tests tagged `KnownDefect` are excluded by default and are expected to fail; non
 present. Tag a test that way when it describes a defect you are not fixing in that pass, and
 untag it when the defect is fixed.
 
-Task generators write back to the rule they were handed (`New-AnsibleIisLoggingTask` and
-`New-AnsibleServiceTask` set `OrganizationValueRequired` on it), so a rule object cannot be fed
-through a generator twice. Tests build a fresh rule per case rather than sharing one.
+Task generators do not modify the rule they were handed, so the same rule object can go through
+one twice. Tests still build a fresh rule per case, so a failure cannot be an artefact of a
+previous case's leftovers.
+
+Organisation values — the ones a STIG leaves for the adopting organisation to decide — reach the
+generated role as variables in `defaults/`, never as literals. `New-AnsiblePlaybook` refuses to
+convert while any of them is unanswered; `-AllowIncompleteOrganizationValue` overrides that. See
+`CONTEXT.md` for the vocabulary and `docs/adr/0001`–`0003` for why.
 
 ## Agent skills
 

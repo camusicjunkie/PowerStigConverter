@@ -6,13 +6,24 @@ BeforeAll {
     $script:fixtureRoot = Join-Path $PSScriptRoot 'fixtures' | Join-Path -ChildPath 'PowerStig'
 
     function Get-OrgValue {
-        param ($Rule, $RuleType, $StigName, $Path)
+        param ($Rule, $RuleType, $StigName, $OrgSetting = @{})
 
         InModuleScope -ModuleName PowerStigConverter -Parameters @{
-            Rule = $Rule; RuleType = $RuleType; StigName = $StigName; Path = $Path
+            Rule = $Rule; RuleType = $RuleType; StigName = $StigName; OrgSetting = $OrgSetting
         } {
-            param ($Rule, $RuleType, $StigName, $Path)
-            Get-AnsibleOrganizationValue -Rule $Rule -RuleType $RuleType -StigName $StigName -Path $Path
+            param ($Rule, $RuleType, $StigName, $OrgSetting)
+            Get-AnsibleOrganizationValue -Rule $Rule -RuleType $RuleType -StigName $StigName -OrgSetting $OrgSetting
+        }
+    }
+
+    # The org settings file is read once up front and handed round as a map, so a test that
+    # needs one loads it the same way New-AnsiblePlaybook does.
+    function Get-OrgSetting {
+        param ($StigName, $Path)
+
+        InModuleScope -ModuleName PowerStigConverter -Parameters @{ StigName = $StigName; Path = $Path } {
+            param ($StigName, $Path)
+            Get-PowerStigOrgSetting -StigName $StigName -Path $Path
         }
     }
 }
@@ -109,10 +120,11 @@ Describe 'Get-AnsibleOrganizationValue' {
 
             $logging = Get-OrgValue -Rule $rule -RuleType IisLogging -StigName 'IISServer-10.0'
 
-            $logging.LogFlags | Should-Be 'Date,Time'
+            # LogFlags and LogTargetW3C are lists to the DSC resource, so they arrive split.
+            $logging.LogFlags -join '|' | Should-Be 'Date|Time'
             $logging.LogFormat | Should-Be 'W3C'
             $logging.LogPeriod | Should-Be 'Daily'
-            $logging.LogTarget | Should-Be 'File,ETW'
+            $logging.LogTarget -join '|' | Should-Be 'File|ETW'
             $logging.PSObject.Properties.Name | Should-ContainCollection @('LogCustomFields')
         }
     }
@@ -132,20 +144,23 @@ Describe 'Get-AnsibleOrganizationValue' {
             }
         }
 
-        # This doubles as the check that the org settings are read from the path given rather
-        # than from a fixed location: the fixture id exists only under the fixture path, so
-        # consulting anywhere else resolves nothing and no reference is produced at all.
         It 'renders a reference to the role variable rather than a literal' {
-            Get-OrgValue -Rule $orgRule -RuleType AccountPolicy -StigName 'WindowsClient-11' -Path $fixtureRoot |
+            $orgSetting = Get-OrgSetting -StigName 'WindowsClient-11' -Path $fixtureRoot
+
+            Get-OrgValue -Rule $orgRule -RuleType AccountPolicy -StigName 'WindowsClient-11' -OrgSetting $orgSetting |
                 Should-Be '{{ stig_client_11_201_account_lockout_duration }}'
         }
     }
 
-    # PowerStig ships some org settings blank because it cannot guess them. The site is warned
-    # which id to fill in, and nothing is emitted for it.
-    Context 'a setting the site has not filled in yet' {
+    # An unanswered setting normally stops the conversion before it reaches here - see
+    # New-AnsiblePlaybook - so this function only sees one when the caller asked for blanks on
+    # purpose. The reference is still emitted: the variable is declared blank in defaults/, an
+    # assert guards it, and the operator finishes the role by filling that one file in rather
+    # than regenerating. Returning nothing instead is what used to leave defaults/ declaring a
+    # variable that no task referenced.
+    Context 'a setting the organization has not answered yet' {
 
-        It 'emits nothing and warns which id needs attention' {
+        It 'still references the variable, so filling defaults/ in finishes the role' {
             # Matches V-202 in the fixture, whose org settings value is deliberately empty.
             $rule = [pscustomobject] @{
                 Id = 'V-202'
@@ -153,17 +168,55 @@ Describe 'Get-AnsibleOrganizationValue' {
                 PolicyValue = ''
                 OrganizationValueRequired = $true
             }
+            $orgSetting = Get-OrgSetting -StigName 'WindowsClient-11' -Path $fixtureRoot
 
-            $output = InModuleScope -ModuleName PowerStigConverter -Parameters @{ Rule = $rule; Path = $fixtureRoot } {
-                param ($Rule, $Path)
-                Get-AnsibleOrganizationValue -Rule $Rule -RuleType AccountPolicy -StigName 'WindowsClient-11' -Path $Path 3>&1
+            Get-OrgValue -Rule $rule -RuleType AccountPolicy -StigName 'WindowsClient-11' -OrgSetting $orgSetting |
+                Should-Be '{{ stig_client_11_202_account_lockout_threshold }}'
+        }
+
+        It 'references the variable even when the org settings file has no entry at all' {
+            $rule = [pscustomobject] @{
+                Id = 'V-999'
+                PolicyName = 'Account lockout threshold'
+                PolicyValue = ''
+                OrganizationValueRequired = $true
+            }
+            $orgSetting = Get-OrgSetting -StigName 'WindowsClient-11' -Path $fixtureRoot
+
+            Get-OrgValue -Rule $rule -RuleType AccountPolicy -StigName 'WindowsClient-11' -OrgSetting $orgSetting |
+                Should-Be '{{ stig_client_11_999_account_lockout_threshold }}'
+        }
+    }
+
+    # Three org values are lists rather than scalars. They are split here so that both halves of
+    # this function hand back the same shape, and so the generator never has to split a value
+    # that might be a variable reference - '{{ x }}' -split ',' is a one element list, which is
+    # what used to reach win_user_right for an org-valued identity.
+    Context 'a setting the task needs as a list' {
+
+        It 'splits an identity list the rule carries itself' {
+            $rule = [pscustomobject] @{
+                Id = 'V-104'
+                DisplayName = 'Access this computer from the network'
+                Identity = 'Administrators,Authenticated Users'
+                OrganizationValueRequired = $false
             }
 
-            $warnings = $output | Where-Object { $_ -is [System.Management.Automation.WarningRecord] }
-            $values = $output | Where-Object { $_ -isnot [System.Management.Automation.WarningRecord] }
+            $identity = Get-OrgValue -Rule $rule -RuleType UserRight -StigName 'WindowsServer-2022-MS'
 
-            $warnings.Message | Should-BeLikeString '*V-202*'
-            @($values).Count | Should-Be 0
+            $identity -join '|' | Should-Be 'Administrators|Authenticated Users'
+        }
+
+        It 'hands back one reference for an identity list the organization decides' {
+            $rule = [pscustomobject] @{
+                Id = 'V-104'
+                DisplayName = 'Access this computer from the network'
+                Identity = ''
+                OrganizationValueRequired = $true
+            }
+
+            Get-OrgValue -Rule $rule -RuleType UserRight -StigName 'WindowsServer-2022-MS' |
+                Should-Be '{{ stig_server_2022_104_access_this_computer_from_the_network }}'
         }
     }
 }

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Fixture STIG for the IIS logging path. Its rule carries its own logging values -
+    OrganizationValueRequired is False - which is the ordinary shape for this rule type, and the
+    shape in which the generated task still references an organisation variable for the log
+    path: nothing in the org settings file says where IIS should write its logs, so the site
+    fills that one in. A role generated from this fixture has to declare that variable as well
+    as reference it, or the play fails on an undefined variable.
+-->
+<DISASTIG version="1" classification="UNCLASSIFIED" customname="" stigid="IIS_10_Server" description="Fixture STIG." filename="U_MS_IIS_10-0_Server_STIG_V1R0_Manual-xccdf.xml" releaseinfo="Release: 0" title="Microsoft IIS 10.0 Server Security Technical Implementation Guide" notice="terms-of-use" source="STIG.DOD.MIL" fullversion="10.0" created="1/1/2026">
+  <IisLoggingRule dscresourcemodule="WebAdministrationDsc">
+    <Rule id="V-300" severity="medium" conversionstatus="pass" title="SRG-APP-000092-WSR-000055" dscresource="IisLogging">
+      <Description>Logging values the rule carries itself; only the log path is left to the site.</Description>
+      <DuplicateOf />
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+      <LogFlags>Date,Time,ClientIP</LogFlags>
+      <LogFormat>W3C</LogFormat>
+      <LogPeriod>Daily</LogPeriod>
+      <LogTargetW3C>File,ETW</LogTargetW3C>
+      <LogCustomFieldEntry />
+    </Rule>
+  </IisLoggingRule>
+</DISASTIG>

@@ -7,7 +7,7 @@ function New-AnsibleIisLoggingTask {
         [Parameter(Mandatory)]
         [string] $StigName,
 
-        [string] $Path,
+        [hashtable] $OrgSetting = @{},
 
         [string] $StigId
     )
@@ -19,7 +19,7 @@ function New-AnsibleIisLoggingTask {
 
             $navParams = @{ TaskId = $rule.Id; StigName = $StigName }
 
-            $logging = Get-AnsibleOrganizationValue -Rule $rule -RuleType 'IisLogging' -StigName $StigName -Path $Path
+            $logging = Get-AnsibleOrganizationValue -Rule $rule -RuleType 'IisLogging' -StigName $StigName -OrgSetting $OrgSetting
             $logFlags = $logging.LogFlags
             $logFormat = $logging.LogFormat
             $logPeriod = $logging.LogPeriod
@@ -53,17 +53,15 @@ function New-AnsibleIisLoggingTask {
 
             Write-Verbose "  Task: $($task.name)"
 
-            if (-not [string]::IsNullOrEmpty($logFlags)) { $task.'ansible.windows.win_dsc'.LogFlags = $logFlags -split ',' }
+            if ($logFlags) { $task.'ansible.windows.win_dsc'.LogFlags = $logFlags }
             if (-not [string]::IsNullOrEmpty($logFormat)) { $task.'ansible.windows.win_dsc'.LogFormat = $logFormat }
             if (-not [string]::IsNullOrEmpty($logPeriod)) { $task.'ansible.windows.win_dsc'.LogPeriod = $logPeriod }
-            if (-not [string]::IsNullOrEmpty($logTarget)) { $task.'ansible.windows.win_dsc'.LogTargetW3C = $logTarget -split ','}
+            if ($logTarget) { $task.'ansible.windows.win_dsc'.LogTargetW3C = $logTarget }
             if (-not [string]::IsNullOrEmpty($logCustomFields)) { $task.'ansible.windows.win_dsc'.LogCustomFields = $customFields }
-
-            $rule.OrganizationValueRequired = "$true"
 
             @{
                 Rule = $rule
-                Task = $task
+                Task = Add-AnsibleOrganizationValueAssert -Task $task -Rule $rule -RuleType 'IisLogging' -StigName $StigName -OrgSetting $OrgSetting
             }
         }
     }

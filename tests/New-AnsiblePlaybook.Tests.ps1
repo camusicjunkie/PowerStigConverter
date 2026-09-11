@@ -251,9 +251,11 @@ Describe 'New-AnsiblePlaybook' {
 
         BeforeAll {
             # The WindowsClient-11 fixture needs an organisation value for V-201, which its org
-            # settings file sets to 15.
+            # settings file sets to 15. It also leaves V-202 unanswered on purpose, so the
+            # command refuses to generate without the opt-out.
             $script:orgRole = New-AnsiblePlaybook -StigName 'WindowsClient-11' -Path $fixtureRoot `
                 -OutputPath (Join-Path $TestDrive 'org') -RoleName 'org_role' `
+                -AllowIncompleteOrganizationValue `
                 -WarningAction SilentlyContinue 6>$null
         }
 
@@ -265,6 +267,96 @@ Describe 'New-AnsiblePlaybook' {
         It 'defaults that variable to the value from the org settings at the given path' {
             Get-Content -Path (Join-Path $orgRole.DefaultPath 'main_default_org.yml') -Raw |
                 Should-BeLikeString '*stig_client_11_201_account_lockout_duration: 15*'
+        }
+    }
+
+    # A value DISA leaves to the adopting organization is an outstanding decision, not a data
+    # error. Generating anyway produced a role that either set an empty value or silently
+    # dropped the rule, so the conversion refuses instead. See docs/adr/0001.
+    Context 'an organization value nobody has answered' {
+
+        BeforeAll {
+            $script:refusedOutput = Join-Path $TestDrive 'refused'
+
+            # V-202 in the WindowsClient-11 fixture is deliberately blank.
+            $script:refusal = try {
+                New-AnsiblePlaybook -StigName 'WindowsClient-11' -Path $fixtureRoot `
+                    -OutputPath $refusedOutput -RoleName 'refused_role' `
+                    -WarningAction SilentlyContinue 6>$null
+                $null
+            }
+            catch {
+                $_
+            }
+        }
+
+        It 'refuses to generate the role' {
+            $refusal | Should-NotBeNull
+        }
+
+        It 'reports the gap as objects rather than only as prose' {
+            $gap = @($refusal.TargetObject).Where({ $_.RuleId -eq 'V-202' })
+
+            @($gap).Count | Should-Be 1
+            $gap[0].RuleType | Should-Be 'AccountPolicy'
+            $gap[0].Field | Should-Be 'PolicyValue'
+            $gap[0].Reason | Should-Be 'Unanswered'
+        }
+
+        It 'names the unanswered id in the message a human reads' {
+            $refusal.Exception.Message | Should-BeLikeString '*V-202*'
+        }
+
+        It 'carries an error id a caller can trap on' {
+            $refusal.FullyQualifiedErrorId | Should-BeLikeString 'IncompleteOrganizationValue*'
+        }
+
+        # Refusing after the scaffold had been written would leave a half-built role behind for
+        # the next run to read as real output.
+        It 'leaves nothing on disk' {
+            Join-Path $refusedOutput 'refused_role' | Should -Not -Exist
+        }
+
+        It 'generates anyway, with a warning, when the caller allows it' {
+            $allowed = New-AnsiblePlaybook -StigName 'WindowsClient-11' -Path $fixtureRoot `
+                -OutputPath (Join-Path $TestDrive 'allowed') -RoleName 'allowed_role' `
+                -AllowIncompleteOrganizationValue `
+                -WarningVariable warning -WarningAction SilentlyContinue 6>$null
+
+            $allowed.Path | Should -Exist
+            $warning.Message | Should-BeLikeString '*V-202*'
+        }
+    }
+
+    # Generating over a part-filled org settings file must not produce a role that quietly sets
+    # an empty value, so the unanswered ones are guarded on the host as well. See docs/adr/0003.
+    Context 'what -AllowIncompleteOrganizationValue produces' {
+
+        BeforeAll {
+            $script:incomplete = New-AnsiblePlaybook -StigName 'WindowsClient-11' -Path $fixtureRoot `
+                -OutputPath (Join-Path $TestDrive 'incomplete') -RoleName 'incomplete_role' `
+                -AllowIncompleteOrganizationValue `
+                -WarningAction SilentlyContinue 6>$null
+
+            $script:incompleteOrg = Get-Content -Path (Join-Path $incomplete.DefaultPath 'main_default_org.yml') -Raw
+            $script:incompleteTasks = Get-Content -Path (Join-Path $incomplete.TaskPath 'cat3.yml') -Raw
+        }
+
+        It 'declares the unanswered variable blank for the operator to fill in' {
+            $incompleteOrg | Should-BeLikeString '*stig_client_11_202_account_lockout_threshold:*'
+        }
+
+        It 'has the task reference it, so filling defaults/ in finishes the role' {
+            # Declaring a variable that no task reads is what made filling it in do nothing.
+            $incompleteTasks | Should-BeLikeString '*{{ stig_client_11_202_account_lockout_threshold }}*'
+        }
+
+        It 'guards it with an assert, so an unfilled value fails the play rather than setting nothing' {
+            $incompleteTasks | Should-BeLikeString '*stig_client_11_202_account_lockout_threshold | default("", true) | length > 0*'
+        }
+
+        It 'does not guard the value that was answered' {
+            $incompleteTasks | Should-NotBeLikeString '*stig_client_11_201_account_lockout_duration | default*'
         }
     }
 
@@ -322,6 +414,46 @@ Describe 'New-AnsiblePlaybook' {
                 -OutputPath $nested -RoleName 'nested_role' -WarningAction SilentlyContinue 6>$null
 
             $created.Path | Should -Exist
+        }
+    }
+}
+
+Describe 'New-AnsiblePlaybook for a STIG with IIS logging' {
+
+    BeforeAll {
+        $script:iisRole = New-AnsiblePlaybook -StigName 'IISServer-10.0' -Path $fixtureRoot `
+            -OutputPath (Join-Path $TestDrive 'iis') -RoleName 'iis_role' `
+            -WarningAction SilentlyContinue 6>$null
+
+        $script:iisTasks = Get-Content -Path (Join-Path $iisRole.TaskPath 'cat2.yml') -Raw
+        $script:iisOrg = Get-Content -Path (Join-Path $iisRole.DefaultPath 'main_default_org.yml') -Raw
+    }
+
+    # Nothing in the org settings file says where IIS should write its logs, so the task points
+    # at a variable the site fills in. The rule itself carries every other value, so it is not an
+    # organisation-value rule - which is exactly the shape that once had the task referencing a
+    # variable defaults/ never declared, and a play that failed on an undefined variable.
+    Context 'the log path variable' {
+
+        It 'has the task reference it' {
+            $iisTasks | Should-BeLikeString '*LogPath:*{{ stig_iisserver_10_0_300_logpath }}*'
+        }
+
+        It 'declares it in defaults, so the reference resolves' {
+            $iisOrg | Should-BeLikeString '*stig_iisserver_10_0_300_logpath:*'
+        }
+    }
+
+    # These come off the rule, not the org settings file, so they are written out as values.
+    Context 'the logging values the rule carries itself' {
+
+        It 'splits the log flags into a yaml list' {
+            $iisTasks | Should-BeLikeString '*- Date*'
+            $iisTasks | Should-BeLikeString '*- ClientIP*'
+        }
+
+        It 'does not declare a variable for a value the rule already answers' {
+            $iisOrg | Should-NotBeLikeString '*logflags*'
         }
     }
 }

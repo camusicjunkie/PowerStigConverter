@@ -12,7 +12,8 @@ function Get-AnsibleOrganizationValue {
 
         [string] $StigName,
 
-        [string] $Path
+        # The org settings loaded once by Get-PowerStigOrgSetting, keyed by rule id.
+        [hashtable] $OrgSetting = @{}
     )
 
     $orgName = $script:organizationData[$RuleType]['Name']
@@ -20,35 +21,33 @@ function Get-AnsibleOrganizationValue {
 
     if ($Rule.OrganizationValueRequired -eq $true) {
 
-        [xml] $xmlOrg = Get-Content (Get-PowerStigFile -Type Org -Path $Path | Where-Object BaseName -like $StigName*)
-        $node = (Select-Xml -Xml $xmlOrg -XPath "//OrganizationalSetting[@id = '$($Rule.id)']").Node
-
-        # Validate the org settings file is filled out for this Id
-        if (Test-PowerStigOrgValue -NodeValue $node.$orgValue -RuleId $Rule.Id) { return }
-
-        $navParams = @{
-            TaskId = $Rule.Id
-            TaskName = $Rule.$orgName
-            StigName = $StigName
+        # A value the organization decides never reaches the task as a literal. It is declared
+        # in defaults/ and the task interpolates it, so the operator can answer the question by
+        # editing one file instead of regenerating the role - and so an assert can check at run
+        # time that it was answered at all. See docs/adr/0003.
+        $reference = {
+            param ([string] $Field)
+            '{0} {1} {2}' -f '{{', (Get-AnsibleOrganizationVariableName -Rule $Rule -RuleType $RuleType -Field $Field -StigName $StigName), '}}'
         }
-        if ($orgValue -eq 'Identity' -and $null -eq $node.$orgValue) { @() }
-        elseif ($RuleType -eq 'RootCertificate') { $node.$orgValue }
-        elseif ($RuleType -eq 'Service') {
+
+        if ($RuleType -eq 'Service') {
             [pscustomobject] @{
-                ServiceName = $node.ServiceName
-                StartupType = $node.StartupType
+                ServiceName = & $reference 'ServiceName'
+                StartupType = & $reference 'StartupType'
             }
         }
         elseif ($RuleType -eq 'IisLogging') {
             [pscustomobject] @{
-                LogFlags = $node.LogFlags
-                LogFormat = $node.LogFormat
-                LogPeriod = $node.LogPeriod
-                LogTarget = $node.LogTargetW3C
-                LogCustomFields = $node.LogCustomFieldEntry
+                LogFlags = & $reference 'LogFlags'
+                LogFormat = & $reference 'LogFormat'
+                LogPeriod = & $reference 'LogPeriod'
+                LogTarget = & $reference 'LogTargetW3C'
+                # LogCustomFields is a nested structure rather than a scalar, and it is the one
+                # field marked optional, so nothing asserts on it and it stays built in place.
+                LogCustomFields = $OrgSetting[$Rule.Id].LogCustomFieldEntry
             }
         }
-        else { New-AnsibleVariable @navParams -Type Organization }
+        else { & $reference $orgValue }
     }
     else {
 
@@ -70,12 +69,17 @@ function Get-AnsibleOrganizationValue {
         }
         elseif ($RuleType -eq 'IisLogging') {
             [pscustomobject] @{
-                LogFlags = $rule.LogFlags
+                LogFlags = if ($rule.LogFlags) { , ($rule.LogFlags -split ',') }
                 LogFormat = $rule.LogFormat
                 LogPeriod = $rule.LogPeriod
-                LogTarget = $rule.LogTargetW3C
+                LogTarget = if ($rule.LogTargetW3C) { , ($rule.LogTargetW3C -split ',') }
                 LogCustomFields = $rule.LogCustomFieldEntry
             }
+        }
+        # A field the task needs as a list is split here rather than in the generator, so that
+        # both halves of this function hand back the same shape.
+        elseif ($script:organizationData[$RuleType]['List'] -contains $orgValue) {
+            , ($Rule.$orgValue -split ',')
         }
         else { $Rule.$orgValue }
     }
