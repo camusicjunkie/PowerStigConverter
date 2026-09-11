@@ -6,8 +6,9 @@ function Export-AnsibleOrganizationValue {
 
         [string] $StigName,
 
+        # The org settings loaded once by Get-PowerStigOrgSetting, keyed by rule id.
         [Parameter()]
-        [string] $Path,
+        [hashtable] $OrgSetting = @{},
 
         [Parameter(Mandatory)]
         [string] $OutputPath
@@ -17,12 +18,10 @@ function Export-AnsibleOrganizationValue {
         $organization = [System.Collections.SortedList]::new()
     }
     process {
-        # TODO: Consolidate code from Get-AnsibleOrganizationValue and below to a new function.
         $ruleName = $Rule.PowerStigRule -replace 'Rule'
         foreach ($rule in $Rule.StigRule) {
 
-            [xml] $xmlOrg = Get-Content (Get-PowerStigFile -Type Org -Path $Path | Where-Object BaseName -like $StigName*)
-            $node = (Select-Xml -Xml $xmlOrg -XPath "//OrganizationalSetting[@id = '$($rule.id)']").Node
+            $node = $OrgSetting[$rule.Id]
 
             $taskName = if ($ruleName -eq 'IisLogging') { 'logpath' } else { $rule.($organizationData[$ruleName]['Name']) }
             $nodeValue = if ($ruleName -eq 'IisLogging') { $null } else { $node.($organizationData[$ruleName]['Value']) }

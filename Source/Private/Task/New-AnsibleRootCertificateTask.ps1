@@ -7,7 +7,7 @@ function New-AnsibleRootCertificateTask {
         [Parameter(Mandatory)]
         [string] $StigName,
 
-        [string] $Path
+        [hashtable] $OrgSetting
     )
 
     begin {
@@ -21,7 +21,7 @@ function New-AnsibleRootCertificateTask {
             $baseId = $rule.Id -replace '\.[a-z]$'
             $navParams = @{ TaskId = $baseId; StigName = $StigName }
 
-            $location = Get-AnsibleOrganizationValue -Rule $rule -RuleType 'RootCertificate' -StigName $StigName -Path $Path
+            $location = Get-AnsibleOrganizationValue -Rule $rule -RuleType 'RootCertificate' -StigName $StigName -OrgSetting $OrgSetting
 
             # The org settings file leaves Location blank for the site to fill in, and
             # Get-AnsibleOrganizationValue returns nothing when it is still empty. There is no

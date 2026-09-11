@@ -6,13 +6,24 @@ BeforeAll {
     $script:fixtureRoot = Join-Path $PSScriptRoot 'fixtures' | Join-Path -ChildPath 'PowerStig'
 
     function Get-OrgValue {
-        param ($Rule, $RuleType, $StigName, $Path)
+        param ($Rule, $RuleType, $StigName, $OrgSetting = @{})
 
         InModuleScope -ModuleName PowerStigConverter -Parameters @{
-            Rule = $Rule; RuleType = $RuleType; StigName = $StigName; Path = $Path
+            Rule = $Rule; RuleType = $RuleType; StigName = $StigName; OrgSetting = $OrgSetting
         } {
-            param ($Rule, $RuleType, $StigName, $Path)
-            Get-AnsibleOrganizationValue -Rule $Rule -RuleType $RuleType -StigName $StigName -Path $Path
+            param ($Rule, $RuleType, $StigName, $OrgSetting)
+            Get-AnsibleOrganizationValue -Rule $Rule -RuleType $RuleType -StigName $StigName -OrgSetting $OrgSetting
+        }
+    }
+
+    # The org settings file is read once up front and handed round as a map, so a test that
+    # needs one loads it the same way New-AnsiblePlaybook does.
+    function Get-OrgSetting {
+        param ($StigName, $Path)
+
+        InModuleScope -ModuleName PowerStigConverter -Parameters @{ StigName = $StigName; Path = $Path } {
+            param ($StigName, $Path)
+            Get-PowerStigOrgSetting -StigName $StigName -Path $Path
         }
     }
 }
@@ -132,20 +143,21 @@ Describe 'Get-AnsibleOrganizationValue' {
             }
         }
 
-        # This doubles as the check that the org settings are read from the path given rather
-        # than from a fixed location: the fixture id exists only under the fixture path, so
-        # consulting anywhere else resolves nothing and no reference is produced at all.
         It 'renders a reference to the role variable rather than a literal' {
-            Get-OrgValue -Rule $orgRule -RuleType AccountPolicy -StigName 'WindowsClient-11' -Path $fixtureRoot |
+            $orgSetting = Get-OrgSetting -StigName 'WindowsClient-11' -Path $fixtureRoot
+
+            Get-OrgValue -Rule $orgRule -RuleType AccountPolicy -StigName 'WindowsClient-11' -OrgSetting $orgSetting |
                 Should-Be '{{ stig_client_11_201_account_lockout_duration }}'
         }
     }
 
-    # PowerStig ships some org settings blank because it cannot guess them. The site is warned
-    # which id to fill in, and nothing is emitted for it.
-    Context 'a setting the site has not filled in yet' {
+    # An unanswered setting normally stops the conversion before it reaches here - see
+    # New-AnsiblePlaybook - so by the time this function sees one, the caller has either been
+    # told or has asked for blanks on purpose. It reports the gap by emitting nothing, and does
+    # not warn a second time about something already reported.
+    Context 'a setting the organization has not answered yet' {
 
-        It 'emits nothing and warns which id needs attention' {
+        It 'emits nothing for an unanswered setting' {
             # Matches V-202 in the fixture, whose org settings value is deliberately empty.
             $rule = [pscustomobject] @{
                 Id = 'V-202'
@@ -153,16 +165,24 @@ Describe 'Get-AnsibleOrganizationValue' {
                 PolicyValue = ''
                 OrganizationValueRequired = $true
             }
+            $orgSetting = Get-OrgSetting -StigName 'WindowsClient-11' -Path $fixtureRoot
 
-            $output = InModuleScope -ModuleName PowerStigConverter -Parameters @{ Rule = $rule; Path = $fixtureRoot } {
-                param ($Rule, $Path)
-                Get-AnsibleOrganizationValue -Rule $Rule -RuleType AccountPolicy -StigName 'WindowsClient-11' -Path $Path 3>&1
+            $values = Get-OrgValue -Rule $rule -RuleType AccountPolicy -StigName 'WindowsClient-11' -OrgSetting $orgSetting
+
+            @($values).Count | Should-Be 0
+        }
+
+        It 'emits nothing for a setting the org settings file has no entry for at all' {
+            $rule = [pscustomobject] @{
+                Id = 'V-999'
+                PolicyName = 'Account lockout threshold'
+                PolicyValue = ''
+                OrganizationValueRequired = $true
             }
+            $orgSetting = Get-OrgSetting -StigName 'WindowsClient-11' -Path $fixtureRoot
 
-            $warnings = $output | Where-Object { $_ -is [System.Management.Automation.WarningRecord] }
-            $values = $output | Where-Object { $_ -isnot [System.Management.Automation.WarningRecord] }
+            $values = Get-OrgValue -Rule $rule -RuleType AccountPolicy -StigName 'WindowsClient-11' -OrgSetting $orgSetting
 
-            $warnings.Message | Should-BeLikeString '*V-202*'
             @($values).Count | Should-Be 0
         }
     }

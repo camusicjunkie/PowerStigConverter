@@ -12,7 +12,8 @@ function Get-AnsibleOrganizationValue {
 
         [string] $StigName,
 
-        [string] $Path
+        # The org settings loaded once by Get-PowerStigOrgSetting, keyed by rule id.
+        [hashtable] $OrgSetting = @{}
     )
 
     $orgName = $script:organizationData[$RuleType]['Name']
@@ -20,19 +21,19 @@ function Get-AnsibleOrganizationValue {
 
     if ($Rule.OrganizationValueRequired -eq $true) {
 
-        [xml] $xmlOrg = Get-Content (Get-PowerStigFile -Type Org -Path $Path | Where-Object BaseName -like $StigName*)
-        $node = (Select-Xml -Xml $xmlOrg -XPath "//OrganizationalSetting[@id = '$($Rule.id)']").Node
+        $node = $OrgSetting[$Rule.Id]
 
-        # Validate the org settings file is filled out for this Id
-        if (Test-PowerStigOrgValue -NodeValue $node.$orgValue -RuleId $Rule.Id) { return }
+        # New-AnsiblePlaybook has already reported every missing and unanswered setting - it
+        # either refused to generate the role or the caller asked for blanks explicitly - so
+        # there is nothing left to warn about here.
+        if ([string]::IsNullOrWhiteSpace($node.$orgValue)) { return }
 
         $navParams = @{
             TaskId = $Rule.Id
             TaskName = $Rule.$orgName
             StigName = $StigName
         }
-        if ($orgValue -eq 'Identity' -and $null -eq $node.$orgValue) { @() }
-        elseif ($RuleType -eq 'RootCertificate') { $node.$orgValue }
+        if ($RuleType -eq 'RootCertificate') { $node.$orgValue }
         elseif ($RuleType -eq 'Service') {
             [pscustomobject] @{
                 ServiceName = $node.ServiceName

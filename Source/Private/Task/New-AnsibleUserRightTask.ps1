@@ -7,7 +7,7 @@ function New-AnsibleUserRightTask {
         [Parameter(Mandatory)]
         [string] $StigName,
 
-        [string] $Path
+        [hashtable] $OrgSetting
     )
 
     process {
@@ -16,7 +16,7 @@ function New-AnsibleUserRightTask {
             if (-not [string]::IsNullOrEmpty($rule.DuplicateOf)) { continue }
 
             $navParams = @{ TaskId = $rule.Id; TaskName = $rule.DisplayName; StigName = $StigName }
-            $identity = Get-AnsibleOrganizationValue -Rule $rule -RuleType 'UserRight' -StigName $StigName -Path $Path
+            $identity = Get-AnsibleOrganizationValue -Rule $rule -RuleType 'UserRight' -StigName $StigName -OrgSetting $OrgSetting
 
             $task = [ordered] @{
                 'name' = '{0} | {1} | {2}' -f $rule.Id, $rule.Severity.ToUpper(), $rule.DisplayName

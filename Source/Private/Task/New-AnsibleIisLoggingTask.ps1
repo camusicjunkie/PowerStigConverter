@@ -7,7 +7,7 @@ function New-AnsibleIisLoggingTask {
         [Parameter(Mandatory)]
         [string] $StigName,
 
-        [string] $Path,
+        [hashtable] $OrgSetting,
 
         [string] $StigId
     )
@@ -19,7 +19,7 @@ function New-AnsibleIisLoggingTask {
 
             $navParams = @{ TaskId = $rule.Id; StigName = $StigName }
 
-            $logging = Get-AnsibleOrganizationValue -Rule $rule -RuleType 'IisLogging' -StigName $StigName -Path $Path
+            $logging = Get-AnsibleOrganizationValue -Rule $rule -RuleType 'IisLogging' -StigName $StigName -OrgSetting $OrgSetting
             $logFlags = $logging.LogFlags
             $logFormat = $logging.LogFormat
             $logPeriod = $logging.LogPeriod

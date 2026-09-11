@@ -7,7 +7,7 @@ function New-AnsibleServiceTask {
         [Parameter(Mandatory)]
         [string] $StigName,
 
-        [string] $Path
+        [hashtable] $OrgSetting
     )
 
     process {
@@ -17,7 +17,7 @@ function New-AnsibleServiceTask {
 
             $navParams = @{ TaskId = $rule.Id; TaskName = $name; StigName = $StigName }
 
-            $service = Get-AnsibleOrganizationValue -Rule $rule -RuleType 'Service' -StigName $StigName -Path $Path
+            $service = Get-AnsibleOrganizationValue -Rule $rule -RuleType 'Service' -StigName $StigName -OrgSetting $OrgSetting
             $serviceName = $service.ServiceName
             $startupType = $service.StartupType
 

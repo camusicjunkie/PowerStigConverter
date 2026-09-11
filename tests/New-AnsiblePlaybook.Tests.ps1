@@ -251,9 +251,11 @@ Describe 'New-AnsiblePlaybook' {
 
         BeforeAll {
             # The WindowsClient-11 fixture needs an organisation value for V-201, which its org
-            # settings file sets to 15.
+            # settings file sets to 15. It also leaves V-202 unanswered on purpose, so the
+            # command refuses to generate without the opt-out.
             $script:orgRole = New-AnsiblePlaybook -StigName 'WindowsClient-11' -Path $fixtureRoot `
                 -OutputPath (Join-Path $TestDrive 'org') -RoleName 'org_role' `
+                -AllowIncompleteOrganizationValue `
                 -WarningAction SilentlyContinue 6>$null
         }
 
@@ -265,6 +267,64 @@ Describe 'New-AnsiblePlaybook' {
         It 'defaults that variable to the value from the org settings at the given path' {
             Get-Content -Path (Join-Path $orgRole.DefaultPath 'main_default_org.yml') -Raw |
                 Should-BeLikeString '*stig_client_11_201_account_lockout_duration: 15*'
+        }
+    }
+
+    # A value DISA leaves to the adopting organization is an outstanding decision, not a data
+    # error. Generating anyway produced a role that either set an empty value or silently
+    # dropped the rule, so the conversion refuses instead. See docs/adr/0001.
+    Context 'an organization value nobody has answered' {
+
+        BeforeAll {
+            $script:refusedOutput = Join-Path $TestDrive 'refused'
+
+            # V-202 in the WindowsClient-11 fixture is deliberately blank.
+            $script:refusal = try {
+                New-AnsiblePlaybook -StigName 'WindowsClient-11' -Path $fixtureRoot `
+                    -OutputPath $refusedOutput -RoleName 'refused_role' `
+                    -WarningAction SilentlyContinue 6>$null
+                $null
+            }
+            catch {
+                $_
+            }
+        }
+
+        It 'refuses to generate the role' {
+            $refusal | Should-NotBeNull
+        }
+
+        It 'reports the gap as objects rather than only as prose' {
+            $gap = @($refusal.TargetObject).Where({ $_.RuleId -eq 'V-202' })
+
+            @($gap).Count | Should-Be 1
+            $gap[0].RuleType | Should-Be 'AccountPolicy'
+            $gap[0].Field | Should-Be 'PolicyValue'
+            $gap[0].Reason | Should-Be 'Unanswered'
+        }
+
+        It 'names the unanswered id in the message a human reads' {
+            $refusal.Exception.Message | Should-BeLikeString '*V-202*'
+        }
+
+        It 'carries an error id a caller can trap on' {
+            $refusal.FullyQualifiedErrorId | Should-BeLikeString 'IncompleteOrganizationValue*'
+        }
+
+        # Refusing after the scaffold had been written would leave a half-built role behind for
+        # the next run to read as real output.
+        It 'leaves nothing on disk' {
+            Join-Path $refusedOutput 'refused_role' | Should -Not -Exist
+        }
+
+        It 'generates anyway, with a warning, when the caller allows it' {
+            $allowed = New-AnsiblePlaybook -StigName 'WindowsClient-11' -Path $fixtureRoot `
+                -OutputPath (Join-Path $TestDrive 'allowed') -RoleName 'allowed_role' `
+                -AllowIncompleteOrganizationValue `
+                -WarningVariable warning -WarningAction SilentlyContinue 6>$null
+
+            $allowed.Path | Should -Exist
+            $warning.Message | Should-BeLikeString '*V-202*'
         }
     }
 

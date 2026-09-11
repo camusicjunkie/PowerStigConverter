@@ -7,7 +7,7 @@ function New-AnsiblePermissionTask {
         [Parameter(Mandatory)]
         [string] $StigName,
 
-        [string] $Path
+        [hashtable] $OrgSetting
     )
 
     begin {
