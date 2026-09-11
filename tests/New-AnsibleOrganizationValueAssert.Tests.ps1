@@ -14,17 +14,6 @@ BeforeAll {
         }
     }
 
-    function New-OrgSetting {
-        param ([string] $Xml)
-
-        [xml] $document = "<OrganizationalSettings>$Xml</OrganizationalSettings>"
-
-        $settings = @{}
-        foreach ($node in $document.OrganizationalSettings.OrganizationalSetting) {
-            $settings[$node.id] = $node
-        }
-        $settings
-    }
 }
 
 Describe 'New-AnsibleOrganizationValueAssert' {
@@ -40,7 +29,7 @@ Describe 'New-AnsibleOrganizationValueAssert' {
                 OrganizationValueRequired = $true
             }
             $script:assert = New-Assert -Rule $rule -RuleType AccountPolicy `
-                -OrgSetting (New-OrgSetting '<OrganizationalSetting id="V-100" PolicyValue="" />')
+                -OrgSetting (New-TestOrgSetting '<OrganizationalSetting id="V-100" PolicyValue="" />')
         }
 
         It 'builds an assert task' {
@@ -66,7 +55,7 @@ Describe 'New-AnsibleOrganizationValueAssert' {
             $rule = [pscustomobject] @{ Id = 'V-248'; OrganizationValueRequired = $true }
 
             $assert = New-Assert -Rule $rule -RuleType Service `
-                -OrgSetting (New-OrgSetting '<OrganizationalSetting id="V-248" ServiceName="WinDefend" StartupType="" />')
+                -OrgSetting (New-TestOrgSetting '<OrganizationalSetting id="V-248" ServiceName="WinDefend" StartupType="" />')
 
             $assert.'ansible.builtin.assert'.that |
                 Should-BeCollection @('stig_server_2022_248_startuptype | default("", true) | length > 0')
@@ -98,7 +87,7 @@ Describe 'New-AnsibleOrganizationValueAssert' {
             }
 
             New-Assert -Rule $rule -RuleType AccountPolicy `
-                -OrgSetting (New-OrgSetting '<OrganizationalSetting id="V-100" PolicyValue="15" />') |
+                -OrgSetting (New-TestOrgSetting '<OrganizationalSetting id="V-100" PolicyValue="15" />') |
                 Should-BeNull
         }
 

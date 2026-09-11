@@ -31,11 +31,8 @@ function New-AnsibleOrganizationValueAssert {
     $gaps = @(Get-AnsibleOrganizationValueGap -Rule $Rule -RuleType $RuleType -OrgSetting $OrgSetting)
     if ($gaps.Count -eq 0) { return }
 
-    # A missing setting names every required field at once, since none of them are there.
     $variables = foreach ($gap in $gaps) {
-        foreach ($field in ($gap.Field -split ',\s*')) {
-            Get-AnsibleOrganizationVariableName -Rule $Rule -RuleType $RuleType -Field $field -StigName $StigName
-        }
+        Get-AnsibleOrganizationVariableName -Rule $Rule -RuleType $RuleType -Field $gap.Field -StigName $StigName
     }
 
     [ordered] @{

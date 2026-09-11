@@ -417,3 +417,43 @@ Describe 'New-AnsiblePlaybook' {
         }
     }
 }
+
+Describe 'New-AnsiblePlaybook for a STIG with IIS logging' {
+
+    BeforeAll {
+        $script:iisRole = New-AnsiblePlaybook -StigName 'IISServer-10.0' -Path $fixtureRoot `
+            -OutputPath (Join-Path $TestDrive 'iis') -RoleName 'iis_role' `
+            -WarningAction SilentlyContinue 6>$null
+
+        $script:iisTasks = Get-Content -Path (Join-Path $iisRole.TaskPath 'cat2.yml') -Raw
+        $script:iisOrg = Get-Content -Path (Join-Path $iisRole.DefaultPath 'main_default_org.yml') -Raw
+    }
+
+    # Nothing in the org settings file says where IIS should write its logs, so the task points
+    # at a variable the site fills in. The rule itself carries every other value, so it is not an
+    # organisation-value rule - which is exactly the shape that once had the task referencing a
+    # variable defaults/ never declared, and a play that failed on an undefined variable.
+    Context 'the log path variable' {
+
+        It 'has the task reference it' {
+            $iisTasks | Should-BeLikeString '*LogPath:*{{ stig_iisserver_10_0_300_logpath }}*'
+        }
+
+        It 'declares it in defaults, so the reference resolves' {
+            $iisOrg | Should-BeLikeString '*stig_iisserver_10_0_300_logpath:*'
+        }
+    }
+
+    # These come off the rule, not the org settings file, so they are written out as values.
+    Context 'the logging values the rule carries itself' {
+
+        It 'splits the log flags into a yaml list' {
+            $iisTasks | Should-BeLikeString '*- Date*'
+            $iisTasks | Should-BeLikeString '*- ClientIP*'
+        }
+
+        It 'does not declare a variable for a value the rule already answers' {
+            $iisOrg | Should-NotBeLikeString '*logflags*'
+        }
+    }
+}

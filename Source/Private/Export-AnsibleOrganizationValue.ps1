@@ -22,7 +22,6 @@ function Export-AnsibleOrganizationValue {
         if (-not $script:organizationData.ContainsKey($ruleType)) { return }
 
         foreach ($rule in $Rule.StigRule) {
-            if ($rule.OrganizationValueRequired -ne $true) { continue }
             # A duplicate produces no task, so a variable for it would guard nothing.
             if (-not [string]::IsNullOrEmpty($rule.DuplicateOf)) { continue }
 
@@ -30,11 +29,18 @@ function Export-AnsibleOrganizationValue {
 
             # One variable per field the task consumes. Flat rather than a mapping so a single
             # field can be overridden with -e and an assert can name the one that is missing.
-            $fields = @($script:organizationData[$ruleType]['Required'])
+            $fields = @(
+                # Only a rule that leaves its value to the organization declares one.
+                if ($rule.OrganizationValueRequired -eq $true) {
+                    $script:organizationData[$ruleType]['Required']
+                }
 
-            # No org settings attribute feeds the IIS log path, so it is declared blank by
-            # design for the site to fill in; the task already references it.
-            if ($ruleType -eq 'IisLogging') { $fields += 'LogPath' }
+                # The IIS log path is the other way round: no org settings attribute feeds it,
+                # so every IisLogging rule declares it blank for the site to fill in. The task
+                # references it whether or not the rule's other values are organization values,
+                # and a reference with no declaration fails the play on an undefined variable.
+                if ($ruleType -eq 'IisLogging') { 'LogPath' }
+            )
 
             foreach ($field in $fields) {
                 $navParams = @{

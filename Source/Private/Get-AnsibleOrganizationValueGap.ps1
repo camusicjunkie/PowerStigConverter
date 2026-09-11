@@ -33,18 +33,19 @@ function Get-AnsibleOrganizationValueGap {
 
     $node = $OrgSetting[$Rule.Id]
 
-    if ($null -eq $node) {
-        [pscustomobject] @{
-            RuleId = $Rule.Id
-            RuleType = $RuleType
-            Field = $script:organizationData[$RuleType]['Required'] -join ', '
-            Reason = 'Missing'
-        }
-        return
-    }
-
+    # One gap per field either way, so Field is always a single field name. Reporting a missing
+    # node as one gap naming every field at once meant the caller had to split that list apart
+    # again to name the variables it guards.
     foreach ($field in $script:organizationData[$RuleType]['Required']) {
-        if ([string]::IsNullOrWhiteSpace($node.$field)) {
+        if ($null -eq $node) {
+            [pscustomobject] @{
+                RuleId = $Rule.Id
+                RuleType = $RuleType
+                Field = $field
+                Reason = 'Missing'
+            }
+        }
+        elseif ([string]::IsNullOrWhiteSpace($node.$field)) {
             [pscustomobject] @{
                 RuleId = $Rule.Id
                 RuleType = $RuleType

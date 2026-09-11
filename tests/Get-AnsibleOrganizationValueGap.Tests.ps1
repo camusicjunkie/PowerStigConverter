@@ -14,19 +14,6 @@ BeforeAll {
         }
     }
 
-    # Builds an org settings map the way Get-PowerStigOrgSetting would, from a node written out
-    # as the org settings file writes it.
-    function New-OrgSetting {
-        param ([string] $Xml)
-
-        [xml] $document = "<OrganizationalSettings>$Xml</OrganizationalSettings>"
-
-        $settings = @{}
-        foreach ($node in $document.OrganizationalSettings.OrganizationalSetting) {
-            $settings[$node.id] = $node
-        }
-        $settings
-    }
 }
 
 Describe 'Get-AnsibleOrganizationValueGap' {
@@ -35,7 +22,7 @@ Describe 'Get-AnsibleOrganizationValueGap' {
 
         It 'reports no gap' {
             $rule = [pscustomobject] @{ Id = 'V-100'; OrganizationValueRequired = $true }
-            $orgSetting = New-OrgSetting '<OrganizationalSetting id="V-100" PolicyValue="15" />'
+            $orgSetting = New-TestOrgSetting '<OrganizationalSetting id="V-100" PolicyValue="15" />'
 
             @(Get-Gap -Rule $rule -RuleType AccountPolicy -OrgSetting $orgSetting).Count | Should-Be 0
         }
@@ -47,7 +34,7 @@ Describe 'Get-AnsibleOrganizationValueGap' {
 
         It 'reports it as unanswered, naming the field' {
             $rule = [pscustomobject] @{ Id = 'V-100'; OrganizationValueRequired = $true }
-            $orgSetting = New-OrgSetting '<OrganizationalSetting id="V-100" PolicyValue="" />'
+            $orgSetting = New-TestOrgSetting '<OrganizationalSetting id="V-100" PolicyValue="" />'
 
             $gap = @(Get-Gap -Rule $rule -RuleType AccountPolicy -OrgSetting $orgSetting)
 
@@ -60,7 +47,7 @@ Describe 'Get-AnsibleOrganizationValueGap' {
 
         It 'treats whitespace as unanswered, since it is no more an answer than an empty string' {
             $rule = [pscustomobject] @{ Id = 'V-100'; OrganizationValueRequired = $true }
-            $orgSetting = New-OrgSetting '<OrganizationalSetting id="V-100" PolicyValue="   " />'
+            $orgSetting = New-TestOrgSetting '<OrganizationalSetting id="V-100" PolicyValue="   " />'
 
             @(Get-Gap -Rule $rule -RuleType AccountPolicy -OrgSetting $orgSetting).Reason |
                 Should-Be 'Unanswered'
@@ -88,7 +75,7 @@ Describe 'Get-AnsibleOrganizationValueGap' {
 
         It 'reports the blank field when the designated one is filled in' {
             $rule = [pscustomobject] @{ Id = 'V-248'; OrganizationValueRequired = $true }
-            $orgSetting = New-OrgSetting '<OrganizationalSetting id="V-248" ServiceName="WinDefend" StartupType="" />'
+            $orgSetting = New-TestOrgSetting '<OrganizationalSetting id="V-248" ServiceName="WinDefend" StartupType="" />'
 
             $gap = @(Get-Gap -Rule $rule -RuleType Service -OrgSetting $orgSetting)
 
@@ -98,7 +85,7 @@ Describe 'Get-AnsibleOrganizationValueGap' {
 
         It 'reports every blank field, not just the first' {
             $rule = [pscustomobject] @{ Id = 'V-248'; OrganizationValueRequired = $true }
-            $orgSetting = New-OrgSetting '<OrganizationalSetting id="V-248" ServiceName="" StartupType="" />'
+            $orgSetting = New-TestOrgSetting '<OrganizationalSetting id="V-248" ServiceName="" StartupType="" />'
 
             @(Get-Gap -Rule $rule -RuleType Service -OrgSetting $orgSetting).Field |
                 Should-BeCollection @('ServiceName', 'StartupType')
@@ -108,7 +95,7 @@ Describe 'Get-AnsibleOrganizationValueGap' {
         # empty, so requiring it would refuse a conversion that has everything it needs.
         It 'does not require a field the task treats as optional' {
             $rule = [pscustomobject] @{ Id = 'V-300'; OrganizationValueRequired = $true }
-            $orgSetting = New-OrgSetting ('<OrganizationalSetting id="V-300" LogFlags="Date,Time" ' +
+            $orgSetting = New-TestOrgSetting ('<OrganizationalSetting id="V-300" LogFlags="Date,Time" ' +
                 'LogFormat="W3C" LogPeriod="Daily" LogTargetW3C="File,ETW" LogCustomFieldEntry="" />')
 
             @(Get-Gap -Rule $rule -RuleType IisLogging -OrgSetting $orgSetting).Count | Should-Be 0

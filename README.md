@@ -220,8 +220,8 @@ loses the tag.
   and `WebConfigurationProperty` are the bulk of the uncovered code
 - `New-AnsibleRootCertificateTask` discards the `LocalMachine` segment of a certificate store
   path and relies on `win_certificate_info`'s `store_location` default
-- `New-AnsibleServiceTask` and `New-AnsibleRootCertificateTask` name their `register:` from a
-  hardcoded `server_2022_stig_` prefix rather than deriving it from the STIG
+- No fixture STIG carries a `Service` or `RootCertificate` rule, so neither generator has
+  end-to-end coverage through `New-AnsiblePlaybook`
 
 ## Authors and acknowledgment
 

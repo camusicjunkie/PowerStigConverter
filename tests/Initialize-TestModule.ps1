@@ -38,3 +38,22 @@ if (-not $built -or $built.LastWriteTimeUtc -lt $newestSource.LastWriteTimeUtc) 
 }
 
 Import-Module -Name $built.FullName -Force
+
+<#
+.SYNOPSIS
+    Builds an org settings map the way Get-PowerStigOrgSetting does, from inline xml.
+.DESCRIPTION
+    Lets a test state the exact OrganizationalSetting it is about - answered, blank, or absent
+    entirely - without adding a fixture STIG for every shape.
+#>
+function New-TestOrgSetting {
+    param ([string] $Xml)
+
+    [xml] $document = "<OrganizationalSettings>$Xml</OrganizationalSettings>"
+
+    $settings = @{}
+    foreach ($node in $document.OrganizationalSettings.OrganizationalSetting) {
+        $settings[$node.id] = $node
+    }
+    $settings
+}
