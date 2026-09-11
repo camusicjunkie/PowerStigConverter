@@ -19,8 +19,8 @@ function New-AnsibleIisLoggingTask {
 
             $navParams = @{ TaskId = $rule.Id; StigName = $StigName }
 
-            $organizationValue = Resolve-AnsibleOrganizationValue -Rule $rule -RuleType 'IisLogging' -StigName $StigName -OrganizationalSetting $OrganizationalSetting
-            $logging = $organizationValue.Value
+            $resolution = Resolve-AnsibleOrganizationValue -Rule $rule -RuleType 'IisLogging' -StigName $StigName -OrganizationalSetting $OrganizationalSetting
+            $logging = $resolution.Value
             $logFlags = $logging.LogFlags
             $logFormat = $logging.LogFormat
             $logPeriod = $logging.LogPeriod
@@ -62,7 +62,7 @@ function New-AnsibleIisLoggingTask {
 
             @{
                 Rule = $rule
-                Task = Add-AnsibleOrganizationValueAssert -Task $task -OrganizationValue $organizationValue
+                Task = Add-AnsibleOrganizationValueAssert -Task $task -Resolution $resolution
             }
         }
     }

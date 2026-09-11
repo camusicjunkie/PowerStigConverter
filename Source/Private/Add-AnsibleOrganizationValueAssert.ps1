@@ -15,16 +15,17 @@ function Add-AnsibleOrganizationValueAssert {
         [Parameter(Mandatory)]
         [object] $Task,
 
-        # A rule resolved by Resolve-AnsibleOrganizationValue.
+        # One rule as Resolve-AnsibleOrganizationValue resolved it - the whole record, not just
+        # its Value.
         [Parameter(Mandatory)]
-        [object] $OrganizationValue
+        [object] $Resolution
     )
 
-    if ($null -eq $OrganizationValue.Assert) { return $Task }
+    if ($null -eq $Resolution.Assert) { return $Task }
 
     $block = [ordered] @{
         'name' = $Task.name
-        'block' = @($OrganizationValue.Assert, $Task)
+        'block' = @($Resolution.Assert, $Task)
     }
     if ($Task.Contains('when')) { $block['when'] = $Task['when'] }
 

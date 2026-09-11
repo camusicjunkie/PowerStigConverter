@@ -25,14 +25,14 @@ function Export-AnsibleOrganizationValue {
             # A duplicate produces no task, so a variable for it would guard nothing.
             if (-not [string]::IsNullOrEmpty($rule.DuplicateOf)) { continue }
 
-            $resolved = Resolve-AnsibleOrganizationValue -Rule $rule -RuleType $ruleType `
+            $resolution = Resolve-AnsibleOrganizationValue -Rule $rule -RuleType $ruleType `
                 -StigName $StigName -OrganizationalSetting $OrganizationalSetting
 
             $declarations = @(
                 # One declaration per organization variable the rule needs - flat rather than a
                 # mapping, so a single field can be overridden with -e and an assert can name the
                 # one that is unanswered.
-                foreach ($variable in $resolved.Variable) { $variable.Declaration }
+                foreach ($variable in $resolution.Variable) { $variable.Declaration }
 
                 # The IIS log path is the other way round: no org settings attribute feeds it, so
                 # it is not an organization value and never appears among them. Every IisLogging

@@ -18,8 +18,8 @@ function New-AnsibleSecurityOptionTask {
             $navParams = @{ TaskId = $rule.Id; TaskName = $rule.OptionName; StigName = $StigName }
             $optionName = $rule.OptionName -replace '/|\s', '_' -replace ':'
 
-            $organizationValue = Resolve-AnsibleOrganizationValue -Rule $rule -RuleType 'SecurityOption' -StigName $StigName -OrganizationalSetting $OrganizationalSetting
-            $optionValue = $organizationValue.Value
+            $resolution = Resolve-AnsibleOrganizationValue -Rule $rule -RuleType 'SecurityOption' -StigName $StigName -OrganizationalSetting $OrganizationalSetting
+            $optionValue = $resolution.Value
 
             $task = [ordered] @{
                 'name' = '{0} | {1} | {2}' -f $rule.Id, $rule.Severity.ToUpper(), $rule.OptionName
@@ -35,7 +35,7 @@ function New-AnsibleSecurityOptionTask {
 
             @{
                 Rule = $rule
-                Task = Add-AnsibleOrganizationValueAssert -Task $task -OrganizationValue $organizationValue
+                Task = Add-AnsibleOrganizationValueAssert -Task $task -Resolution $resolution
             }
         }
     }

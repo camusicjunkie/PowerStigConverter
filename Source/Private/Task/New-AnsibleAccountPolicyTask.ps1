@@ -18,8 +18,8 @@ function New-AnsibleAccountPolicyTask {
             $navParams = @{ TaskId = $rule.Id; TaskName = $rule.PolicyName; StigName = $StigName }
             $policyName = $rule.PolicyName -replace '/|\s', '_' -replace ':'
 
-            $organizationValue = Resolve-AnsibleOrganizationValue -Rule $rule -RuleType 'AccountPolicy' -StigName $StigName -OrganizationalSetting $OrganizationalSetting
-            $policyValue = $organizationValue.Value
+            $resolution = Resolve-AnsibleOrganizationValue -Rule $rule -RuleType 'AccountPolicy' -StigName $StigName -OrganizationalSetting $OrganizationalSetting
+            $policyValue = $resolution.Value
             $parsedPolicyValue = if ([int32]::TryParse($policyValue, [ref] $null)) { [int] $policyValue } else { $policyValue }
 
             $task = [ordered] @{
@@ -36,7 +36,7 @@ function New-AnsibleAccountPolicyTask {
 
             @{
                 Rule = $rule
-                Task = Add-AnsibleOrganizationValueAssert -Task $task -OrganizationValue $organizationValue
+                Task = Add-AnsibleOrganizationValueAssert -Task $task -Resolution $resolution
             }
         }
     }
