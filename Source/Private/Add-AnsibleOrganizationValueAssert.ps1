@@ -15,25 +15,16 @@ function Add-AnsibleOrganizationValueAssert {
         [Parameter(Mandatory)]
         [object] $Task,
 
+        # A rule resolved by Resolve-AnsibleOrganizationValue.
         [Parameter(Mandatory)]
-        [object] $Rule,
-
-        [Parameter(Mandatory)]
-        [ValidateSet('AccountPolicy', 'IisLogging', 'Registry', 'RootCertificate', 'SecurityOption', 'Service', 'UserRight')]
-        [string] $RuleType,
-
-        [Parameter(Mandatory)]
-        [string] $StigName,
-
-        [hashtable] $OrgSetting = @{}
+        [object] $OrganizationValue
     )
 
-    $assert = New-AnsibleOrganizationValueAssert -Rule $Rule -RuleType $RuleType -StigName $StigName -OrgSetting $OrgSetting
-    if ($null -eq $assert) { return $Task }
+    if ($null -eq $OrganizationValue.Assert) { return $Task }
 
     $block = [ordered] @{
         'name' = $Task.name
-        'block' = @($assert, $Task)
+        'block' = @($OrganizationValue.Assert, $Task)
     }
     if ($Task.Contains('when')) { $block['when'] = $Task['when'] }
 

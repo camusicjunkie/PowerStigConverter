@@ -40,22 +40,23 @@ function New-AnsiblePlaybook {
     # Read the org settings once and hand the same map to the check, the generators and the
     # exporter. It used to be re-read and re-parsed once per rule from two places, which left
     # nowhere to judge the inputs complete before writing anything.
-    $orgSetting = Get-PowerStigOrgSetting -StigName $StigName -Path $Path
+    $organizationalSetting = Get-PowerStigOrgSetting -StigName $StigName -Path $Path
 
     # A value DISA leaves to the adopting organization is an outstanding decision, not a data
     # error. Refuse to write a role that would silently set an empty value, and do it before
     # New-AnsibleRoleScaffold puts anything on disk, so a refused conversion leaves no trace.
-    $gaps = @(foreach ($ruleGroup in $rules) {
+    $incomplete = @(foreach ($ruleGroup in $rules) {
         $ruleType = $ruleGroup.PowerStigRule -replace 'Rule'
         if (-not $script:organizationData.ContainsKey($ruleType)) { continue }
 
         foreach ($rule in $ruleGroup.StigRule) {
-            Get-AnsibleOrganizationValueGap -Rule $rule -RuleType $ruleType -OrgSetting $orgSetting
+            (Resolve-AnsibleOrganizationValue -Rule $rule -RuleType $ruleType `
+                -StigName $StigName -OrganizationalSetting $organizationalSetting).Incomplete
         }
     })
 
-    if ($gaps.Count -gt 0) {
-        $message = Format-AnsibleOrganizationValueGap -Gap $gaps -StigName $StigName
+    if ($incomplete.Count -gt 0) {
+        $message = Format-AnsibleIncompleteOrganizationValue -Variable $incomplete -StigName $StigName
 
         if (-not $AllowIncompleteOrganizationValue) {
             $exception = [System.InvalidOperationException]::new($message)
@@ -63,7 +64,7 @@ function New-AnsiblePlaybook {
                 $exception,
                 'IncompleteOrganizationValue',
                 [System.Management.Automation.ErrorCategory]::InvalidData,
-                $gaps
+                $incomplete
             ))
         }
 
@@ -77,7 +78,7 @@ function New-AnsiblePlaybook {
     # toggles from the generated tasks rather than from the rule list is what keeps the two in
     # step: rules the generators skip - duplicates, and rule types with no generator - produce
     # no task, and so can no longer leave a toggle behind in defaults/ that guards nothing.
-    $tasks = $rules | ConvertTo-AnsiblePlaybook -StigName $StigName -StigId $stigId -OrgSetting $orgSetting
+    $tasks = $rules | ConvertTo-AnsiblePlaybook -StigName $StigName -StigId $stigId -OrganizationalSetting $organizationalSetting
 
     $tasks | Export-AnsibleTaskBySeverity -OutputPath $role.TaskPath
     $tasks | Export-AnsibleConditionalValue -StigName $StigName -OutputPath $role.DefaultPath
@@ -85,7 +86,7 @@ function New-AnsiblePlaybook {
     # Every rule type goes through the exporter now that all of them reach the role through a
     # variable. It used to exclude RootCertificate and Service by name and filter the rest on
     # OrganizationValueRequired, which is the filter the two write-backs existed to steer.
-    $rules | Export-AnsibleOrganizationValue -StigName $StigName -OrgSetting $orgSetting -OutputPath $role.DefaultPath
+    $rules | Export-AnsibleOrganizationValue -StigName $StigName -OrganizationalSetting $organizationalSetting -OutputPath $role.DefaultPath
 
     $role
 }

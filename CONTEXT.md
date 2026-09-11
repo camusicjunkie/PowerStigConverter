@@ -56,6 +56,14 @@ A rule that requires an organization value for which the org settings file carri
 settings file does not match the STIG version in hand.
 _Avoid_: blank value, null setting
 
+**Incomplete organization value**:
+The collective for the two above — an organization value the org settings file does not answer,
+whether because the setting is unanswered or because it is missing. It is the thing
+`New-AnsiblePlaybook` refuses on, and it already names the public
+`-AllowIncompleteOrganizationValue` switch and the `IncompleteOrganizationValue` error id. Name
+the individual fault where the remedy matters, and this where it does not.
+_Avoid_: gap
+
 ### Generated role
 
 **Task generator**:

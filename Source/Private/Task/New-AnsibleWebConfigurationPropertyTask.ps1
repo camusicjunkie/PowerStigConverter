@@ -7,7 +7,7 @@ function New-AnsibleWebConfigurationPropertyTask {
         [Parameter(Mandatory)]
         [string] $StigName,
 
-        [hashtable] $OrgSetting = @{},
+        [hashtable] $OrganizationalSetting = @{},
 
         [string] $StigId
     )

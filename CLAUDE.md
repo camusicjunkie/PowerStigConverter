@@ -37,6 +37,12 @@ generated role as variables in `defaults/`, never as literals. `New-AnsiblePlayb
 convert while any of them is unanswered; `-AllowIncompleteOrganizationValue` overrides that. See
 `CONTEXT.md` for the vocabulary and `docs/adr/0001`–`0003` for why.
 
+Every question about a rule's organization values is answered by one function,
+`Resolve-AnsibleOrganizationValue` — the value the task consumes, the variables `defaults/`
+declares, the ones the org settings file leaves unanswered, and the assert guarding those.
+`OrganizationData.psd1` is read only from there, so adding a rule type is one edit in one file.
+See `docs/adr/0004`.
+
 ## Agent skills
 
 ### Issue tracker

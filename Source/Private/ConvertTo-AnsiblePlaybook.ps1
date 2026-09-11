@@ -6,7 +6,7 @@ function ConvertTo-AnsiblePlaybook {
 
         [string] $StigName,
 
-        [hashtable] $OrgSetting = @{},
+        [hashtable] $OrganizationalSetting = @{},
 
         [string] $StigId
     )
@@ -14,7 +14,7 @@ function ConvertTo-AnsiblePlaybook {
     begin {
         $natParams = @{
             StigName = $StigName
-            OrgSetting = $OrgSetting
+            OrganizationalSetting = $OrganizationalSetting
             ErrorAction = 'Stop'
         }
     }
