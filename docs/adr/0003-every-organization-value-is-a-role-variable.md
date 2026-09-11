@@ -46,3 +46,10 @@ regeneration once the org settings file is filled in.
 `IisLogging`'s `LogPath` is the other way round and was already correct: no org settings attribute
 feeds it, so it is a blank organization variable by design, declared in `defaults/` and referenced
 by the task, for the site to fill in.
+
+> **Amended by [ADR-0004](0004-one-function-answers-every-organization-value-question.md).** Calling
+> `LogPath` an *organization variable* contradicts `CONTEXT.md`, which defines one as holding an
+> organization value — and no org settings attribute feeds `LogPath`, as this paragraph itself says.
+> ADR-0004 resolves the contradiction the other way: it is a role variable the site fills in, not an
+> organization variable, and it is declared outside the organization value machinery. Everything
+> else in this paragraph — blank by design, declared in `defaults/`, referenced by the task — stands.

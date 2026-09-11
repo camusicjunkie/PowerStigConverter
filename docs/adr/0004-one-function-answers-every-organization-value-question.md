@@ -30,18 +30,25 @@ declarations. Four functions where there were eight, and the clump in one signat
 
 ## Consequences
 
-- `OrganizationData.psd1` is read from one function, so what a rule type needs and what each of
-  its fields is called is one edit in one file. `-RuleType` validates against that file's keys
-  rather than a copied `ValidateSet`, so a new rule type does not need a second edit to be
-  accepted.
+- A rule type's *fields* — what it needs and what each one is called — are read out of
+  `OrganizationData.psd1` in one function, so that is one edit in one file. Two callers still
+  test the same file for **membership** (`ContainsKey`, to skip rule types it says nothing about),
+  which is a different question and stays where the skipping happens. `-RuleType` validates
+  against the file's keys rather than a copied `ValidateSet`. All three adapt on their own, so
+  adding a rule type needs no second edit.
 - The declaration in `defaults/`, the reference the task interpolates and the assert that guards
   it are three properties of the same resolved variable rather than three functions agreeing, so
   they cannot drift apart.
 - Tests cross the same seam callers do — the four properties — rather than testing eight
   implementation pieces. The generated role is unchanged: this is a restructuring, and the
   output files are byte for byte what they were.
-- The IIS log path is no longer handled alongside organization values. No org settings attribute
-  feeds it, so it is not one; `Export-AnsibleOrganizationValue` declares it directly, from the
-  same task name `New-AnsibleIisLoggingTask` builds its reference from. See ADR-0003.
+- **This amends the last paragraph of [ADR-0003](0003-every-organization-value-is-a-role-variable.md),
+  which called the IIS log path "a blank organization variable by design".** That contradicts
+  `CONTEXT.md`, where an *organization variable* is one holding an organization value, and no org
+  settings attribute feeds the log path. It is a role variable the site fills in, not an
+  organization variable, so it is no longer handled alongside organization values:
+  `Export-AnsibleOrganizationValue` declares it directly, from the same task name
+  `New-AnsibleIisLoggingTask` builds its reference from. The generated output is unchanged — it is
+  the same variable, declared the same way, under a name the glossary can carry.
 - `Get-PowerStigOrgSetting` now fails the way the rest of the feature does — a terminating error
   with an id and a `TargetObject` — rather than with a bare `throw`. See ADR-0002.
