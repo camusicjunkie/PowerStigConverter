@@ -80,9 +80,16 @@ function Resolve-AnsibleOrganizationValue {
                 #
                 # An unanswered or missing setting has no default, which is what declares the
                 # variable blank for the operator to fill in.
+                #
+                # The unary comma on the list branch is load-bearing: PowerShell enumerates an
+                # array written to the output stream, so a one-element split would arrive here as
+                # a bare string and New-AnsibleVariable, which decides on -is [array], would write
+                # it as a plain scalar instead of a yaml sequence. A single-identity UserRight and
+                # a LogTargetW3C of just File are both common, so this is the usual case, not the
+                # edge one.
                 $default = if ($status -ne 'Answered') { $null }
                     elseif ($RuleType -eq 'RootCertificate' -and $field -eq 'Location') { Split-Path -Path $node.$field -Leaf }
-                    elseif ($data['List'] -contains $field) { [string[]] ($node.$field -split ',') }
+                    elseif ($data['List'] -contains $field) { , ($node.$field -split ',') }
                     else { $node.$field }
 
                 $navParams = @{ TaskId = $Rule.Id; TaskName = $taskName; StigName = $StigName }
@@ -159,17 +166,18 @@ function Resolve-AnsibleOrganizationValue {
     }
     elseif ($RuleType -eq 'IisLogging') {
         [pscustomobject] @{
-            LogFlags = if ($Rule.LogFlags) { [string[]] ($Rule.LogFlags -split ',') }
+            LogFlags = if ($Rule.LogFlags) { , ($Rule.LogFlags -split ',') }
             LogFormat = $Rule.LogFormat
             LogPeriod = $Rule.LogPeriod
-            LogTarget = if ($Rule.LogTargetW3C) { [string[]] ($Rule.LogTargetW3C -split ',') }
+            LogTarget = if ($Rule.LogTargetW3C) { , ($Rule.LogTargetW3C -split ',') }
             LogCustomFields = $Rule.LogCustomFieldEntry
         }
     }
     # A field the task needs as a list is split here rather than in the generator, so that both
-    # halves of this hand back the same shape.
+    # halves of this hand back the same shape. The unary comma keeps a one-element split an
+    # array - see the note on $default above.
     elseif ($data['List'] -contains $data['Value']) {
-        [string[]] ($Rule.($data['Value']) -split ',')
+        , ($Rule.($data['Value']) -split ',')
     }
     else { $Rule.($data['Value']) }
 

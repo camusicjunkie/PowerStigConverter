@@ -50,7 +50,7 @@ Describe 'Resolve-AnsibleOrganizationValue: the value the task consumes' {
     # Some STIG settings are expressed as Enabled or Disabled, but win_security_policy wants the
     # number the policy actually takes. The lookup tables in SecurityOptionData.psd1 and
     # AccountPolicyData.psd1 hold that mapping, keyed by the value the rule asks for.
-    Context 'a setting expressed as Enabled or Disabled' {
+    Context 'a rule whose value is expressed as Enabled or Disabled' {
 
         It 'maps <OptionValue> to <Expected>' -ForEach @(
             @{ OptionValue = 'Enabled'; Expected = 1 }
@@ -89,7 +89,7 @@ Describe 'Resolve-AnsibleOrganizationValue: the value the task consumes' {
         }
     }
 
-    Context 'a setting that carries its own value' {
+    Context 'a rule that carries its own value' {
 
         It 'passes the value straight through' {
             $rule = [pscustomobject] @{
@@ -106,7 +106,7 @@ Describe 'Resolve-AnsibleOrganizationValue: the value the task consumes' {
     # These two types are reported as an object rather than a scalar, because the task needs
     # more than one field from them. The property names are the contract the matching task
     # generator reads, so they are pinned here.
-    Context 'settings made of more than one field' {
+    Context 'rule types whose task needs more than one field' {
 
         It 'reports a service as its name and startup type' {
             $rule = [pscustomobject] @{
@@ -144,10 +144,10 @@ Describe 'Resolve-AnsibleOrganizationValue: the value the task consumes' {
         }
     }
 
-    # Where the STIG leaves the value to the implementing site, the task cannot hardcode it.
-    # It gets a reference to a role variable instead, and the value the org settings file holds
-    # becomes that variable's default.
-    Context 'a setting the site has to decide' {
+    # Where DISA leaves the value to the adopting organization, the task cannot hardcode it. It
+    # gets a reference to an organization variable instead, and the value the org settings file
+    # holds becomes that variable's default.
+    Context 'a value the organization decides' {
 
         It 'renders a reference to the role variable rather than a literal' {
             # Matches V-201 in the WindowsClient-11 fixture, whose org settings set it to 15.
@@ -166,12 +166,12 @@ Describe 'Resolve-AnsibleOrganizationValue: the value the task consumes' {
     }
 
     # An unanswered setting normally stops the conversion before a task is built - see
-    # New-AnsiblePlaybook - so a generator only sees one when the caller asked for blanks on
-    # purpose. The reference is still emitted: the variable is declared blank in defaults/, an
+    # New-AnsiblePlaybook - so a generator only sees one when the caller asked to generate anyway.
+    # The reference is still emitted: the variable is declared with no value in defaults/, an
     # assert guards it, and the operator finishes the role by filling that one file in rather
     # than regenerating. Returning nothing instead is what used to leave defaults/ declaring a
     # variable that no task referenced.
-    Context 'a setting the organization has not answered yet' {
+    Context 'an organization value nobody has answered yet' {
 
         It 'still references the variable, so filling defaults/ in finishes the role' {
             # Matches V-202 in the fixture, whose org settings value is deliberately empty.
@@ -207,7 +207,7 @@ Describe 'Resolve-AnsibleOrganizationValue: the value the task consumes' {
     # the resolution hand back the same shape, and so the generator never has to split a value
     # that might be a variable reference - '{{ x }}' -split ',' is a one element list, which is
     # what used to reach win_user_right for an org-valued identity.
-    Context 'a setting the task needs as a list' {
+    Context 'a value the task needs as a list' {
 
         It 'splits an identity list the rule carries itself' {
             $rule = [pscustomobject] @{
@@ -220,6 +220,38 @@ Describe 'Resolve-AnsibleOrganizationValue: the value the task consumes' {
             $identity = (Resolve-OrgValue -Rule $rule -RuleType UserRight).Value
 
             $identity -join '|' | Should-Be 'Administrators|Authenticated Users'
+        }
+
+        # A one-element list is the usual case, not the edge one - a single-identity UserRight
+        # and a LogTargetW3C of just File are both common - and it is the one PowerShell will
+        # quietly unroll back to a string on the way out of an if. win_user_right then receives
+        # users: as a string rather than a list.
+        It 'keeps a single-valued list a list, rather than unrolling it to a string' {
+            $rule = [pscustomobject] @{
+                Id = 'V-104'
+                DisplayName = 'Access this computer from the network'
+                Identity = 'Administrators'
+                OrganizationValueRequired = $false
+            }
+
+            $identity = (Resolve-OrgValue -Rule $rule -RuleType UserRight).Value
+
+            $identity -is [array] | Should-BeTrue
+            @($identity).Count | Should-Be 1
+        }
+
+        It 'keeps a single-valued IIS log target a list too' {
+            $rule = [pscustomobject] @{
+                Id = 'V-300'
+                LogFlags = 'Date'
+                LogTargetW3C = 'File'
+                OrganizationValueRequired = $false
+            }
+
+            $logging = (Resolve-OrgValue -Rule $rule -RuleType IisLogging -StigName 'IISServer-10.0').Value
+
+            $logging.LogFlags -is [array] | Should-BeTrue
+            $logging.LogTarget -is [array] | Should-BeTrue
         }
 
         It 'hands back one reference for an identity list the organization decides' {
@@ -300,6 +332,22 @@ Describe 'Resolve-AnsibleOrganizationValue: the organization variables it declar
                 Should-Be 'stig_server_2022_104_access_this_computer_from_the_network: [Administrators, Guests]'
         }
 
+        # The same unrolling trap as the value side: a one-element sequence has to stay a
+        # sequence, or defaults/ declares a string and the module receives the wrong shape.
+        It 'declares a single-valued list as a sequence, not a bare scalar' {
+            $rule = [pscustomobject] @{
+                Id = 'V-104'
+                DisplayName = 'Access this computer from the network'
+                OrganizationValueRequired = $true
+            }
+
+            $variable = (Resolve-OrgValue -Rule $rule -RuleType UserRight `
+                -OrganizationalSetting (New-TestOrgSetting '<OrganizationalSetting id="V-104" Identity="Administrators" />')).Variable
+
+            $variable.Declaration |
+                Should-Be 'stig_server_2022_104_access_this_computer_from_the_network: [Administrators]'
+        }
+
         # PowerStig holds Cert:\LocalMachine\Root where win_certificate_info takes a store name
         # of Root.
         It 'reduces a certificate store path to the store name' {
@@ -329,7 +377,7 @@ Describe 'Resolve-AnsibleOrganizationValue: the organization variables it declar
 
 Describe 'Resolve-AnsibleOrganizationValue: the values the org settings file does not answer' {
 
-    Context 'a setting the organization has answered' {
+    Context 'an organization value the org settings file answers' {
 
         It 'reports nothing incomplete' {
             $rule = [pscustomobject] @{ Id = 'V-100'; OrganizationValueRequired = $true }
@@ -342,7 +390,7 @@ Describe 'Resolve-AnsibleOrganizationValue: the values the org settings file doe
 
     # PowerStig ships these blank on purpose: they are policy questions only the adopting
     # organization can answer, and until it does there is no value to write into the role.
-    Context 'a setting that is present but unanswered' {
+    Context 'an unanswered setting' {
 
         It 'reports it as unanswered, naming the field' {
             $rule = [pscustomobject] @{ Id = 'V-100'; OrganizationValueRequired = $true }
@@ -365,7 +413,7 @@ Describe 'Resolve-AnsibleOrganizationValue: the values the org settings file doe
                 Should-Be 'Unanswered'
         }
 
-        It 'declares the variable blank, for the operator to fill in' {
+        It 'declares the variable with no value, for the operator to fill in' {
             $rule = [pscustomobject] @{
                 Id = 'V-100'
                 PolicyName = 'Account lockout duration'
@@ -397,7 +445,7 @@ Describe 'Resolve-AnsibleOrganizationValue: the values the org settings file doe
     # than one, so a service with no startup type passed and produced a half-empty task.
     Context 'a rule type whose task needs more than one field' {
 
-        It 'reports the blank field when the designated one is filled in' {
+        It 'reports the unanswered field when the designated one is filled in' {
             $rule = [pscustomobject] @{ Id = 'V-248'; OrganizationValueRequired = $true }
             $orgSetting = New-TestOrgSetting '<OrganizationalSetting id="V-248" ServiceName="WinDefend" StartupType="" />'
 
@@ -407,7 +455,7 @@ Describe 'Resolve-AnsibleOrganizationValue: the values the org settings file doe
             $incomplete[0].Field | Should-Be 'StartupType'
         }
 
-        It 'reports every blank field, not just the first' {
+        It 'reports every unanswered field, not just the first' {
             $rule = [pscustomobject] @{ Id = 'V-248'; OrganizationValueRequired = $true }
             $orgSetting = New-TestOrgSetting '<OrganizationalSetting id="V-248" ServiceName="" StartupType="" />'
 
@@ -453,7 +501,7 @@ Describe 'Resolve-AnsibleOrganizationValue: the assert guarding an unanswered va
 
     # The conversion normally refuses outright, so these only appear in a role generated with
     # -AllowIncompleteOrganizationValue. They are what stops that role setting an empty value.
-    Context 'a setting nobody has answered' {
+    Context 'an unanswered setting' {
 
         BeforeAll {
             $rule = [pscustomobject] @{
@@ -484,7 +532,7 @@ Describe 'Resolve-AnsibleOrganizationValue: the assert guarding an unanswered va
     # field that is missing rather than the rule as a whole.
     Context 'a multi-field type with one field answered' {
 
-        It 'checks only the field that is blank' {
+        It 'checks only the field that is unanswered' {
             $rule = [pscustomobject] @{ Id = 'V-248'; OrganizationValueRequired = $true }
 
             $assert = (Resolve-OrgValue -Rule $rule -RuleType Service `
@@ -510,7 +558,7 @@ Describe 'Resolve-AnsibleOrganizationValue: the assert guarding an unanswered va
 
     # Only settings unanswered at generation time get one, so the asserts in a role are the list
     # of questions nobody answered and they go away when it is regenerated.
-    Context 'a setting that has been answered' {
+    Context 'an organization value that has been answered' {
 
         It 'builds nothing' {
             $rule = [pscustomobject] @{
