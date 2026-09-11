@@ -9,7 +9,7 @@ function Get-PowerStigOrgSetting {
         XPath query.
 
         Returns an empty map when the file carries no settings; a rule with no entry is a
-        missing setting, which Get-AnsibleOrganizationValueGap reports separately from one that
+        missing setting, which Resolve-AnsibleOrganizationValue reports separately from one that
         is present but unanswered.
     #>
     [CmdletBinding()]
@@ -24,7 +24,17 @@ function Get-PowerStigOrgSetting {
     $orgFile = Get-PowerStigFile -Type Org -Path $Path | Where-Object BaseName -like "$StigName*"
 
     if ($null -eq $orgFile) {
-        throw "No organization settings file was found for '$StigName'. PowerStig ships one '*.org.default.xml' beside each processed STIG."
+        # Same failure style as the completeness check this feeds - an error id a caller can trap
+        # on and the STIG name as the TargetObject, rather than a bare string. See docs/adr/0002.
+        $exception = [System.IO.FileNotFoundException]::new(
+            "No organization settings file was found for '$StigName'. PowerStig ships one '*.org.default.xml' beside each processed STIG."
+        )
+        $PSCmdlet.ThrowTerminatingError([System.Management.Automation.ErrorRecord]::new(
+            $exception,
+            'OrgSettingsFileNotFound',
+            [System.Management.Automation.ErrorCategory]::ObjectNotFound,
+            $StigName
+        ))
     }
 
     [xml] $xmlOrg = Get-Content -Path $orgFile

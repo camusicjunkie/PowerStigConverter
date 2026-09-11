@@ -70,5 +70,14 @@ Describe 'Get-PowerStigOrgSetting' {
             { Get-OrgSetting -StigName 'NotAStig-1.0' -Path $fixtureRoot } |
                 Should -Throw -ExpectedMessage '*NotAStig-1.0*'
         }
+
+        # The same failure style as the completeness check this feeds, so a caller traps both
+        # the same way rather than matching on prose. See docs/adr/0002.
+        It 'carries an error id a caller can trap on' {
+            $refusal = try { Get-OrgSetting -StigName 'NotAStig-1.0' -Path $fixtureRoot } catch { $_ }
+
+            $refusal.FullyQualifiedErrorId | Should-BeLikeString 'OrgSettingsFileNotFound*'
+            $refusal.TargetObject | Should-Be 'NotAStig-1.0'
+        }
     }
 }
