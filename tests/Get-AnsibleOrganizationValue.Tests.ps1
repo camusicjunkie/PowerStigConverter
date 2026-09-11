@@ -120,10 +120,11 @@ Describe 'Get-AnsibleOrganizationValue' {
 
             $logging = Get-OrgValue -Rule $rule -RuleType IisLogging -StigName 'IISServer-10.0'
 
-            $logging.LogFlags | Should-Be 'Date,Time'
+            # LogFlags and LogTargetW3C are lists to the DSC resource, so they arrive split.
+            $logging.LogFlags -join '|' | Should-Be 'Date|Time'
             $logging.LogFormat | Should-Be 'W3C'
             $logging.LogPeriod | Should-Be 'Daily'
-            $logging.LogTarget | Should-Be 'File,ETW'
+            $logging.LogTarget -join '|' | Should-Be 'File|ETW'
             $logging.PSObject.Properties.Name | Should-ContainCollection @('LogCustomFields')
         }
     }
@@ -152,12 +153,14 @@ Describe 'Get-AnsibleOrganizationValue' {
     }
 
     # An unanswered setting normally stops the conversion before it reaches here - see
-    # New-AnsiblePlaybook - so by the time this function sees one, the caller has either been
-    # told or has asked for blanks on purpose. It reports the gap by emitting nothing, and does
-    # not warn a second time about something already reported.
+    # New-AnsiblePlaybook - so this function only sees one when the caller asked for blanks on
+    # purpose. The reference is still emitted: the variable is declared blank in defaults/, an
+    # assert guards it, and the operator finishes the role by filling that one file in rather
+    # than regenerating. Returning nothing instead is what used to leave defaults/ declaring a
+    # variable that no task referenced.
     Context 'a setting the organization has not answered yet' {
 
-        It 'emits nothing for an unanswered setting' {
+        It 'still references the variable, so filling defaults/ in finishes the role' {
             # Matches V-202 in the fixture, whose org settings value is deliberately empty.
             $rule = [pscustomobject] @{
                 Id = 'V-202'
@@ -167,12 +170,11 @@ Describe 'Get-AnsibleOrganizationValue' {
             }
             $orgSetting = Get-OrgSetting -StigName 'WindowsClient-11' -Path $fixtureRoot
 
-            $values = Get-OrgValue -Rule $rule -RuleType AccountPolicy -StigName 'WindowsClient-11' -OrgSetting $orgSetting
-
-            @($values).Count | Should-Be 0
+            Get-OrgValue -Rule $rule -RuleType AccountPolicy -StigName 'WindowsClient-11' -OrgSetting $orgSetting |
+                Should-Be '{{ stig_client_11_202_account_lockout_threshold }}'
         }
 
-        It 'emits nothing for a setting the org settings file has no entry for at all' {
+        It 'references the variable even when the org settings file has no entry at all' {
             $rule = [pscustomobject] @{
                 Id = 'V-999'
                 PolicyName = 'Account lockout threshold'
@@ -181,9 +183,40 @@ Describe 'Get-AnsibleOrganizationValue' {
             }
             $orgSetting = Get-OrgSetting -StigName 'WindowsClient-11' -Path $fixtureRoot
 
-            $values = Get-OrgValue -Rule $rule -RuleType AccountPolicy -StigName 'WindowsClient-11' -OrgSetting $orgSetting
+            Get-OrgValue -Rule $rule -RuleType AccountPolicy -StigName 'WindowsClient-11' -OrgSetting $orgSetting |
+                Should-Be '{{ stig_client_11_999_account_lockout_threshold }}'
+        }
+    }
 
-            @($values).Count | Should-Be 0
+    # Three org values are lists rather than scalars. They are split here so that both halves of
+    # this function hand back the same shape, and so the generator never has to split a value
+    # that might be a variable reference - '{{ x }}' -split ',' is a one element list, which is
+    # what used to reach win_user_right for an org-valued identity.
+    Context 'a setting the task needs as a list' {
+
+        It 'splits an identity list the rule carries itself' {
+            $rule = [pscustomobject] @{
+                Id = 'V-104'
+                DisplayName = 'Access this computer from the network'
+                Identity = 'Administrators,Authenticated Users'
+                OrganizationValueRequired = $false
+            }
+
+            $identity = Get-OrgValue -Rule $rule -RuleType UserRight -StigName 'WindowsServer-2022-MS'
+
+            $identity -join '|' | Should-Be 'Administrators|Authenticated Users'
+        }
+
+        It 'hands back one reference for an identity list the organization decides' {
+            $rule = [pscustomobject] @{
+                Id = 'V-104'
+                DisplayName = 'Access this computer from the network'
+                Identity = ''
+                OrganizationValueRequired = $true
+            }
+
+            Get-OrgValue -Rule $rule -RuleType UserRight -StigName 'WindowsServer-2022-MS' |
+                Should-Be '{{ stig_server_2022_104_access_this_computer_from_the_network }}'
         }
     }
 }

@@ -119,6 +119,32 @@ Tasks are split by rule severity, matching the DISA category system:
 
 Alongside these, the module emits the variables the tasks depend on: organisation-specific values
 that a STIG leaves for the implementing site to decide, and conditional values that vary by host.
+
+Every organisation value reaches the role as a variable in `main_default_org.yml`, one per field
+the task consumes, which the task interpolates rather than inlining. Answering a question the STIG
+leaves open is therefore a one-line edit to that file, not a regeneration.
+
+DISA leaves some of those values blank on purpose, and PowerStig ships them that way. Converting
+a STIG whose org settings file still has an unanswered value **fails**, naming every one of them,
+rather than producing a role that sets an empty value or silently drops the rule:
+
+```powershell
+New-AnsiblePlaybook -StigName WindowsServer-2022-MS
+# The organization settings for 'WindowsServer-2022-MS' do not answer every value the role needs
+# (2 unanswered).
+#
+#   V-63321  AccountPolicy   PolicyValue: left blank for the organization to decide
+#   V-63323  UserRight       Identity: left blank for the organization to decide
+```
+
+A rule the org settings file has no entry for at all is reported separately, because that usually
+means the file does not match the STIG version in hand rather than that anything needs filling in.
+
+`-AllowIncompleteOrganizationValue` generates anyway, for iterating on a part-filled org settings
+file. The unanswered values are declared blank in `main_default_org.yml` and each one gains an
+`ansible.builtin.assert` in the role, so an unfilled value fails the play instead of quietly
+configuring nothing. Those asserts are only generated for values that were unanswered at
+generation time, and disappear when the role is regenerated against a filled-in file.
 `Source/Roles/` holds the scaffolding as a [Plaster](https://github.com/PowerShell/Plaster)
 template, which `New-AnsiblePlaybook` runs to lay out the role directories before writing anything
 into them. `main_task.yml` becomes `tasks/main.yml`: it asserts the target OS, sets a Server Core
@@ -192,12 +218,10 @@ loses the tag.
 - Error handling and relative-path support in `Copy-PowerStigFile`
 - Cover the remaining task generators with tests: `MimeType`, `Permission`, `RootCertificate`
   and `WebConfigurationProperty` are the bulk of the uncovered code
-- Decide what a role should do with an organisation value the site has left blank. Today the
-  task is still emitted with an empty `value:`, and only a warning says which id to fill in —
-  `New-AnsibleRootCertificateTask` skips the rule instead, so the two disagree
-- Stop the task generators writing back to the rule they were handed.
-  `New-AnsibleIisLoggingTask` and `New-AnsibleServiceTask` both set `OrganizationValueRequired`
-  on their input, which makes them non-idempotent over the same object
+- `New-AnsibleRootCertificateTask` discards the `LocalMachine` segment of a certificate store
+  path and relies on `win_certificate_info`'s `store_location` default
+- `New-AnsibleServiceTask` and `New-AnsibleRootCertificateTask` name their `register:` from a
+  hardcoded `server_2022_stig_` prefix rather than deriving it from the STIG
 
 ## Authors and acknowledgment
 

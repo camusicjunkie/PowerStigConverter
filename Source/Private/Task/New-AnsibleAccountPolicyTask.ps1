@@ -7,7 +7,7 @@ function New-AnsibleAccountPolicyTask {
         [Parameter(Mandatory)]
         [string] $StigName,
 
-        [hashtable] $OrgSetting
+        [hashtable] $OrgSetting = @{}
     )
 
     process {
@@ -35,7 +35,7 @@ function New-AnsibleAccountPolicyTask {
 
             @{
                 Rule = $rule
-                Task = $task
+                Task = Add-AnsibleOrganizationValueAssert -Task $task -Rule $rule -RuleType 'AccountPolicy' -StigName $StigName -OrgSetting $OrgSetting
             }
         }
     }

@@ -7,7 +7,7 @@ function New-AnsibleRootCertificateTask {
         [Parameter(Mandatory)]
         [string] $StigName,
 
-        [hashtable] $OrgSetting
+        [hashtable] $OrgSetting = @{}
     )
 
     begin {
@@ -21,13 +21,11 @@ function New-AnsibleRootCertificateTask {
             $baseId = $rule.Id -replace '\.[a-z]$'
             $navParams = @{ TaskId = $baseId; StigName = $StigName }
 
+            # The certificate store is an organization value, so the task interpolates it rather
+            # than naming a store. This rule used to be dropped outright when the value was
+            # blank, which left a STIG requirement silently absent from the role; an unanswered
+            # value now stops the conversion instead, or produces an assert. See docs/adr/0001.
             $location = Get-AnsibleOrganizationValue -Rule $rule -RuleType 'RootCertificate' -StigName $StigName -OrgSetting $OrgSetting
-
-            # The org settings file leaves Location blank for the site to fill in, and
-            # Get-AnsibleOrganizationValue returns nothing when it is still empty. There is no
-            # certificate store to check without it, so skip the rule; Test-PowerStigOrgValue
-            # has already warned which id needs filling in.
-            if ([string]::IsNullOrEmpty($location)) { continue }
 
             $parsedCertificateName = if ($rule.Id -match '\.[a-z]$') {
                 $rule.CertificateName -replace '\s\d$'
@@ -35,24 +33,26 @@ function New-AnsibleRootCertificateTask {
             else {
                 $rule.CertificateName
             }
-            $parsedLocation = Split-Path -Path $location -Leaf
-            $registerName = 'server_2022_stig_{0}_certificate_info' -f ($rule.CertificateName -replace '\s')
+            $registerName = '{0}_{1}_certificate_info' -f (Get-AnsibleVariablePrefix -StigName $StigName), ($baseId -replace 'V-' -replace '[^A-Za-z0-9]+', '_')
 
-            $tasks = [ordered] @{
-                'name' = 'Gather info for {0}' -f $rule.CertificateName
-                'community.windows.win_certificate_info' = [ordered] @{
-                    'store_name' = $parsedLocation
-                    'thumbprint' = $rule.Thumbprint
+            $tasks = @(
+                New-AnsibleOrganizationValueAssert -Rule $rule -RuleType 'RootCertificate' -StigName $StigName -OrgSetting $OrgSetting
+                [ordered] @{
+                    'name' = 'Gather info for {0}' -f $rule.CertificateName
+                    'community.windows.win_certificate_info' = [ordered] @{
+                        'store_name' = $location
+                        'thumbprint' = $rule.Thumbprint
+                    }
+                    'register' = $registerName
                 }
-                'register' = $registerName
-            },
-            [ordered] @{
-                'name' = 'Assert {0} is set to {1}' -f $rule.CertificateName, $location
-                'ansible.builtin.assert' = [ordered] @{
-                    'that' = "$registerName.certificates.issued_by exists"
-                    'fail_msg' = '{0} does not exist in the {1} certificate store' -f $rule.CertificateName, $parsedLocation
+                [ordered] @{
+                    'name' = 'Assert {0} is set to {1}' -f $rule.CertificateName, $location
+                    'ansible.builtin.assert' = [ordered] @{
+                        'that' = "$registerName.certificates.issued_by exists"
+                        'fail_msg' = '{0} does not exist in the {1} certificate store' -f $rule.CertificateName, $location
+                    }
                 }
-            }
+            ).Where({ $null -ne $_ })
 
             $groupTask = @{
                 'name' = '{0} | {1} | Assert {2} exists in the appropriate certificate store' -f $baseId, $rule.Severity.ToUpper(), $parsedCertificateName

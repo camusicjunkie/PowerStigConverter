@@ -82,12 +82,10 @@ function New-AnsiblePlaybook {
     $tasks | Export-AnsibleTaskBySeverity -OutputPath $role.TaskPath
     $tasks | Export-AnsibleConditionalValue -StigName $StigName -OutputPath $role.DefaultPath
 
-    $ruleNames.Where({ $_ -notmatch 'RootCertificate|Service' }).Foreach({
-        [pscustomobject] @{
-            PowerStigRule = $_
-            StigRule = $xml.DISASTIG.$_.Rule | Where-Object { $_.OrganizationValueRequired -eq $true }
-        }
-    }) | Export-AnsibleOrganizationValue -StigName $StigName -OrgSetting $orgSetting -OutputPath $role.DefaultPath
+    # Every rule type goes through the exporter now that all of them reach the role through a
+    # variable. It used to exclude RootCertificate and Service by name and filter the rest on
+    # OrganizationValueRequired, which is the filter the two write-backs existed to steer.
+    $rules | Export-AnsibleOrganizationValue -StigName $StigName -OrgSetting $orgSetting -OutputPath $role.DefaultPath
 
     $role
 }

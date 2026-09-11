@@ -18,22 +18,38 @@ function Export-AnsibleOrganizationValue {
         $organization = [System.Collections.SortedList]::new()
     }
     process {
-        $ruleName = $Rule.PowerStigRule -replace 'Rule'
+        $ruleType = $Rule.PowerStigRule -replace 'Rule'
+        if (-not $script:organizationData.ContainsKey($ruleType)) { return }
+
         foreach ($rule in $Rule.StigRule) {
+            if ($rule.OrganizationValueRequired -ne $true) { continue }
+            # A duplicate produces no task, so a variable for it would guard nothing.
+            if (-not [string]::IsNullOrEmpty($rule.DuplicateOf)) { continue }
 
             $node = $OrgSetting[$rule.Id]
 
-            $taskName = if ($ruleName -eq 'IisLogging') { 'logpath' } else { $rule.($organizationData[$ruleName]['Name']) }
-            $nodeValue = if ($ruleName -eq 'IisLogging') { $null } else { $node.($organizationData[$ruleName]['Value']) }
+            # One variable per field the task consumes. Flat rather than a mapping so a single
+            # field can be overridden with -e and an assert can name the one that is missing.
+            $fields = @($script:organizationData[$ruleType]['Required'])
 
-            $navParams = @{
-                TaskId = $rule.id
-                TaskName = $taskName
-                NodeValue = $nodeValue
-                StigName = $StigName
+            # No org settings attribute feeds the IIS log path, so it is declared blank by
+            # design for the site to fill in; the task already references it.
+            if ($ruleType -eq 'IisLogging') { $fields += 'LogPath' }
+
+            foreach ($field in $fields) {
+                $navParams = @{
+                    TaskId = $rule.Id
+                    TaskName = Get-AnsibleOrganizationTaskName -Rule $rule -RuleType $ruleType -Field $field
+                    NodeValue = Get-AnsibleOrganizationDefaultValue -Node $node -RuleType $ruleType -Field $field
+                    StigName = $StigName
+                }
+                $organizationVariable = New-AnsibleVariable @navParams -Type OrganizationValue
+
+                # Sub-rules collapse onto the same variable when they share a field.
+                if (-not $organization.ContainsKey($organizationVariable)) {
+                    $organization.Add($organizationVariable, $organizationVariable)
+                }
             }
-            $organizationVariable = New-AnsibleVariable @navParams -Type OrganizationValue
-            $organization.Add($rule.Id, $organizationVariable)
         }
     }
     end {

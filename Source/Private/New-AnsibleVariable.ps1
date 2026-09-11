@@ -11,7 +11,7 @@ function New-AnsibleVariable {
         [object] $NodeValue,
 
         [Parameter(Mandatory)]
-        [ValidateSet('Conditional', 'ConditionalValue', 'Organization', 'OrganizationValue', 'OrganizationValueGroup')]
+        [ValidateSet('Conditional', 'ConditionalValue', 'Organization', 'OrganizationName', 'OrganizationValue', 'OrganizationValueGroup')]
         [string] $Type,
 
         [Parameter(Mandatory)]
@@ -23,22 +23,46 @@ function New-AnsibleVariable {
     $name = $TaskName.ToLower() -replace '\s', '_' -replace '[^\w]+'
     $base = Get-AnsibleVariablePrefix -StigName $StigName
 
+    # The declaration in defaults/, the reference in tasks/ and the assert that guards it all
+    # have to name the same variable, so they all build that name here.
+    $organizationName = '{0}_{1}_{2}' -f $base, $id, $name
+
     # Org values are STIG text, and some of them (the DoD legal notice above all) contain a
     # colon followed by a space, which yaml reads as a nested mapping and which would make the
     # defaults file unparseable. Quote anything that cannot stand as a plain scalar, and leave
     # everything else alone so numbers keep being numbers.
-    $quotedNodeValue = if ($NodeValue -is [string] -and $NodeValue -match ':\s|^\s|\s$|^[#&*!|>%@`]') {
-        "'{0}'" -f ($NodeValue -replace "'", "''")
+    $quote = {
+        param ($Value, [switch] $InSequence)
+
+        # Inside a flow sequence a comma and a closing bracket end the element, so those need
+        # quoting too; a plain scalar can hold both without any help.
+        $unsafe = if ($InSequence) { ':\s|^\s|\s$|,|]|^[#&*!|>%@`\[]' } else { ':\s|^\s|\s$|^[#&*!|>%@`\[\]]' }
+
+        if ($Value -is [string] -and $Value -match $unsafe) {
+            "'{0}'" -f ($Value -replace "'", "''")
+        }
+        else {
+            $Value
+        }
+    }
+
+    # A value the task needs as a list is split before it gets here, and is written as a yaml
+    # flow sequence so the whole variable can be interpolated as one. Splitting it on the host
+    # instead would make the shape the module receives depend on a jinja expression no test can
+    # see. See docs/adr/0003.
+    $quotedNodeValue = if ($NodeValue -is [array]) {
+        '[{0}]' -f (($NodeValue | ForEach-Object { & $quote $_ -InSequence }) -join ', ')
     }
     else {
-        $NodeValue
+        & $quote $NodeValue
     }
 
     switch ($Type) {
         'Conditional' { '{0}_{1}_when' -f $base, $id; break }
         'ConditionalValue' { '{0}_{1}_when: true' -f $base, $id; break }
-        'Organization' { '{0} {1}_{2}_{3} {4}' -f '{{', $base, $id, $name, '}}'; break }
-        'OrganizationValue' { "{0}_{1}_{2}: {3}" -f $base, $id, $name, $quotedNodeValue; break }
+        'Organization' { '{0} {1} {2}' -f '{{', $organizationName, '}}'; break }
+        'OrganizationName' { $organizationName; break }
+        'OrganizationValue' { '{0}: {1}' -f $organizationName, $quotedNodeValue; break }
         'OrganizationValueGroup' { "{0}" -f $base; break }
     }
 }

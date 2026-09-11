@@ -328,6 +328,38 @@ Describe 'New-AnsiblePlaybook' {
         }
     }
 
+    # Generating over a part-filled org settings file must not produce a role that quietly sets
+    # an empty value, so the unanswered ones are guarded on the host as well. See docs/adr/0003.
+    Context 'what -AllowIncompleteOrganizationValue produces' {
+
+        BeforeAll {
+            $script:incomplete = New-AnsiblePlaybook -StigName 'WindowsClient-11' -Path $fixtureRoot `
+                -OutputPath (Join-Path $TestDrive 'incomplete') -RoleName 'incomplete_role' `
+                -AllowIncompleteOrganizationValue `
+                -WarningAction SilentlyContinue 6>$null
+
+            $script:incompleteOrg = Get-Content -Path (Join-Path $incomplete.DefaultPath 'main_default_org.yml') -Raw
+            $script:incompleteTasks = Get-Content -Path (Join-Path $incomplete.TaskPath 'cat3.yml') -Raw
+        }
+
+        It 'declares the unanswered variable blank for the operator to fill in' {
+            $incompleteOrg | Should-BeLikeString '*stig_client_11_202_account_lockout_threshold:*'
+        }
+
+        It 'has the task reference it, so filling defaults/ in finishes the role' {
+            # Declaring a variable that no task reads is what made filling it in do nothing.
+            $incompleteTasks | Should-BeLikeString '*{{ stig_client_11_202_account_lockout_threshold }}*'
+        }
+
+        It 'guards it with an assert, so an unfilled value fails the play rather than setting nothing' {
+            $incompleteTasks | Should-BeLikeString '*stig_client_11_202_account_lockout_threshold | default("", true) | length > 0*'
+        }
+
+        It 'does not guard the value that was answered' {
+            $incompleteTasks | Should-NotBeLikeString '*stig_client_11_201_account_lockout_duration | default*'
+        }
+    }
+
     Context 'naming the role' {
 
         It 'names the role after the STIG when no name is given' {

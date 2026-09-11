@@ -7,7 +7,7 @@ function New-AnsibleSecurityOptionTask {
         [Parameter(Mandatory)]
         [string] $StigName,
 
-        [hashtable] $OrgSetting
+        [hashtable] $OrgSetting = @{}
     )
 
     process {
@@ -34,7 +34,7 @@ function New-AnsibleSecurityOptionTask {
 
             @{
                 Rule = $rule
-                Task = $task
+                Task = Add-AnsibleOrganizationValueAssert -Task $task -Rule $rule -RuleType 'SecurityOption' -StigName $StigName -OrgSetting $OrgSetting
             }
         }
     }

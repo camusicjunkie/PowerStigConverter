@@ -7,7 +7,7 @@ function New-AnsibleRegistryTask {
         [Parameter(Mandatory)]
         [string] $StigName,
 
-        [hashtable] $OrgSetting
+        [hashtable] $OrgSetting = @{}
     )
 
     begin {
@@ -46,7 +46,7 @@ function New-AnsibleRegistryTask {
 
                 $item = @{
                     GroupId = $baseId
-                    Task = $task
+                    Task = Add-AnsibleOrganizationValueAssert -Task $task -Rule $rule -RuleType 'Registry' -StigName $StigName -OrgSetting $OrgSetting
                     Output = @{
                         Rule = $rule
                         Name = $parsedValueName
@@ -60,7 +60,7 @@ function New-AnsibleRegistryTask {
                 $item = @{
                     Output = @{
                         Rule = $rule
-                        Task = $task
+                        Task = Add-AnsibleOrganizationValueAssert -Task $task -Rule $rule -RuleType 'Registry' -StigName $StigName -OrgSetting $OrgSetting
                     }
                 }
             }

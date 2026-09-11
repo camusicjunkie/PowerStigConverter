@@ -126,3 +126,30 @@ Describe 'New-AnsibleIisLoggingTask' {
         }
     }
 }
+
+Describe 'New-AnsibleIisLoggingTask idempotency' {
+
+    # The generator used to write OrganizationValueRequired back onto its input purely to steer
+    # a filter in the exporter. That filter is gone, so nothing should mutate the rule and the
+    # same object can go through twice. See docs/adr/0003.
+    Context 'the same rule handed to the generator twice' {
+
+        It 'leaves the rule it was given unchanged' {
+            $rule = New-LoggingRule
+
+            $null = New-LoggingTask -Rule $rule
+
+            $rule.OrganizationValueRequired | Should-Be $false
+        }
+
+        It 'builds the same task the second time' {
+            $rule = New-LoggingRule
+
+            $first = New-LoggingTask -Rule $rule
+            $second = New-LoggingTask -Rule $rule
+
+            $second.name | Should-Be $first.name
+            $second.'ansible.windows.win_dsc'.LogFormat | Should-Be $first.'ansible.windows.win_dsc'.LogFormat
+        }
+    }
+}

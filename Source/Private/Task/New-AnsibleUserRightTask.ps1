@@ -7,7 +7,7 @@ function New-AnsibleUserRightTask {
         [Parameter(Mandatory)]
         [string] $StigName,
 
-        [hashtable] $OrgSetting
+        [hashtable] $OrgSetting = @{}
     )
 
     process {
@@ -23,7 +23,7 @@ function New-AnsibleUserRightTask {
                 'ansible.windows.win_user_right' = [ordered] @{
                     'name' = $rule.Constant
                     'action' = if ($rule.Force -eq 'True') { 'set' } else { 'add' }
-                    'users' = $identity -split ','
+                    'users' = $identity
                 }
                 'when' = New-AnsibleVariable @navParams -Type Conditional
             }
@@ -32,7 +32,7 @@ function New-AnsibleUserRightTask {
 
             @{
                 Rule = $rule
-                Task = $task
+                Task = Add-AnsibleOrganizationValueAssert -Task $task -Rule $rule -RuleType 'UserRight' -StigName $StigName -OrgSetting $OrgSetting
             }
         }
     }

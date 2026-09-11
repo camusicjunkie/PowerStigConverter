@@ -7,7 +7,7 @@ function New-AnsibleWindowsFeatureTask {
         [Parameter(Mandatory)]
         [string] $StigName,
 
-        [hashtable] $OrgSetting
+        [hashtable] $OrgSetting = @{}
     )
 
     process {

@@ -6,7 +6,7 @@ function ConvertTo-AnsiblePlaybook {
 
         [string] $StigName,
 
-        [hashtable] $OrgSetting,
+        [hashtable] $OrgSetting = @{},
 
         [string] $StigId
     )

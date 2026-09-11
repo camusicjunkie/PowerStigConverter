@@ -7,7 +7,7 @@ function New-AnsibleAuditSettingTask {
         [Parameter(Mandatory)]
         [string] $StigName,
 
-        [hashtable] $OrgSetting
+        [hashtable] $OrgSetting = @{}
     )
 
     process {

@@ -7,7 +7,7 @@ function New-AnsibleMimeTypeTask {
         [Parameter(Mandatory)]
         [string] $StigName,
 
-        [hashtable] $OrgSetting,
+        [hashtable] $OrgSetting = @{},
 
         [string] $StigId
     )

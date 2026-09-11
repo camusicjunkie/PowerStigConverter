@@ -30,6 +30,8 @@
         'Name' = 'DisplayName'
         'Value' = 'Identity'
         'Required' = @('Identity')
+        # win_user_right takes a list of identities, so the variable holds one.
+        'List' = @('Identity')
         'Optional' = @()
     }
     'RootCertificate' = @{
@@ -48,6 +50,8 @@
         # LogCustomFieldEntry is genuinely optional - New-AnsibleIisLoggingTask already omits the
         # LogCustomFields property from the DSC task when it is empty.
         'Required' = @('LogFlags', 'LogFormat', 'LogPeriod', 'LogTargetW3C')
+        # The DSC resource takes these two as lists.
+        'List' = @('LogFlags', 'LogTargetW3C')
         'Optional' = @('LogCustomFieldEntry')
     }
 }
