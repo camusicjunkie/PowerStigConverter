@@ -66,5 +66,6 @@ Describe 'the checklist is discoverable' {
 
         $contract | Should-BeLikeString '*the ansible module or DSC resource it emits*'
         $contract | Should-BeLikeString '*a single-valued list stays a list*'
+        $contract | Should-BeLikeString '*reads the rule and nothing else*'
     }
 }

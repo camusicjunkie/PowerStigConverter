@@ -16,6 +16,7 @@
                                                           List key in OrganizationData.psd1
       7. an organization value reaches the task as a      each test file, the generators that
          reference rather than a literal                  call Resolve-AnsibleOrganizationValue
+      8. reads the rule and nothing else                  here
 
     GeneratorCoverage.Tests.ps1 enforces all of it.
 #>
@@ -46,6 +47,7 @@ function Add-GeneratorContractTests {
         Module = $Module
         StigName = $StigName
         ExtraParams = $ExtraParams
+        SourcePath = Join-Path (Split-Path $PSScriptRoot -Parent) "Source/Private/Task/$Generator.ps1"
     })
 
     Context 'the generator contract' {
@@ -84,6 +86,36 @@ function Add-GeneratorContractTests {
             $null = Invoke-Generator -Generator $Generator -Rule $rule -StigName $StigName -ExtraParams $ExtraParams
 
             $rule | ConvertTo-Json -Depth 6 -Compress | Should-Be $before
+        }
+
+        # ADR-0005: the same rule has to convert to the same task wherever it is converted, so a
+        # generator may not ask this machine anything. Baseline first, then the same rule again
+        # with the readers throwing - a generator that consulted one dies on the throw.
+        It 'does not consult the converting machine' -ForEach $case {
+            $baseline = Invoke-Generator -Generator $Generator -Rule (& $Factory) -StigName $StigName -ExtraParams $ExtraParams |
+                ConvertTo-Json -Depth 12 -Compress
+
+            foreach ($reader in 'Test-Path', 'Get-Item', 'Get-ItemProperty', 'Get-ChildItem', 'Get-Content', 'Resolve-Path') {
+                Mock -ModuleName PowerStigConverter -CommandName $reader -MockWith {
+                    throw 'a task generator must not ask the converting machine'
+                }
+            }
+
+            # Proves the mocks are live, so a case that stops reaching the generator fails here
+            # rather than passing on an assertion that can no longer be broken.
+            InModuleScope -ModuleName PowerStigConverter { { Test-Path 'C:\' } | Should-Throw }
+
+            Invoke-Generator -Generator $Generator -Rule (& $Factory) -StigName $StigName -ExtraParams $ExtraParams |
+                ConvertTo-Json -Depth 12 -Compress | Should-Be $baseline
+        }
+
+        # The other half of what ADR-0005 removed, and the half no mock can trap: expanding a
+        # variable resolves it against this machine's environment, not the one the rule describes.
+        It 'does not expand an environment variable against the converting machine' -ForEach $case {
+            $body = Get-Content $SourcePath -Raw
+
+            $body | Should-NotBeLikeString '*ExpandEnvironmentVariables*'
+            $body | Should-NotBeLikeString '*$env:*'
         }
 
         It 'builds the same task the second time' -ForEach $case {
