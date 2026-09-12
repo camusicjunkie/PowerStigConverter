@@ -32,9 +32,8 @@ BeforeAll {
     }
 }
 
-# The certificate store is always an organization value, so every rule of this type takes the
-# organization path. The rule used to be dropped outright when the value was blank, which left a
-# STIG requirement silently absent from the role - see docs/adr/0001.
+# The store is always an organization value, so every rule of this type takes that path.
+# An unanswered one stops the conversion rather than dropping the rule - docs/adr/0001.
 Describe 'New-AnsibleRootCertificateTask' {
 
     Add-GeneratorContractTests -Generator 'New-AnsibleRootCertificateTask' `
@@ -67,10 +66,8 @@ Describe 'New-AnsibleRootCertificateTask' {
 
     Context 'a value the organization decides' {
 
-        # PowerStig holds a store path; win_certificate_info takes the store and its location as
-        # separate parameters. Both are taken at generation time so defaults/ holds the values the
-        # module actually consumes, and the assert's non-empty check is about those values.
-        # See docs/adr/0003.
+        # Both parts are taken at generation time, so defaults/ holds what the module
+        # consumes and the asserts check those values. See docs/adr/0003.
         It 'interpolates a variable for the store and another for its location' {
             $task = Get-RootCertificateTask -Rule (New-RootCertificateRule) -OrganizationalSetting (New-RootStore)
             $gather = ($task.block | Where-Object { $_.Contains('community.windows.win_certificate_info') }).'community.windows.win_certificate_info'

@@ -222,10 +222,8 @@ Describe 'Resolve-AnsibleOrganizationValue: the value the task consumes' {
             $identity -join '|' | Should-Be 'Administrators|Authenticated Users'
         }
 
-        # A one-element list is the usual case, not the edge one - a single-identity UserRight
-        # and a LogTargetW3C of just File are both common - and it is the one PowerShell will
-        # quietly unroll back to a string on the way out of an if. win_user_right then receives
-        # users: as a string rather than a list.
+        # The common case, and the one PowerShell unrolls back to a string on the way out
+        # of an if - win_user_right then gets users: as a string.
         It 'keeps a single-valued list a list, rather than unrolling it to a string' {
             $rule = [pscustomobject] @{
                 Id = 'V-104'
@@ -348,11 +346,8 @@ Describe 'Resolve-AnsibleOrganizationValue: the organization variables it declar
                 Should-Be 'stig_server_2022_104_access_this_computer_from_the_network: [Administrators]'
         }
 
-        # PowerStig answers with one store path; win_certificate_info takes the store and its
-        # location as separate parameters. One answered question, two variables - and the location
-        # used to be thrown away, leaving the module's LocalMachine default to stand in. That was
-        # right by luck for every Cert:\LocalMachine\ store and silently wrong for anything under
-        # Cert:\CurrentUser\, where the role then checked a store the STIG never named.
+        # One answered question, two variables. The location used to be dropped, leaving the
+        # module's LocalMachine default to stand in - wrong under Cert:\CurrentUser\. See #4.
         It 'splits <Path> into a store name and a store location' -ForEach @(
             @{ Path = 'Cert:\LocalMachine\Root'; StoreName = 'Root'; StoreLocation = 'LocalMachine' }
             @{ Path = 'Cert:\LocalMachine\Disallowed'; StoreName = 'Disallowed'; StoreLocation = 'LocalMachine' }
