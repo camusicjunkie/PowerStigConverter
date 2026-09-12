@@ -36,12 +36,6 @@ BeforeAll {
 # always groups even when the id carries no sub-rule suffix.
 Describe 'Build-AnsiblePermissionTask' {
 
-    # The generator asks the filesystem whether the expanded path exists; mocked so the result
-    # does not depend on the machine running the suite. See #8.
-    BeforeAll {
-        InModuleScope -ModuleName PowerStigConverter { Mock Test-Path { $true } }
-    }
-
     Add-GeneratorContractTests -Generator 'Build-AnsiblePermissionTask' `
         -Module 'ansible.windows.win_acl' `
         -Factory { New-PermissionRule }
@@ -95,21 +89,32 @@ Describe 'Build-AnsiblePermissionTask' {
         }
     }
 
-    # Both branches of the Test-Path decision, so the behaviour is pinned before it is changed.
-    Context 'expanding an environment variable in the path' {
+    # Why the raw path rather than the expanded one: see the generator's help.
+    Context 'a path holding an environment variable' {
 
-        It 'sends the expanded path when it exists on the converting machine' {
-            InModuleScope -ModuleName PowerStigConverter { Mock Test-Path { $true } }
-
+        It 'sends it exactly as the STIG wrote it' {
             $task = (Invoke-Generator -Generator 'Build-AnsiblePermissionTask' `
                 -Rule (New-PermissionRule) -StigName 'WindowsServer-2022-MS').Task
 
-            $task.block[0].'ansible.windows.win_acl'.path |
-                Should-Be ([System.Environment]::ExpandEnvironmentVariables('%SystemRoot%\System32\config'))
+            $task.block[0].'ansible.windows.win_acl'.path | Should-Be '%SystemRoot%\System32\config'
         }
 
-        It 'falls back to the unexpanded path when it does not' {
-            InModuleScope -ModuleName PowerStigConverter { Mock Test-Path { $false } }
+        It 'names the task for the same path, so the role reads the way it runs' {
+            $task = (Invoke-Generator -Generator 'Build-AnsiblePermissionTask' `
+                -Rule (New-PermissionRule) -StigName 'WindowsServer-2022-MS').Task
+
+            $task.name | Should-BeLikeString '*%SystemRoot%\System32\config'
+        }
+
+        # The whole point: the same rule converts to the same task wherever it is converted.
+        It 'does not consult the converting machine' {
+            Mock -ModuleName PowerStigConverter -CommandName Test-Path -MockWith {
+                throw 'the generator must not ask the filesystem'
+            }
+
+            # Proves the mock is live, so a case that stops reaching the generator fails here
+            # rather than passing on an assertion that can no longer be broken.
+            InModuleScope -ModuleName PowerStigConverter { { Test-Path 'C:\' } | Should-Throw }
 
             $task = (Invoke-Generator -Generator 'Build-AnsiblePermissionTask' `
                 -Rule (New-PermissionRule) -StigName 'WindowsServer-2022-MS').Task
