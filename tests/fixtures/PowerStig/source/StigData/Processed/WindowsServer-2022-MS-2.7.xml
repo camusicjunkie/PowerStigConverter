@@ -2,13 +2,12 @@
 <!--
   Hand-written fixture standing in for a PowerStig processed STIG file. It mirrors the real
   shape - a DISASTIG element holding one collection per rule type, each rule carrying the
-  elements the matching New-Ansible<Type>Task generator reads - but holds only the handful of
+  elements the matching Build-Ansible<Type>Task adapter reads - but holds only the handful of
   rules the tests need, so the expected output can be written out in full.
 
-  Every rule here has OrganizationValueRequired of False. Rules that require an organisation
-  value are in the WindowsClient-11 fixture instead, because the code path that reads them
-  during task generation ignores the Path it was given and always reads LOCALAPPDATA, which
-  would make any test using them depend on what is on the machine.
+  Every rule here has OrganizationValueRequired of False; the WindowsClient-11 fixture carries
+  the ones that do not, so each file exercises one half of that branch. Nothing stops them
+  sharing a file - the org settings path they used to depend on was fixed by docs/adr/0002.
 
   Severities are spread across high, medium and low so all three cat files get written.
 -->
