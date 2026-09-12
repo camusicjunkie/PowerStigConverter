@@ -21,14 +21,9 @@ function New-AnsibleRootCertificateTask {
             $baseId = $rule.Id -replace '\.[a-z]$'
             $navParams = @{ TaskId = $baseId; StigName = $StigName }
 
-            # The certificate store is an organization value, so the task interpolates it rather
-            # than naming a store. This rule used to be dropped outright when the value was
-            # blank, which left a STIG requirement silently absent from the role; an unanswered
-            # value now stops the conversion instead, or produces an assert. See docs/adr/0001.
+            # The store is an organization value, so the task interpolates it rather than naming
+            # one; win_certificate_info takes its name and location separately. See #4.
             $resolution = Resolve-AnsibleOrganizationValue -Rule $rule -RuleType 'RootCertificate' -StigName $StigName -OrganizationalSetting $OrganizationalSetting
-            # win_certificate_info takes the store and its location separately. Sending only the
-            # store left the location to the module's LocalMachine default, which was right by
-            # luck for every Cert:\LocalMachine\ store and wrong for anything under Cert:\CurrentUser\.
             $store = $resolution.Value
 
             $parsedCertificateName = if ($rule.Id -match '\.[a-z]$') {
