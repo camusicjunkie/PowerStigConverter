@@ -36,6 +36,13 @@ declarations. Four functions where there were eight, and the clump in one signat
   which is a different question and stays where the skipping happens. `-RuleType` validates
   against the file's keys rather than a copied `ValidateSet`. All three adapt on their own, so
   adding a rule type needs no second edit.
+
+  > **Extended, see [#20](https://github.com/camusicjunkie/PowerStigConverter/issues/20).** This
+  > moved a rule type's fields into the file but left its *shape* — scalar, or an object of named
+  > properties — as three branches on `$RuleType` in the resolver. `Shape`, `Derive` and `Empty`
+  > now carry that too, and the resolver has no rule-type branch left. Note `.psd1` is restricted
+  > language: `Import-PowerShellDataFile` rejects `[ordered]`, so ordering that matters is carried
+  > by arrays and the resolver sorts `Shape`'s keys to keep the object reproducible.
 - The declaration in `defaults/`, the reference the task interpolates and the assert that guards
   it are three properties of the same resolved variable rather than three functions agreeing, so
   they cannot drift apart.

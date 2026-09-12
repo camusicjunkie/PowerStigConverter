@@ -266,6 +266,58 @@ Describe 'Resolve-AnsibleOrganizationValue: the value the task consumes' {
     }
 }
 
+Describe 'Resolve-AnsibleOrganizationValue: the shape a rule type declares' {
+
+    # Which rule types need an object rather than a scalar is declared in OrganizationData.psd1,
+    # not branched on in the resolver. See #20.
+    Context 'a rule type that declares a shape' {
+
+        It 'reports <RuleType> with the properties the task reads' -ForEach @(
+            @{ RuleType = 'Service'; Rule = @{ ServiceName = 'WinDefend'; StartupType = 'Automatic' }
+               Expected = @('ServiceName', 'StartupType') }
+            @{ RuleType = 'RootCertificate'; Rule = @{ Location = 'Cert:\LocalMachine\Root' }
+               Expected = @('StoreLocation', 'StoreName') }
+        ) {
+            $rule = [pscustomobject] ($Rule + @{ Id = 'V-1'; OrganizationValueRequired = $false })
+
+            (Resolve-OrgValue -Rule $rule -RuleType $RuleType).Value.PSObject.Properties.Name |
+                Should-BeCollection $Expected
+        }
+
+        # The same object whichever arm built it, so a task generator can read .Value without
+        # knowing whether the organization answered or the rule carried its own value.
+        It 'reports the same properties whether the organization decides or the rule carries it' {
+            $own = [pscustomobject] @{ Id = 'V-1'; ServiceName = 'WinDefend'; StartupType = 'Automatic'; OrganizationValueRequired = $false }
+            $org = [pscustomobject] @{ Id = 'V-1'; OrganizationValueRequired = $true }
+            $orgSetting = New-TestOrgSetting '<OrganizationalSetting id="V-1" ServiceName="WinDefend" StartupType="Automatic" />'
+
+            (Resolve-OrgValue -Rule $own -RuleType Service).Value.PSObject.Properties.Name |
+                Should-BeCollection (Resolve-OrgValue -Rule $org -RuleType Service -OrganizationalSetting $orgSetting).Value.PSObject.Properties.Name
+        }
+
+        It 'orders the properties the same way every run, so the object is reproducible' {
+            $rule = [pscustomobject] @{ Id = 'V-1'; ServiceName = 'WinDefend'; StartupType = 'Automatic'; OrganizationValueRequired = $false }
+
+            $first = (Resolve-OrgValue -Rule $rule -RuleType Service).Value.PSObject.Properties.Name -join ','
+            $second = (Resolve-OrgValue -Rule $rule -RuleType Service).Value.PSObject.Properties.Name -join ','
+
+            $second | Should-Be $first
+        }
+    }
+
+    Context 'a rule type that declares no shape' {
+
+        It 'reports a scalar rather than an object' {
+            $rule = [pscustomobject] @{
+                Id = 'V-100'; PolicyName = 'Maximum password age'
+                PolicyValue = '60'; OrganizationValueRequired = $false
+            }
+
+            (Resolve-OrgValue -Rule $rule -RuleType AccountPolicy).Value | Should-Be '60'
+        }
+    }
+}
+
 Describe 'Resolve-AnsibleOrganizationValue: the organization variables it declares' {
 
     # The declaration in defaults/, the reference the task interpolates and the assert that

@@ -29,6 +29,8 @@
         'Required' = @('Identity')
         # win_user_right takes a list of identities, so the variable holds one.
         'List' = @('Identity')
+        # PowerStig spells 'nobody holds this right' as the string NULL.
+        'Empty' = 'NULL'
     }
     'RootCertificate' = @{
         'Value' = 'Location'
@@ -38,11 +40,26 @@
         'Part' = @{
             'Location' = @('store_name', 'store_location')
         }
+        # How each part is taken out of the path it shares.
+        'Derive' = @{
+            'store_name' = 'Leaf'
+            'store_location' = 'ParentLeaf'
+        }
+        # The task consumes an object, not a scalar. Keys are what the task reads, values are
+        # the part or org node attribute each comes from.
+        'Shape' = @{
+            'StoreName' = 'store_name'
+            'StoreLocation' = 'store_location'
+        }
     }
     'Service' = @{
         'Value' = 'ServiceName'
         # The task names the service and asserts its startup type; neither is optional.
         'Required' = @('ServiceName', 'StartupType')
+        'Shape' = @{
+            'ServiceName' = 'ServiceName'
+            'StartupType' = 'StartupType'
+        }
     }
     'IisLogging' = @{
         'Value' = 'LogFlags'
@@ -52,5 +69,14 @@
         'Required' = @('LogFlags', 'LogFormat', 'LogPeriod', 'LogTargetW3C')
         # The DSC resource takes these two as lists.
         'List' = @('LogFlags', 'LogTargetW3C')
+        # LogTarget and LogCustomFields are what the task reads; the org node calls them
+        # LogTargetW3C and LogCustomFieldEntry.
+        'Shape' = @{
+            'LogFlags' = 'LogFlags'
+            'LogFormat' = 'LogFormat'
+            'LogPeriod' = 'LogPeriod'
+            'LogTarget' = 'LogTargetW3C'
+            'LogCustomFields' = 'LogCustomFieldEntry'
+        }
     }
 }
