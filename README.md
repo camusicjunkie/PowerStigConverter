@@ -214,10 +214,6 @@ it from the default run. There are none at present, so a clean run currently mea
 says. As a defect is fixed its test moves into the file for the function it belongs to and
 loses the tag.
 
-## Roadmap
-
-- Error handling and relative-path support in `Copy-PowerStigFile`
-
 ## Authors and acknowledgment
 
 John Steele
