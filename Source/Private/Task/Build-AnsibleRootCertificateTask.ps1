@@ -6,16 +6,16 @@ function Build-AnsibleRootCertificateTask {
     param ($Rule, $StigName, $StigId, $Resolution)
 
     $store = $Resolution.Value
-    $baseId = $Rule.Id -replace '\.[a-z]$'
+    $baseId = Get-PowerStigBaseRuleId -Id $Rule.Id
 
-    $parsedCertificateName = if ($Rule.Id -match '\.[a-z]$') {
+    $parsedCertificateName = if (Test-PowerStigSubRuleId -Id $Rule.Id) {
         $Rule.CertificateName -replace '\s\d$'
     }
     else {
         $Rule.CertificateName
     }
 
-    $registerName = '{0}_{1}_certificate_info' -f (Get-AnsibleVariablePrefix -StigName $StigName), ($baseId -replace 'V-' -replace '[^A-Za-z0-9]+', '_')
+    $registerName = Get-AnsibleRegisterName -TaskId $baseId -StigName $StigName -Suffix 'certificate_info'
 
     @{
         # Always a block: sub-rules of one requirement name several certificates.

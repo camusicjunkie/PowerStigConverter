@@ -8,7 +8,7 @@ function Build-AnsibleServiceTask {
     $service = $Resolution.Value
 
     # Named for the rule, because the service name may be a variable reference by now.
-    $registerName = '{0}_{1}_service_info' -f (Get-AnsibleVariablePrefix -StigName $StigName), ($Rule.Id -replace 'V-' -replace '[^A-Za-z0-9]+', '_')
+    $registerName = Get-AnsibleRegisterName -TaskId $Rule.Id -StigName $StigName -Suffix 'service_info'
 
     @{
         Task = @(

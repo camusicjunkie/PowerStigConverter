@@ -11,7 +11,7 @@ function Build-AnsibleRegistryTask {
 
     @{
         # Sub-rules of one requirement share a key, so the block is named for it.
-        GroupDetail = if ($Rule.Id -match '\.[a-z]$') { Split-Path -Path $Rule.Key -Leaf } else { $Rule.ValueName }
+        GroupDetail = if (Test-PowerStigSubRuleId -Id $Rule.Id) { Split-Path -Path $Rule.Key -Leaf } else { $Rule.ValueName }
         Task = @(
             @{
                 Detail = 'Set {0}' -f $Rule.ValueName

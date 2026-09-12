@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    The names every generated variable is built from, and the four things built on them.
+    Every name a generated role uses, and the defaults/ lines built on them.
 .DESCRIPTION
     The declaration in defaults/, the reference a task interpolates and the assert that guards it
     all have to name the same variable, so they all come through here. See docs/adr/0003.
@@ -22,8 +22,7 @@ function Get-AnsibleVariableName {
         [Parameter(Mandatory)] [string] $StigName
     )
 
-    # Sub-rule ids carry a suffix (V-254343.b) that is not legal in an ansible variable name.
-    $id = $TaskId -replace 'V-' -replace '[^A-Za-z0-9]+', '_'
+    $id = Get-AnsibleVariableIdFragment -TaskId $TaskId
     $name = $TaskName.ToLower() -replace '\s', '_' -replace '[^\w]+'
 
     '{0}_{1}_{2}' -f (Get-AnsibleVariablePrefix -StigName $StigName), $id, $name
@@ -86,7 +85,7 @@ function Get-AnsibleToggleName {
         [Parameter(Mandatory)] [string] $StigName
     )
 
-    $id = $TaskId -replace 'V-' -replace '[^A-Za-z0-9]+', '_'
+    $id = Get-AnsibleVariableIdFragment -TaskId $TaskId
 
     '{0}_{1}_when' -f (Get-AnsibleVariablePrefix -StigName $StigName), $id
 }
@@ -104,4 +103,41 @@ function New-AnsibleToggleLine {
     )
 
     '{0}: true' -f (Get-AnsibleToggleName @PSBoundParameters)
+}
+
+<#
+.SYNOPSIS
+    The rule id as an ansible variable name fragment.
+.DESCRIPTION
+    Every name here is built from one, so the mangling lives in one place. A sub-rule id carries
+    a suffix (V-254343.b) that no ansible variable name may contain.
+#>
+function Get-AnsibleVariableIdFragment {
+    [CmdletBinding()]
+    [OutputType([string])]
+    param (
+        [Parameter(Mandatory)] [string] $TaskId
+    )
+
+    $TaskId -replace 'V-' -replace '[^A-Za-z0-9]+', '_'
+}
+
+<#
+.SYNOPSIS
+    The variable a gather task registers its result in - prefix_id_suffix.
+.DESCRIPTION
+    Named from the rule rather than from what is being gathered, because the service or
+    certificate name may be an organization variable reference by the time the task is built.
+#>
+function Get-AnsibleRegisterName {
+    [CmdletBinding()]
+    [OutputType([string])]
+    param (
+        [Parameter(Mandatory)] [string] $TaskId,
+        [Parameter(Mandatory)] [string] $StigName,
+        [Parameter(Mandatory)] [string] $Suffix
+    )
+
+    '{0}_{1}_{2}' -f (Get-AnsibleVariablePrefix -StigName $StigName),
+        (Get-AnsibleVariableIdFragment -TaskId $TaskId), $Suffix
 }

@@ -47,7 +47,7 @@ function ConvertTo-AnsibleTask {
             $built = & $adapter -Rule $rule -StigName $StigName -StigId $StigId -Resolution $resolution
             if ($null -eq $built) { continue }
 
-            $baseId = $rule.Id -replace '\.[a-z]$'
+            $baseId = Get-PowerStigBaseRuleId -Id $rule.Id
             $severity = $rule.Severity.ToUpper()
 
             # An adapter names a task outright only where the generated role already did - the
@@ -62,7 +62,7 @@ function ConvertTo-AnsibleTask {
 
             # Sub-rules share a block so an operator switches the requirement off rather than one
             # of its halves; a rule that becomes several tasks needs one for the same reason.
-            $group = $built.Group -or $rule.Id -match '\.[a-z]$' -or $tasks.Count -gt 1
+            $group = $built.Group -or (Test-PowerStigSubRuleId -Id $rule.Id) -or $tasks.Count -gt 1
 
             if (-not $group) {
                 $task = $tasks[0]
