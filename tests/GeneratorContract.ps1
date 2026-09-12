@@ -47,7 +47,7 @@ function Add-GeneratorContractTests {
         Module = $Module
         StigName = $StigName
         ExtraParams = $ExtraParams
-        SourcePath = Join-Path (Split-Path $PSScriptRoot -Parent) "Source/Private/Task/$Generator.ps1"
+        Reach = Get-GeneratorSourceReach -Generator $Generator
     })
 
     Context 'the generator contract' {
@@ -111,11 +111,20 @@ function Add-GeneratorContractTests {
 
         # The other half of what ADR-0005 removed, and the half no mock can trap: expanding a
         # variable resolves it against this machine's environment, not the one the rule describes.
+        #
+        # Reads the source of every module function the generator reaches, not just its own file,
+        # so a helper cannot expand on its behalf. Where the edge is: the walk follows command
+        # names it can see, so a call made through Invoke-Expression or a name held in a
+        # variable is past it, and text is text, so a comment that merely names one of these
+        # trips it.
         It 'does not expand an environment variable against the converting machine' -ForEach $case {
-            $body = Get-Content $SourcePath -Raw
+            $offender = foreach ($name in $Reach.Keys) {
+                foreach ($token in 'ExpandEnvironmentVariables', '$env:', 'GetEnvironmentVariable') {
+                    if ($Reach[$name] -like "*$token*") { "$name uses $token" }
+                }
+            }
 
-            $body | Should-NotBeLikeString '*ExpandEnvironmentVariables*'
-            $body | Should-NotBeLikeString '*$env:*'
+            $offender -join '; ' | Should-Be ''
         }
 
         It 'builds the same task the second time' -ForEach $case {
@@ -128,6 +137,62 @@ function Add-GeneratorContractTests {
                 Should-Be ($first.Task | ConvertTo-Json -Depth 12 -Compress)
         }
     }
+}
+
+<#
+.SYNOPSIS
+    The source text of every module function one generator reaches, keyed by function name.
+.DESCRIPTION
+    Item 8's source half has to see past the generator's own file: a generator that expanded an
+    environment variable inside a helper it calls would otherwise pass. So this walks the call
+    graph from the same entry point Invoke-Generator uses and hands back what it found - the
+    naming and organization-value helpers included.
+
+    Command names are resolved against the functions Source/ defines, so a call to anything else
+    ends the walk; a dynamic call ends it too, which is why the adapter ConvertTo-AnsibleTask
+    invokes through a variable is seeded here rather than discovered.
+#>
+function Get-GeneratorSourceReach {
+    param ([Parameter(Mandatory)] [string] $Generator)
+
+    if (-not $script:sourceFunction) {
+        $script:sourceFunction = @{}
+
+        $sourceRoot = Join-Path (Split-Path $PSScriptRoot -Parent) 'Source'
+        foreach ($file in Get-ChildItem $sourceRoot -Filter '*.ps1' -Recurse) {
+            $ast = [System.Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref] $null, [ref] $null)
+
+            foreach ($function in $ast.FindAll({ $args[0] -is [System.Management.Automation.Language.FunctionDefinitionAst] }, $true)) {
+                $script:sourceFunction[$function.Name] = $function
+            }
+        }
+    }
+
+    # Mirrors Invoke-Generator: an adapter is reached through the shared module, so the driver is
+    # on the path the contract exercises and belongs in the walk.
+    $queue = [System.Collections.Queue]::new()
+    foreach ($root in @($Generator) + @(if ($Generator -like 'Build-*') { 'ConvertTo-AnsibleTask' })) {
+        if (-not $script:sourceFunction.ContainsKey($root)) {
+            throw "Source/ defines no function named $root, so item 8 would scan nothing"
+        }
+        $queue.Enqueue($root)
+    }
+
+    $reach = [ordered] @{}
+    while ($queue.Count) {
+        $name = $queue.Dequeue()
+        if ($reach.Contains($name)) { continue }
+
+        $function = $script:sourceFunction[$name]
+        $reach[$name] = $function.Extent.Text
+
+        foreach ($call in $function.FindAll({ $args[0] -is [System.Management.Automation.Language.CommandAst] }, $true)) {
+            $called = $call.GetCommandName()
+            if ($called -and $script:sourceFunction.ContainsKey($called)) { $queue.Enqueue($called) }
+        }
+    }
+
+    $reach
 }
 
 <#
