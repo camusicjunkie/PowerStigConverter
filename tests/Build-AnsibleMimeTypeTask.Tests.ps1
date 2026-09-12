@@ -66,9 +66,9 @@ Describe 'Build-AnsibleMimeTypeTask' {
                 Should-Be 'MACHINE/WEBROOT/APPHOST'
         }
 
-        It 'targets a site path for anything else' {
+        It 'interpolates the website variable for a site STIG' {
             (Get-MimeTypeTask -Rule (New-MimeTypeRule) -StigId 'IIS_10-0_Site').'ansible.windows.win_dsc'.ConfigurationPath |
-                Should-BeLikeString 'IIS:\Sites\*'
+                Should-Be 'IIS:\Sites\{{ stig_iisserver_10_0_200_website }}'
         }
     }
 

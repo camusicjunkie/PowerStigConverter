@@ -16,29 +16,34 @@ function Export-AnsibleOrganizationValue {
     }
     process {
         $ruleType = $Rule.PowerStigRule -replace 'Rule'
-        if (-not $script:organizationData.ContainsKey($ruleType)) { return }
+        $hasOrganizationValue = $script:organizationData.ContainsKey($ruleType)
+        $hasRoleVariable = $script:roleVariableData.ContainsKey($ruleType)
+        if (-not $hasOrganizationValue -and -not $hasRoleVariable) { return }
 
         foreach ($rule in $Rule.StigRule) {
             # A duplicate produces no task, so a variable for it would guard nothing.
             if (-not [string]::IsNullOrEmpty($rule.DuplicateOf)) { continue }
 
-            $resolution = Resolve-AnsibleOrganizationValue -Rule $rule -RuleType $ruleType `
-                -StigName $StigName -OrganizationalSetting $OrganizationalSetting
-
             $declarations = @(
                 # One declaration per organization variable the rule needs - flat rather than a
                 # mapping, so a single field can be overridden with -e and an assert can name the
                 # one that is unanswered.
-                foreach ($variable in $resolution.Variable) { $variable.Declaration }
+                if ($hasOrganizationValue) {
+                    $resolution = Resolve-AnsibleOrganizationValue -Rule $rule -RuleType $ruleType `
+                        -StigName $StigName -OrganizationalSetting $OrganizationalSetting
+                    foreach ($variable in $resolution.Variable) { $variable.Declaration }
+                }
 
-                # The IIS log path is the other way round: no org settings attribute feeds it, so
-                # it is not an organization value and never appears among them. Every IisLogging
-                # rule still declares it blank for the site to fill in, because the task
-                # references it whether or not the rule's other values are organization values,
-                # and a reference with no declaration fails the play on an undefined variable.
-                # Build-AnsibleIisLoggingTask builds the reference from the same task name.
-                if ($ruleType -eq 'IisLogging') {
-                    New-AnsibleVariableLine -TaskId $rule.Id -TaskName 'LogPath' -StigName $StigName
+                # Some role variables carry no organization value at all - the IIS log path and
+                # site name are the other way round: no org settings attribute feeds them, so
+                # they never appear above. A rule type that needs one still declares it blank for
+                # the site to fill in, because the task references it regardless, and a reference
+                # with no declaration fails the play on an undefined variable. RoleVariableData.psd1
+                # names the task each rule type's generator builds the same reference from.
+                if ($hasRoleVariable) {
+                    foreach ($taskName in $script:roleVariableData[$ruleType]) {
+                        New-AnsibleVariableLine -TaskId $rule.Id -TaskName $taskName -StigName $StigName
+                    }
                 }
             )
 

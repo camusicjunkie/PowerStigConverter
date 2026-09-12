@@ -109,4 +109,27 @@ Describe 'Export-AnsibleOrganizationValue' {
             $content | Should-ContainCollection @('stig_iisserver_10_0_300_logpath: ')
         }
     }
+
+    # No org settings attribute feeds the site name either, so a site-scoped IIS task references
+    # a role variable the site fills in, the same way the log path does. See docs/adr/0004.
+    Context 'the IIS website' {
+
+        It 'declares it blank for every WebConfigurationProperty rule' {
+            $rule = [pscustomobject] @{ Id = 'V-310'; DuplicateOf = ''; OrganizationValueRequired = $false }
+
+            $content = (Export-OrgValues -Groups @(New-RuleGroup 'WebConfigurationPropertyRule' @($rule)) `
+                -StigName 'IISServer-10.0').main_default_org
+
+            $content | Should-ContainCollection @('stig_iisserver_10_0_310_website: ')
+        }
+
+        It 'declares it blank for every MimeType rule' {
+            $rule = [pscustomobject] @{ Id = 'V-311'; DuplicateOf = ''; OrganizationValueRequired = $false }
+
+            $content = (Export-OrgValues -Groups @(New-RuleGroup 'MimeTypeRule' @($rule)) `
+                -StigName 'IISServer-10.0').main_default_org
+
+            $content | Should-ContainCollection @('stig_iisserver_10_0_311_website: ')
+        }
+    }
 }
