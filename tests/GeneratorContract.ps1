@@ -16,7 +16,8 @@
                                                           List key in OrganizationData.psd1
       7. an organization value reaches the task as a      each test file, the generators that
          reference rather than a literal                  call Resolve-AnsibleOrganizationValue
-      8. reads the rule and nothing else                  here
+      8. reads the rule and nothing else                  here, over every module function the
+                                                          generator reaches
 
     GeneratorCoverage.Tests.ps1 enforces all of it.
 #>
@@ -47,7 +48,6 @@ function Add-GeneratorContractTests {
         Module = $Module
         StigName = $StigName
         ExtraParams = $ExtraParams
-        SourcePath = Join-Path (Split-Path $PSScriptRoot -Parent) "Source/Private/Task/$Generator.ps1"
     })
 
     Context 'the generator contract' {
@@ -111,11 +111,28 @@ function Add-GeneratorContractTests {
 
         # The other half of what ADR-0005 removed, and the half no mock can trap: expanding a
         # variable resolves it against this machine's environment, not the one the rule describes.
+        # Read over every module function the generator reaches, not just its own file, so a
+        # generator that expanded a variable inside a helper is caught too. See #34, and
+        # Get-GeneratorReachableFunction for where the walk stops.
         It 'does not expand an environment variable against the converting machine' -ForEach $case {
-            $body = Get-Content $SourcePath -Raw
+            $reached = @(Get-GeneratorReachableFunction -Generator $Generator)
 
-            $body | Should-NotBeLikeString '*ExpandEnvironmentVariables*'
-            $body | Should-NotBeLikeString '*$env:*'
+            # The generator plus the shared module at least, so a walk that silently stopped
+            # finding anything fails here rather than passing over an empty set.
+            ($reached.Name -contains $Generator) | Should-BeTrue
+            $reached.Count | Should-BeGreaterThan 1
+
+            # Reported a line at a time, so the failure names the function that expanded and the
+            # line it did it on rather than printing every function the walk read.
+            $offending = foreach ($function in $reached) {
+                foreach ($line in $function.Text -split '\r?\n') {
+                    if ($line -like '*ExpandEnvironmentVariables*' -or $line -like '*$env:*') {
+                        '{0}: {1}' -f $function.Name, $line.Trim()
+                    }
+                }
+            }
+
+            $offending -join [System.Environment]::NewLine | Should-Be ''
         }
 
         It 'builds the same task the second time' -ForEach $case {
@@ -214,4 +231,61 @@ function Get-ExpectedRegisterName {
 
         Get-AnsibleRegisterName -TaskId $TaskId -StigName $StigName -Suffix $Suffix
     }
+}
+
+<#
+.SYNOPSIS
+    Every module function a generator can reach, so item 8's source scan is not limited to the
+    one file the generator lives in.
+.DESCRIPTION
+    Walks the call graph from the generator over the functions defined under Source/, and hands
+    back each one it reaches as its own name, file and source text.
+
+    Covers: any module function the generator calls by name, however deep, wherever it is
+    defined - including the ones ConvertTo-AnsibleTask calls on every adapter's behalf.
+
+    Does not cover: calls made through a variable (ConvertTo-AnsibleTask dispatches to the
+    adapter as `& $adapter`, which is why a Build-* generator is seeded with both ends), commands
+    that are not module functions, and anything reached only at run time. It is static analysis;
+    the runtime half of item 8 is the case above it.
+#>
+function Get-GeneratorReachableFunction {
+    param ([Parameter(Mandatory)] [string] $Generator)
+
+    $sourceRoot = Join-Path (Split-Path $PSScriptRoot -Parent) 'Source'
+
+    # Keyed by function name rather than file, because a file can define several - Add-AnsibleAssert
+    # sits in ConvertTo-AnsibleTask.ps1 - and the scan should read the function, not its neighbours.
+    $defined = @{}
+    foreach ($file in Get-ChildItem $sourceRoot -Filter *.ps1 -Recurse) {
+        $ast = [System.Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref] $null, [ref] $null)
+
+        foreach ($definition in $ast.FindAll({ $args[0] -is [System.Management.Automation.Language.FunctionDefinitionAst] }, $true)) {
+            $defined[$definition.Name] = @{
+                Name = $definition.Name
+                File = $file.FullName
+                Text = $definition.Extent.Text
+                Ast  = $definition
+            }
+        }
+    }
+
+    # A Build-* generator is only ever run through the shared module, so the module is on its path.
+    $pending = [System.Collections.Queue]::new()
+    $pending.Enqueue($Generator)
+    if ($Generator -like 'Build-*') { $pending.Enqueue('ConvertTo-AnsibleTask') }
+
+    $reached = [ordered] @{}
+    while ($pending.Count) {
+        $name = $pending.Dequeue()
+        if ($reached.Contains($name) -or -not $defined.ContainsKey($name)) { continue }
+        $reached[$name] = $defined[$name]
+
+        foreach ($command in $defined[$name].Ast.FindAll({ $args[0] -is [System.Management.Automation.Language.CommandAst] }, $true)) {
+            $called = $command.GetCommandName()
+            if ($called -and $defined.ContainsKey($called)) { $pending.Enqueue($called) }
+        }
+    }
+
+    $reached.Values
 }
