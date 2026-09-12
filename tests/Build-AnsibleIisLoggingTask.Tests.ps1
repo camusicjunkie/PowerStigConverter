@@ -23,6 +23,40 @@ BeforeAll {
         }
     }
 
+    # V-218741 of the IIS 10.0 Site STIG, which asks for the Connection and Warning request
+    # headers to be logged. Built from xml rather than a pscustomobject because the generator
+    # reads .Entry off the element, and only a rule read out of the processed STIG has that.
+    function New-CustomFieldRule {
+        param (
+            [string] $Entry = @'
+        <Entry>
+          <SourceType>RequestHeader</SourceType>
+          <SourceName>Connection</SourceName>
+        </Entry>
+        <Entry>
+          <SourceType>RequestHeader</SourceType>
+          <SourceName>Warning</SourceName>
+        </Entry>
+'@
+        )
+
+        [xml] $document = @"
+<Rule id="V-218741" severity="medium" conversionstatus="pass" dscresource="XWebsite">
+  <DuplicateOf />
+  <IsNullOrEmpty>False</IsNullOrEmpty>
+  <LogCustomFieldEntry>$Entry</LogCustomFieldEntry>
+  <LogFlags />
+  <LogFormat>W3C</LogFormat>
+  <LogPeriod />
+  <LogTargetW3C />
+  <OrganizationValueRequired>False</OrganizationValueRequired>
+  <OrganizationValueTestString />
+</Rule>
+"@
+
+        $document.Rule
+    }
+
     function New-LoggingTask {
         param ($Rule)
 
@@ -126,6 +160,59 @@ Describe 'Build-AnsibleIisLoggingTask' {
 
             $value -is [array] | Should-BeTrue
             @($value).Count | Should-Be 1
+        }
+    }
+
+    # The custom fields reach win_dsc two deep - a list of hashtables, each holding one
+    # DSC_LogCustomField - because that is how the DSC resource takes an array of embedded
+    # instances.
+    Context 'the custom log fields the rule carries' {
+
+        It 'builds one DSC_LogCustomField per entry, in rule order' {
+            $fields = (New-LoggingTask -Rule (New-CustomFieldRule)).'ansible.windows.win_dsc'.LogCustomFields
+
+            @($fields).Count | Should-Be 2
+            $fields[0].DSC_LogCustomField.SourceName | Should-Be 'Connection'
+            $fields[1].DSC_LogCustomField.SourceName | Should-Be 'Warning'
+        }
+
+        # The resource keys its fields by name and the rule carries none - only the source the
+        # field comes from, which is what makes the pair unique.
+        It 'names each field for the source type and name it joins' {
+            $fields = (New-LoggingTask -Rule (New-CustomFieldRule)).'ansible.windows.win_dsc'.LogCustomFields
+
+            $fields.DSC_LogCustomField.LogFieldName |
+                Should-BeCollection @('RequestHeader-Connection', 'RequestHeader-Warning')
+        }
+
+        It 'carries the source type and name through unchanged' {
+            $field = (New-LoggingTask -Rule (New-CustomFieldRule)).'ansible.windows.win_dsc'.LogCustomFields[0].DSC_LogCustomField
+
+            $field.SourceType | Should-Be 'RequestHeader'
+            $field.SourceName | Should-Be 'Connection'
+        }
+
+        # One Entry comes off the element as a single node rather than a collection, which is
+        # where a shape like this usually unrolls to a lone hashtable.
+        It 'keeps a single entry a list rather than unrolling it' {
+            $single = New-CustomFieldRule -Entry @'
+        <Entry>
+          <SourceType>ResponseHeader</SourceType>
+          <SourceName>Content-Type</SourceName>
+        </Entry>
+'@
+
+            $fields = (New-LoggingTask -Rule $single).'ansible.windows.win_dsc'.LogCustomFields
+
+            $fields -is [array] | Should-BeTrue
+            @($fields).Count | Should-Be 1
+            $fields[0].DSC_LogCustomField.LogFieldName | Should-Be 'ResponseHeader-Content-Type'
+        }
+
+        It 'leaves the key off the resource entirely when the rule has no custom fields' {
+            $task = New-LoggingTask -Rule (New-CustomFieldRule -Entry '')
+
+            $task.'ansible.windows.win_dsc'.Keys | Should-NotContainCollection @('LogCustomFields')
         }
     }
 
