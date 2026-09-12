@@ -68,8 +68,7 @@ function Resolve-AnsibleOrganizationValue {
                     # unary comma is load-bearing - without it a one-element split unrolls to a
                     # string and is written as a scalar rather than a sequence.
                     $default = if ($status -ne 'Answered') { $null }
-                        elseif ($part -eq 'store_name') { Split-Path -Path $node.$field -Leaf }
-                        elseif ($part -eq 'store_location') { Split-Path -Path (Split-Path -Path $node.$field -Parent) -Leaf }
+                        elseif ($data['Derive'] -and $data['Derive'][$part]) { Split-AnsibleValuePart -Value $node.$field -Derivation $data['Derive'][$part] }
                         elseif ($data['List'] -contains $field) { , ($node.$field -split ',') }
                         else { $node.$field }
 
@@ -99,42 +98,29 @@ function Resolve-AnsibleOrganizationValue {
     $reference = @{}
     foreach ($variable in $variables) { $reference[$variable.Part] = $variable.Reference }
 
-    $value = if ($decidedByOrganization) {
+    # A rule type whose task needs an object rather than a scalar declares its shape in
+    # OrganizationData.psd1. Both arms build the same shape, so a task generator reads .Value
+    # without knowing which one produced it.
+    $value = if ($data['Shape']) {
+        $shaped = [ordered] @{}
+        # Sorted so the shape is the same object every run. A .psd1 cannot hold an ordered
+        # hashtable - Import-PowerShellDataFile rejects [ordered] as a dynamic expression.
+        foreach ($property in ($data['Shape'].Keys | Sort-Object)) {
+            $source = $data['Shape'][$property]
 
-        # An organization value never reaches the task as a literal. See docs/adr/0003.
-        switch ($RuleType) {
-            'Service' {
-                [pscustomobject] @{
-                    ServiceName = $reference['ServiceName']
-                    StartupType = $reference['StartupType']
-                }
+            $shaped[$property] = if (-not $decidedByOrganization) {
+                Get-AnsibleShapedValue -Rule $Rule -Data $data -Source $source
             }
-            'IisLogging' {
-                [pscustomobject] @{
-                    LogFlags = $reference['LogFlags']
-                    LogFormat = $reference['LogFormat']
-                    LogPeriod = $reference['LogPeriod']
-                    LogTarget = $reference['LogTargetW3C']
-                    # Nested rather than scalar, and optional, so it stays built in place.
-                    LogCustomFields = $node.LogCustomFieldEntry
-                }
-            }
-            'RootCertificate' {
-                [pscustomobject] @{
-                    StoreName = $reference['store_name']
-                    StoreLocation = $reference['store_location']
-                }
-            }
-            default { $reference[$data['Value']] }
+            # A source with no variable behind it is read off the org node: it is not required,
+            # so nothing declares or asserts it. LogCustomFields is the only one.
+            elseif ($reference.ContainsKey($source)) { $reference[$source] }
+            else { $node.$source }
         }
+
+        [pscustomobject] $shaped
     }
-    # Same shape whichever way the value arrived. Rare: these rules are org-valued in practice.
-    elseif ($RuleType -eq 'RootCertificate') {
-        [pscustomobject] @{
-            StoreName = Split-Path -Path $Rule.Location -Leaf
-            StoreLocation = Split-Path -Path (Split-Path -Path $Rule.Location -Parent) -Leaf
-        }
-    }
+    # An organization value never reaches the task as a literal. See docs/adr/0003.
+    elseif ($decidedByOrganization) { $reference[$data['Value']] }
     elseif ($Rule.($data['Value']) -match 'Enabled|Disabled') {
 
         $option = $script:accountPolicyData + $script:securityOptionData
@@ -143,22 +129,7 @@ function Resolve-AnsibleOrganizationValue {
         # every time and the cast then turns every rule into 0.
         [int] $option[$attributeName]['Option'][$Rule.($data['Value'])]
     }
-    elseif ($data['Value'] -eq 'Identity' -and $Rule.Identity -eq 'NULL') { @() }
-    elseif ($RuleType -eq 'Service') {
-        [pscustomobject] @{
-            ServiceName = $Rule.ServiceName
-            StartupType = $Rule.StartupType
-        }
-    }
-    elseif ($RuleType -eq 'IisLogging') {
-        [pscustomobject] @{
-            LogFlags = if ($Rule.LogFlags) { , ($Rule.LogFlags -split ',') }
-            LogFormat = $Rule.LogFormat
-            LogPeriod = $Rule.LogPeriod
-            LogTarget = if ($Rule.LogTargetW3C) { , ($Rule.LogTargetW3C -split ',') }
-            LogCustomFields = $Rule.LogCustomFieldEntry
-        }
-    }
+    elseif ($data['Empty'] -and $Rule.($data['Value']) -eq $data['Empty']) { @() }
     # Split here so both halves hand back the same shape; the comma keeps one element an array.
     elseif ($data['List'] -contains $data['Value']) {
         , ($Rule.($data['Value']) -split ',')
@@ -186,4 +157,46 @@ function Resolve-AnsibleOrganizationValue {
         Incomplete = $incomplete
         Assert = $assert
     }
+}
+
+<#
+.SYNOPSIS
+    Takes one part out of a value several parts share, by the named derivation.
+.DESCRIPTION
+    A closed vocabulary, declared per part in OrganizationData.psd1's Derive key. Only
+    RootCertificate's store path needs one so far: Cert:\LocalMachine\Root is a store name of Root
+    in a location of LocalMachine.
+#>
+function Split-AnsibleValuePart {
+    param ([string] $Value, [string] $Derivation)
+
+    switch ($Derivation) {
+        'Leaf' { Split-Path -Path $Value -Leaf }
+        'ParentLeaf' { Split-Path -Path (Split-Path -Path $Value -Parent) -Leaf }
+        default { $Value }
+    }
+}
+
+<#
+.SYNOPSIS
+    One property of a shaped value, read off the rule rather than off the org settings file.
+#>
+function Get-AnsibleShapedValue {
+    param ($Rule, $Data, [string] $Source)
+
+    # A part is derived from the field it belongs to; the rule carries the field, not the part.
+    if ($Data['Part']) {
+        foreach ($field in $Data['Part'].Keys) {
+            if ($Data['Part'][$field] -contains $Source) {
+                return Split-AnsibleValuePart -Value $Rule.$field -Derivation $Data['Derive'][$Source]
+            }
+        }
+    }
+
+    if ($Data['List'] -contains $Source) {
+        if ($Rule.$Source) { return , ($Rule.$Source -split ',') }
+        return
+    }
+
+    $Rule.$Source
 }
