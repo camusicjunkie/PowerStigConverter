@@ -8,5 +8,6 @@ Register-ArgumentCompleter -CommandName New-AnsiblePlaybook -ParameterName StigN
 }
 
 $script:organizationData = Import-PowerShellDataFile -Path $PSScriptRoot\Files\OrganizationData.psd1
+$script:roleVariableData = Import-PowerShellDataFile -Path $PSScriptRoot\Files\RoleVariableData.psd1
 $script:accountPolicyData = Import-PowerShellDataFile -Path $PSScriptRoot\Files\AccountPolicyData.psd1
 $script:securityOptionData = Import-PowerShellDataFile -Path $PSScriptRoot\Files\SecurityOptionData.psd1

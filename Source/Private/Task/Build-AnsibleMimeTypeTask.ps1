@@ -7,9 +7,8 @@ function Build-AnsibleMimeTypeTask {
 
     $parsedMimeType = if (Test-PowerStigSubRuleId -Id $Rule.Id) { Split-Path -Path $Rule.MimeType } else { $Rule.MimeType }
 
-    # A server STIG configures the machine-wide root; a site STIG configures one site.
-    $website = ''
-    $configurationPath = if ($StigId -match 'IIS_.+_Server') { 'MACHINE/WEBROOT/APPHOST' } else { "IIS:\Sites\$website" }
+    $configurationPath = Get-AnsibleIisScopePath -StigId $StigId -MachinePath 'MACHINE/WEBROOT/APPHOST' `
+        -TaskId $Rule.Id -StigName $StigName
 
     @{
         GroupDetail = 'Ensure {0} MIME types are set' -f $parsedMimeType

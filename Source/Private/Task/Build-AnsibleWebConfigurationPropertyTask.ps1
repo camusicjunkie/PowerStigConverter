@@ -6,16 +6,10 @@ function Build-AnsibleWebConfigurationPropertyTask {
     param ($Rule, $StigName, $StigId, $Resolution)
 
     $parsedConfigSection = if (Test-PowerStigSubRuleId -Id $Rule.Id) { Split-Path -Path $Rule.ConfigSection } else { $Rule.ConfigSection }
-    $website = Get-AnsibleVariableReference -TaskId $Rule.Id -TaskName 'website' -StigName $StigName
 
-    # A system.web section lives under the web root, everything else under the app host. A site
-    # STIG instead targets one site, whose name the implementing site fills in.
-    $websitePath = if ($StigId -match 'IIS_.+_Server') {
-        if ($Rule.ConfigSection -match '/system.web/') { 'MACHINE/WEBROOT' } else { 'MACHINE/WEBROOT/APPHOST' }
-    }
-    else {
-        "IIS:\Sites\$website"
-    }
+    # A system.web section lives under the web root, everything else under the app host.
+    $machinePath = if ($Rule.ConfigSection -match '/system.web/') { 'MACHINE/WEBROOT' } else { 'MACHINE/WEBROOT/APPHOST' }
+    $websitePath = Get-AnsibleIisScopePath -StigId $StigId -MachinePath $machinePath -TaskId $Rule.Id -StigName $StigName
 
     @{
         GroupDetail = 'Ensure section {0} is configured' -f $parsedConfigSection
