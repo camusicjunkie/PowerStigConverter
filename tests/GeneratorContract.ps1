@@ -166,3 +166,20 @@ function New-ContractOrgSetting {
     }
     $settings
 }
+
+<#
+.SYNOPSIS
+    The register name the naming module builds, so a generator test pins the name it asked for
+    rather than a string spelled out in two places. See #18.
+#>
+function Get-ExpectedRegisterName {
+    param ($TaskId, $StigName, $Suffix)
+
+    InModuleScope -ModuleName PowerStigConverter -Parameters @{
+        TaskId = $TaskId; StigName = $StigName; Suffix = $Suffix
+    } {
+        param ($TaskId, $StigName, $Suffix)
+
+        Get-AnsibleRegisterName -TaskId $TaskId -StigName $StigName -Suffix $Suffix
+    }
+}

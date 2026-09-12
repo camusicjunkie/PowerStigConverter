@@ -5,7 +5,7 @@ function Build-AnsibleWebConfigurationPropertyTask {
     #>
     param ($Rule, $StigName, $StigId, $Resolution)
 
-    $parsedConfigSection = if ($Rule.Id -match '\.[a-z]$') { Split-Path -Path $Rule.ConfigSection } else { $Rule.ConfigSection }
+    $parsedConfigSection = if (Test-PowerStigSubRuleId -Id $Rule.Id) { Split-Path -Path $Rule.ConfigSection } else { $Rule.ConfigSection }
     $website = Get-AnsibleVariableReference -TaskId $Rule.Id -TaskName 'website' -StigName $StigName
 
     # A system.web section lives under the web root, everything else under the app host. A site

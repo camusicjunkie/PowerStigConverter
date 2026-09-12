@@ -54,7 +54,8 @@ Describe 'Build-AnsibleServiceTask' {
         It 'names the register for the rule, not the service' {
             $register = (Get-ServiceTask -Rule (New-ServiceRule)).block[0].register
 
-            $register | Should-Be 'stig_server_2022_160_service_info'
+            $register | Should-Be (Get-ExpectedRegisterName -TaskId 'V-160' `
+                    -StigName 'WindowsServer-2022-MS' -Suffix 'service_info')
         }
 
         It 'names the task for the rule id, its severity and the service' {

@@ -5,7 +5,7 @@ function Build-AnsibleMimeTypeTask {
     #>
     param ($Rule, $StigName, $StigId, $Resolution)
 
-    $parsedMimeType = if ($Rule.Id -match '\.[a-z]$') { Split-Path -Path $Rule.MimeType } else { $Rule.MimeType }
+    $parsedMimeType = if (Test-PowerStigSubRuleId -Id $Rule.Id) { Split-Path -Path $Rule.MimeType } else { $Rule.MimeType }
 
     # A server STIG configures the machine-wide root; a site STIG configures one site.
     $website = ''

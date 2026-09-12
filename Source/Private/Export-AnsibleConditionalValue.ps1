@@ -14,7 +14,7 @@ function Export-AnsibleConditionalValue {
         # One generated task, one toggle. Sub-rules (V-254343.b) were already collapsed into a
         # single block task guarded by the base id, so the toggle is named for the base id too.
         $rule = $InputObject.Rule
-        $baseId = $rule.Id -replace '\.[a-z]$'
+        $baseId = Get-PowerStigBaseRuleId -Id $rule.Id
 
         $null = $items.Add(@{
             Id = $baseId

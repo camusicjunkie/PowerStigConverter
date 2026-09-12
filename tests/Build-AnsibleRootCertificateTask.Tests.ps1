@@ -62,6 +62,24 @@ Describe 'Build-AnsibleRootCertificateTask' {
 
             $task.name | Should-BeLikeString 'V-180 | MEDIUM | *certificate store'
         }
+
+        It 'registers the gathered certificate in the variable the naming module builds' {
+            $task = Get-RootCertificateTask -Rule (New-RootCertificateRule) -OrganizationalSetting (New-RootStore)
+            $gather = $task.block | Where-Object { $_.Contains('community.windows.win_certificate_info') }
+
+            $gather.register | Should-Be (Get-ExpectedRegisterName -TaskId 'V-180' `
+                    -StigName 'WindowsServer-2022-MS' -Suffix 'certificate_info')
+        }
+
+        # Sub-rules of one requirement share a block, and they share the register with it.
+        It 'names the register for the base id of a sub-rule' {
+            $task = Get-RootCertificateTask -Rule (New-RootCertificateRule -Id 'V-180.b') `
+                -OrganizationalSetting (New-ContractOrgSetting '<OrganizationalSetting id="V-180.b" Location="Cert:\LocalMachine\Root" />')
+            $gather = $task.block | Where-Object { $_.Contains('community.windows.win_certificate_info') }
+
+            $gather.register | Should-Be (Get-ExpectedRegisterName -TaskId 'V-180' `
+                    -StigName 'WindowsServer-2022-MS' -Suffix 'certificate_info')
+        }
     }
 
     Context 'a value the organization decides' {

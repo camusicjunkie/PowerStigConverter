@@ -44,6 +44,26 @@ Describe 'New-AnsibleToggleLine' {
     }
 }
 
+Describe 'Get-AnsibleRegisterName' {
+
+    Context 'the variable a gather task registers its result in' {
+
+        It 'names it from the prefix, the rule id and the suffix the caller asked for' {
+            Invoke-Namer -Command 'Get-AnsibleRegisterName' -Splat @{
+                TaskId = 'V-160'; StigName = $stig; Suffix = 'service_info'
+            } | Should-Be "${prefix}_160_service_info"
+        }
+
+        # A register is named for the rule it belongs to, so a sub-rule id reaches it the same way
+        # it reaches every other variable name.
+        It 'flattens a sub-rule suffix, which is not legal in an ansible variable name' {
+            Invoke-Namer -Command 'Get-AnsibleRegisterName' -Splat @{
+                TaskId = 'V-254343.b'; StigName = $stig; Suffix = 'certificate_info'
+            } | Should-Be "${prefix}_254343_b_certificate_info"
+        }
+    }
+}
+
 Describe 'Get-AnsibleVariableName' {
 
     Context 'organization values the organization decides' {
