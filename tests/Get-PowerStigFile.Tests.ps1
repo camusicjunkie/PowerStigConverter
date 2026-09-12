@@ -24,7 +24,12 @@ Describe 'Get-PowerStigFile' {
         It 'returns one file per STIG name' {
             $files = Get-StigFile -Type Name -Path $fixtureRoot
 
-            $files.Name | Should-BeCollection @('IISServer-10.0.xml', 'WindowsClient-11-1.0.xml', 'WindowsServer-2022-MS-2.7.xml')
+            $files.Name | Should-BeCollection @(
+                    'IISServer-10.0.xml'
+                    'WindowsClient-11-1.0.xml'
+                    'WindowsServer-2022-DC-1.0.xml'
+                    'WindowsServer-2022-MS-2.7.xml'
+                )
         }
 
         It 'leaves the organisational settings files out of the STIG data list' {

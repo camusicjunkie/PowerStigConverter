@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Fixture organisational settings, answered. The conversion refuses to generate while any of
+    these is blank - see docs/adr/0001 - so a fixture meant to produce a role has to fill them in.
+-->
+<OrganizationalSettings fullversion="1.0">
+  <OrganizationalSetting id="V-402" Location="Cert:\LocalMachine\Root" />
+  <OrganizationalSetting id="V-403" ServiceName="WinDefend" StartupType="Automatic" />
+</OrganizationalSettings>
