@@ -4,12 +4,12 @@ status: accepted
 
 # A rule's path is emitted as the STIG wrote it
 
-`New-AnsiblePermissionTask` decided the path it wrote into the role by asking the **converting**
+`Build-AnsiblePermissionTask` decided the path it wrote into the role by asking the **converting**
 machine whether the expanded path existed:
 
 ```powershell
-$parsedPath = [System.Environment]::ExpandEnvironmentVariables($rule.Path)
-$path = if (Test-Path $parsedPath) { $parsedPath } else { $rule.Path }
+$parsedPath = [System.Environment]::ExpandEnvironmentVariables($Rule.Path)
+$path = if (Test-Path $parsedPath) { $parsedPath } else { $Rule.Path }
 ```
 
 So the same STIG produced `C:\Windows\System32\config` when converted on a machine where that
@@ -31,8 +31,8 @@ it was handed.
 - The task's `name` carries the raw path too, so a role reads the way it runs rather than naming a
   path different from the one `win_acl` acts on.
 - Generated output moves for any Permission rule whose path holds an environment variable. No
-  fixture on `main` carried one when this was decided, so no fixture changed; the fixture added in
-  [#27](https://github.com/camusicjunkie/PowerStigConverter/issues/27) does.
+  fixture on `main` carried one when this was decided, so no fixture changed. A fixture that does
+  carry one will record the raw path.
 - A path that needs resolving on the converter — if one ever does — is a different problem from
   this one, and wants an organization value or a role variable rather than a `Test-Path` at
   conversion time. See [ADR-0003](0003-every-organization-value-is-a-role-variable.md).
