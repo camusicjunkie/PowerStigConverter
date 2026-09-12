@@ -39,7 +39,7 @@ function Export-AnsibleOrganizationValue {
                 # rule still declares it blank for the site to fill in, because the task
                 # references it whether or not the rule's other values are organization values,
                 # and a reference with no declaration fails the play on an undefined variable.
-                # New-AnsibleIisLoggingTask builds the reference from the same task name.
+                # Build-AnsibleIisLoggingTask builds the reference from the same task name.
                 if ($ruleType -eq 'IisLogging') {
                     New-AnsibleVariable -TaskId $rule.Id -TaskName 'LogPath' -StigName $StigName -Type OrganizationValue
                 }

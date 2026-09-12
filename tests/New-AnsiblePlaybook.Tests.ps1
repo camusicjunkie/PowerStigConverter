@@ -200,7 +200,7 @@ Describe 'New-AnsiblePlaybook' {
                 Where-Object { $_ -is [System.Management.Automation.WarningRecord] }
 
             $warnings.Message -join "`n" |
-                Should-BeLikeString '*New-AnsibleProcessMitigationTask is not currently supported*'
+                Should-BeLikeString '*Build-AnsibleProcessMitigationTask is not currently supported*'
             Join-Path $TestDrive 'warned/warned_role/tasks/cat1.yml' | Should -Exist
         }
 

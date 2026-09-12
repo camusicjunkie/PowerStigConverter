@@ -81,14 +81,19 @@ function ConvertTo-AnsibleTask {
                 'when' = New-AnsibleVariable -TaskId $baseId -StigName $StigName -Type Conditional
             }
 
+            # One assert per rule, on the first task it produces - the one that consumes the value.
+            # A rule that becomes a single task, which is all of them bar RootCertificate, gets the
+            # same wrapping it would have got ungrouped.
+            $first = $true
             foreach ($task in $tasks) {
                 Write-Verbose "  Task: $($task.name)"
 
                 $null = $items.Add(@{
                     GroupId = $baseId
-                    Task = Add-AnsibleAssert -Task $task -Resolution $resolution
+                    Task = if ($first) { Add-AnsibleAssert -Task $task -Resolution $resolution } else { $task }
                     Output = @{ Rule = $rule; Task = $groupTask }
                 })
+                $first = $false
             }
         }
     }
