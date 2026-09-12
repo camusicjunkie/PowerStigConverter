@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Fixture STIG for the rule types no other fixture carries, so that AuditSetting, Permission,
+  RootCertificate and Service are converted end to end by New-AnsiblePlaybook rather than only by
+  their own tests. Each generator was verifiable before this; none of them was ever run against a
+  whole conversion.
+
+  RootCertificate and Service leave their values to the organisation, which is the ordinary shape
+  for both, so the org settings file beside this one answers them.
+-->
+<DISASTIG version="1" classification="UNCLASSIFIED" customname="" stigid="MS_Windows_Server_2022_DC_STIG" description="Fixture STIG." filename="U_MS_Windows_Server_2022_DC_STIG_V1R0_Manual-xccdf.xml" releaseinfo="Release: 0" title="Microsoft Windows Server 2022 Domain Controller Security Technical Implementation Guide" notice="terms-of-use" source="STIG.DOD.MIL" fullversion="1.0" created="1/1/2026">
+  <AuditSettingRule dscresourcemodule="AuditSystemDsc">
+    <Rule id="V-400" severity="medium" conversionstatus="pass" title="SRG-OS-000257-GPOS-00098" dscresource="AuditSetting">
+      <Description>Fixture audit setting rule.</Description>
+      <DuplicateOf />
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+      <Query>SELECT * FROM Win32_LogicalDisk WHERE DriveType = 3</Query>
+      <Property>FileSystem</Property>
+      <DesiredValue>NTFS</DesiredValue>
+      <Operator>eq</Operator>
+      <Namespace>root/cimv2</Namespace>
+    </Rule>
+  </AuditSettingRule>
+  <PermissionRule dscresourcemodule="AccessControlDsc">
+    <Rule id="V-401" severity="high" conversionstatus="pass" title="SRG-OS-000324-GPOS-00125" dscresource="NTFSAccessEntry">
+      <Description>Fixture permission rule. Two entries, so the generated block holds two tasks.</Description>
+      <DuplicateOf />
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+      <Path>%SystemRoot%\SYSTEM32\WINEVT\LOGS\Application.evtx</Path>
+      <Force>False</Force>
+      <AccessControlEntry>
+        <Entry>
+          <Type>Allow</Type>
+          <Principal>Administrators</Principal>
+          <ForcePrincipal>False</ForcePrincipal>
+          <Inheritance>This folder only</Inheritance>
+          <Rights>FullControl</Rights>
+        </Entry>
+        <Entry>
+          <Type>Allow</Type>
+          <Principal>SYSTEM</Principal>
+          <ForcePrincipal>False</ForcePrincipal>
+          <Inheritance>This folder only</Inheritance>
+          <Rights>FullControl</Rights>
+        </Entry>
+      </AccessControlEntry>
+    </Rule>
+  </PermissionRule>
+  <RootCertificateRule dscresourcemodule="CertificateDsc">
+    <Rule id="V-402" severity="medium" conversionstatus="pass" title="SRG-OS-000066-GPOS-00034" dscresource="RootCertificate">
+      <Description>Fixture root certificate rule. The store is an organisation value.</Description>
+      <DuplicateOf />
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <OrganizationValueRequired>True</OrganizationValueRequired>
+      <OrganizationValueTestString>{0} -match 'Cert:\'</OrganizationValueTestString>
+      <CertificateName>DoD Root CA 3</CertificateName>
+      <Thumbprint>D73CA91102A2204A36459ED32213B467D7CE97FB</Thumbprint>
+      <Location />
+    </Rule>
+  </RootCertificateRule>
+  <ServiceRule dscresourcemodule="PSDesiredStateConfiguration">
+    <Rule id="V-403" severity="low" conversionstatus="pass" title="SRG-OS-000095-GPOS-00049" dscresource="Service">
+      <Description>Fixture service rule. Both the name and the startup type are organisation values.</Description>
+      <DuplicateOf />
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <OrganizationValueRequired>True</OrganizationValueRequired>
+      <OrganizationValueTestString />
+      <ServiceName />
+      <StartupType />
+    </Rule>
+  </ServiceRule>
+</DISASTIG>

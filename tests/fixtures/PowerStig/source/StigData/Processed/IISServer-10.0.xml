@@ -6,6 +6,9 @@
     path: nothing in the org settings file says where IIS should write its logs, so the site
     fills that one in. A role generated from this fixture has to declare that variable as well
     as reference it, or the play fails on an undefined variable.
+
+    The MIME type and web configuration rules are here because this is the STIG whose stigid
+    takes the server branch of both generators.
 -->
 <DISASTIG version="1" classification="UNCLASSIFIED" customname="" stigid="IIS_10_Server" description="Fixture STIG." filename="U_MS_IIS_10-0_Server_STIG_V1R0_Manual-xccdf.xml" releaseinfo="Release: 0" title="Microsoft IIS 10.0 Server Security Technical Implementation Guide" notice="terms-of-use" source="STIG.DOD.MIL" fullversion="10.0" created="1/1/2026">
   <IisLoggingRule dscresourcemodule="WebAdministrationDsc">
@@ -22,4 +25,28 @@
       <LogCustomFieldEntry />
     </Rule>
   </IisLoggingRule>
+  <MimeTypeRule dscresourcemodule="WebAdministrationDsc">
+    <Rule id="V-301" severity="medium" conversionstatus="pass" title="SRG-APP-000141-WSR-000081" dscresource="MimeType">
+      <Description>Fixture MIME type rule. A server STIG configures the machine-wide web root.</Description>
+      <DuplicateOf />
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+      <Extension>.exe</Extension>
+      <MimeType>application/octet-stream</MimeType>
+      <Ensure>Absent</Ensure>
+    </Rule>
+  </MimeTypeRule>
+  <WebConfigurationPropertyRule dscresourcemodule="WebAdministrationDsc">
+    <Rule id="V-302" severity="medium" conversionstatus="pass" title="SRG-APP-000141-WSR-000085" dscresource="WebConfigProperty">
+      <Description>Fixture web configuration property rule.</Description>
+      <DuplicateOf />
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+      <ConfigSection>/system.webServer/security/requestFiltering</ConfigSection>
+      <Key>allowDoubleEscaping</Key>
+      <Value>false</Value>
+    </Rule>
+  </WebConfigurationPropertyRule>
 </DISASTIG>

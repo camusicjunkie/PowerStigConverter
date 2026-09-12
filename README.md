@@ -217,11 +217,6 @@ loses the tag.
 ## Roadmap
 
 - Error handling and relative-path support in `Copy-PowerStigFile`
-- No fixture STIG carries an `AuditSetting`, `MimeType`, `Permission`, `RootCertificate`,
-  `Service` or `WebConfigurationProperty` rule, so those six generators have no end-to-end
-  coverage through `New-AnsiblePlaybook`. Each has a direct test of its own, and
-  `tests/GeneratorCoverage.Tests.ps1` holds every generator to the same checklist, so this is
-  now about the fixtures rather than about the generators being unverified.
 
 ## Authors and acknowledgment
 
