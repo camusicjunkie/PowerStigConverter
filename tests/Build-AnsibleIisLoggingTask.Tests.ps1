@@ -28,14 +28,14 @@ BeforeAll {
 
         InModuleScope -ModuleName PowerStigConverter -Parameters @{ Rule = $Rule } {
             param ($Rule)
-            ($Rule | New-AnsibleIisLoggingTask -StigName 'IISServer-10.0').Task
+            ($Rule | ConvertTo-AnsibleTask -RuleType 'IisLogging' -StigName 'IISServer-10.0').Task
         }
     }
 }
 
-Describe 'New-AnsibleIisLoggingTask' {
+Describe 'Build-AnsibleIisLoggingTask' {
 
-    Add-GeneratorContractTests -Generator 'New-AnsibleIisLoggingTask' `
+    Add-GeneratorContractTests -Generator 'Build-AnsibleIisLoggingTask' `
         -Module 'ansible.windows.win_dsc' `
         -StigName 'IISServer-10.0' `
         -Factory { New-LoggingRule }
@@ -141,7 +141,7 @@ Describe 'New-AnsibleIisLoggingTask' {
         }
 
         It 'interpolates a variable per field rather than inlining the values' {
-            $dsc = (Invoke-Generator -Generator 'New-AnsibleIisLoggingTask' -Rule $orgRule `
+            $dsc = (Invoke-Generator -Generator 'Build-AnsibleIisLoggingTask' -Rule $orgRule `
                 -StigName 'IISServer-10.0' -OrganizationalSetting $answered).Task.'ansible.windows.win_dsc'
 
             $dsc.LogFormat | Should-Be '{{ stig_iisserver_10_0_300_logformat }}'
@@ -152,7 +152,7 @@ Describe 'New-AnsibleIisLoggingTask' {
             $blank = New-ContractOrgSetting ('<OrganizationalSetting id="V-300" LogFlags="Date,Time" ' +
                 'LogFormat="W3C" LogPeriod="Daily" LogTargetW3C="" />')
 
-            $task = (Invoke-Generator -Generator 'New-AnsibleIisLoggingTask' -Rule $orgRule `
+            $task = (Invoke-Generator -Generator 'Build-AnsibleIisLoggingTask' -Rule $orgRule `
                 -StigName 'IISServer-10.0' -OrganizationalSetting $blank).Task
 
             $task.block[0].'ansible.builtin.assert'.that |

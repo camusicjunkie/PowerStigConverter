@@ -67,8 +67,10 @@ _Avoid_: gap
 ### Generated role
 
 **Task generator**:
-The function that turns STIG rules of one rule type into Ansible tasks — `New-Ansible*Task`.
-One per supported rule type; rule types without one produce nothing.
+The adapter that turns STIG rules of one rule type into Ansible tasks — `Build-Ansible*Task`.
+It supplies only what differs by type: the ansible module and the fields mapped into it.
+`ConvertTo-AnsibleTask` owns everything every type does the same way. One adapter per supported
+rule type; rule types without one produce nothing.
 _Avoid_: converter, handler, builder
 
 **Conditional toggle**:

@@ -23,23 +23,23 @@ BeforeAll {
 }
 
 # There is no ansible module covering a WMI audit, so this one goes through win_dsc.
-Describe 'New-AnsibleAuditSettingTask' {
+Describe 'Build-AnsibleAuditSettingTask' {
 
-    Add-GeneratorContractTests -Generator 'New-AnsibleAuditSettingTask' `
+    Add-GeneratorContractTests -Generator 'Build-AnsibleAuditSettingTask' `
         -Module 'ansible.windows.win_dsc' `
         -Factory { New-AuditSettingRule }
 
     Context 'the task it builds' {
 
         It 'uses the AuditSetting DSC resource' {
-            $task = (Invoke-Generator -Generator 'New-AnsibleAuditSettingTask' `
+            $task = (Invoke-Generator -Generator 'Build-AnsibleAuditSettingTask' `
                 -Rule (New-AuditSettingRule) -StigName 'WindowsServer-2022-MS').Task
 
             $task.'ansible.windows.win_dsc'.resource_name | Should-Be 'AuditSetting'
         }
 
         It 'carries the query, property, desired value and operator' {
-            $dsc = (Invoke-Generator -Generator 'New-AnsibleAuditSettingTask' `
+            $dsc = (Invoke-Generator -Generator 'Build-AnsibleAuditSettingTask' `
                 -Rule (New-AuditSettingRule) -StigName 'WindowsServer-2022-MS').Task.'ansible.windows.win_dsc'
 
             $dsc.Query | Should-Be 'SELECT * FROM Win32_LogicalDisk'
@@ -49,7 +49,7 @@ Describe 'New-AnsibleAuditSettingTask' {
         }
 
         It 'names the task for the assertion it makes' {
-            $task = (Invoke-Generator -Generator 'New-AnsibleAuditSettingTask' `
+            $task = (Invoke-Generator -Generator 'Build-AnsibleAuditSettingTask' `
                 -Rule (New-AuditSettingRule) -StigName 'WindowsServer-2022-MS').Task
 
             $task.name | Should-Be 'V-120 | LOW | Audit that FileSystem eq NTFS'
@@ -61,14 +61,14 @@ Describe 'New-AnsibleAuditSettingTask' {
     Context 'a rule that does not name a namespace' {
 
         It 'leaves Namespace out rather than sending it empty' {
-            $dsc = (Invoke-Generator -Generator 'New-AnsibleAuditSettingTask' `
+            $dsc = (Invoke-Generator -Generator 'Build-AnsibleAuditSettingTask' `
                 -Rule (New-AuditSettingRule -Namespace '') -StigName 'WindowsServer-2022-MS').Task.'ansible.windows.win_dsc'
 
             $dsc.Contains('Namespace') | Should-BeFalse
         }
 
         It 'includes Namespace when the rule does name one' {
-            $dsc = (Invoke-Generator -Generator 'New-AnsibleAuditSettingTask' `
+            $dsc = (Invoke-Generator -Generator 'Build-AnsibleAuditSettingTask' `
                 -Rule (New-AuditSettingRule) -StigName 'WindowsServer-2022-MS').Task.'ansible.windows.win_dsc'
 
             $dsc.Namespace | Should-Be 'root/cimv2'

@@ -181,7 +181,8 @@ Each PowerStig rule type is converted by its own task generator:
 | WindowsFeature | | |
 
 A rule type with no matching generator is skipped with a warning rather than failing the run, so
-adding support for a new type means adding one `New-Ansible<Type>Task` function.
+adding support for a new type means adding one `Build-Ansible<Type>Task` adapter, which supplies
+the ansible module and the fields mapped into it. `ConvertTo-AnsibleTask` does the rest.
 
 ## Tests
 

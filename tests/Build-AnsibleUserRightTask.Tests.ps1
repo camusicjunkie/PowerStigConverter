@@ -22,9 +22,9 @@ BeforeAll {
     }
 }
 
-Describe 'New-AnsibleUserRightTask' {
+Describe 'Build-AnsibleUserRightTask' {
 
-    Add-GeneratorContractTests -Generator 'New-AnsibleUserRightTask' `
+    Add-GeneratorContractTests -Generator 'Build-AnsibleUserRightTask' `
         -Module 'ansible.windows.win_user_right' `
         -Factory { New-UserRightRule }
 
@@ -32,14 +32,14 @@ Describe 'New-AnsibleUserRightTask' {
 
         # win_user_right takes the constant, not the display name a human reads.
         It 'names the right by its constant' {
-            $right = (Invoke-Generator -Generator 'New-AnsibleUserRightTask' `
+            $right = (Invoke-Generator -Generator 'Build-AnsibleUserRightTask' `
                 -Rule (New-UserRightRule) -StigName 'WindowsServer-2022-MS').Task.'ansible.windows.win_user_right'
 
             $right.name | Should-Be 'SeNetworkLogonRight'
         }
 
         It 'names the task for the rule id, its severity and the right' {
-            $task = (Invoke-Generator -Generator 'New-AnsibleUserRightTask' `
+            $task = (Invoke-Generator -Generator 'Build-AnsibleUserRightTask' `
                 -Rule (New-UserRightRule) -StigName 'WindowsServer-2022-MS').Task
 
             $task.name | Should-Be 'V-150 | MEDIUM | Access this computer from the network'
@@ -53,7 +53,7 @@ Describe 'New-AnsibleUserRightTask' {
             @{ Force = 'True'; Expected = 'set' }
             @{ Force = 'False'; Expected = 'add' }
         ) {
-            $right = (Invoke-Generator -Generator 'New-AnsibleUserRightTask' `
+            $right = (Invoke-Generator -Generator 'Build-AnsibleUserRightTask' `
                 -Rule (New-UserRightRule -Force $Force) -StigName 'WindowsServer-2022-MS').Task.'ansible.windows.win_user_right'
 
             $right.action | Should-Be $Expected
@@ -65,14 +65,14 @@ Describe 'New-AnsibleUserRightTask' {
     Context 'a value the task needs as a list' {
 
         It 'splits an identity list the rule carries itself' {
-            $right = (Invoke-Generator -Generator 'New-AnsibleUserRightTask' `
+            $right = (Invoke-Generator -Generator 'Build-AnsibleUserRightTask' `
                 -Rule (New-UserRightRule) -StigName 'WindowsServer-2022-MS').Task.'ansible.windows.win_user_right'
 
             $right.users -join '|' | Should-Be 'Administrators|Guests'
         }
 
         It 'keeps a single identity a list rather than unrolling it to a string' {
-            $right = (Invoke-Generator -Generator 'New-AnsibleUserRightTask' `
+            $right = (Invoke-Generator -Generator 'Build-AnsibleUserRightTask' `
                 -Rule (New-UserRightRule -Identity 'Administrators') -StigName 'WindowsServer-2022-MS').Task.'ansible.windows.win_user_right'
 
             $right.users -is [array] | Should-BeTrue
@@ -81,7 +81,7 @@ Describe 'New-AnsibleUserRightTask' {
 
         # PowerStig spells "nobody holds this right" as the string NULL.
         It 'sends an empty list when the rule denies the right to everyone' {
-            $right = (Invoke-Generator -Generator 'New-AnsibleUserRightTask' `
+            $right = (Invoke-Generator -Generator 'Build-AnsibleUserRightTask' `
                 -Rule (New-UserRightRule -Identity 'NULL') -StigName 'WindowsServer-2022-MS').Task.'ansible.windows.win_user_right'
 
             @($right.users).Count | Should-Be 0
@@ -94,7 +94,7 @@ Describe 'New-AnsibleUserRightTask' {
             $rule = New-UserRightRule -Identity '' -OrganizationValueRequired $true
             $orgSetting = New-ContractOrgSetting '<OrganizationalSetting id="V-150" Identity="Administrators" />'
 
-            $right = (Invoke-Generator -Generator 'New-AnsibleUserRightTask' -Rule $rule `
+            $right = (Invoke-Generator -Generator 'Build-AnsibleUserRightTask' -Rule $rule `
                 -StigName 'WindowsServer-2022-MS' -OrganizationalSetting $orgSetting).Task.'ansible.windows.win_user_right'
 
             $right.users | Should-Be '{{ stig_server_2022_150_access_this_computer_from_the_network }}'
@@ -106,7 +106,7 @@ Describe 'New-AnsibleUserRightTask' {
             $rule = New-UserRightRule -Identity '' -OrganizationValueRequired $true
             $orgSetting = New-ContractOrgSetting '<OrganizationalSetting id="V-150" Identity="Administrators,Guests" />'
 
-            $right = (Invoke-Generator -Generator 'New-AnsibleUserRightTask' -Rule $rule `
+            $right = (Invoke-Generator -Generator 'Build-AnsibleUserRightTask' -Rule $rule `
                 -StigName 'WindowsServer-2022-MS' -OrganizationalSetting $orgSetting).Task.'ansible.windows.win_user_right'
 
             @($right.users).Count | Should-Be 1

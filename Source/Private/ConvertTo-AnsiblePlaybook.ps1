@@ -25,12 +25,14 @@ function ConvertTo-AnsiblePlaybook {
 
         if ($dscResourceModule -like '*WebAdministration*') { $natParams.Add('StigId', $stigId) }
 
-        try {
-            Write-Verbose "New-Ansible$($ruleName)Task is being processed."
-            $stigRule | & "New-Ansible$($ruleName)Task" @natParams
+        # A rule type is supported exactly when it has an adapter, so that is the question asked -
+        # rather than calling a function named after it and reading the failure.
+        if (Get-Command "Build-Ansible$($ruleName)Task" -ErrorAction Ignore) {
+            Write-Verbose "Build-Ansible$($ruleName)Task is being processed."
+            $stigRule | ConvertTo-AnsibleTask -RuleType $ruleName @natParams
         }
-        catch [System.Management.Automation.CommandNotFoundException] {
-            Write-Warning "New-Ansible$($ruleName)Task is not currently supported."
+        else {
+            Write-Warning "Build-Ansible$($ruleName)Task is not currently supported."
         }
 
         $natParams.Remove('StigId')

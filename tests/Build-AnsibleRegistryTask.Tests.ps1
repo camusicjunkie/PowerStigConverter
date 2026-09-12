@@ -29,14 +29,14 @@ BeforeAll {
     function Get-RegistryTask {
         param ($Rule, $OrganizationalSetting = @{})
 
-        (Invoke-Generator -Generator 'New-AnsibleRegistryTask' -Rule $Rule `
+        (Invoke-Generator -Generator 'Build-AnsibleRegistryTask' -Rule $Rule `
             -StigName 'WindowsServer-2022-MS' -OrganizationalSetting $OrganizationalSetting).Task
     }
 }
 
-Describe 'New-AnsibleRegistryTask' {
+Describe 'Build-AnsibleRegistryTask' {
 
-    Add-GeneratorContractTests -Generator 'New-AnsibleRegistryTask' `
+    Add-GeneratorContractTests -Generator 'Build-AnsibleRegistryTask' `
         -Module 'ansible.windows.win_regedit' `
         -Factory { New-RegistryRule }
 
@@ -87,7 +87,7 @@ Describe 'New-AnsibleRegistryTask' {
                         Key = 'HKLM\Software\Policies\Alpha'; ValueName = 'Two'
                         ValueType = 'DWORD'; ValueData = '2'; OrganizationValueRequired = $false
                     }
-                ) | New-AnsibleRegistryTask -StigName 'WindowsServer-2022-MS'
+                ) | ConvertTo-AnsibleTask -RuleType 'Registry' -StigName 'WindowsServer-2022-MS'
             }
         }
 

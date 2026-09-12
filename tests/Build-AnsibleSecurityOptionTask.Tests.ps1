@@ -21,16 +21,16 @@ BeforeAll {
     }
 }
 
-Describe 'New-AnsibleSecurityOptionTask' {
+Describe 'Build-AnsibleSecurityOptionTask' {
 
-    Add-GeneratorContractTests -Generator 'New-AnsibleSecurityOptionTask' `
+    Add-GeneratorContractTests -Generator 'Build-AnsibleSecurityOptionTask' `
         -Module 'community.windows.win_security_policy' `
         -Factory { New-SecurityOptionRule }
 
     Context 'the task it builds' {
 
         It 'looks the section and key up rather than taking them off the rule' {
-            $policy = (Invoke-Generator -Generator 'New-AnsibleSecurityOptionTask' `
+            $policy = (Invoke-Generator -Generator 'Build-AnsibleSecurityOptionTask' `
                 -Rule (New-SecurityOptionRule) -StigName 'WindowsServer-2022-MS').Task.'community.windows.win_security_policy'
 
             $policy.section | Should-Be 'Registry Values'
@@ -38,7 +38,7 @@ Describe 'New-AnsibleSecurityOptionTask' {
         }
 
         It 'names the task for the rule id, its severity and the option' {
-            $task = (Invoke-Generator -Generator 'New-AnsibleSecurityOptionTask' `
+            $task = (Invoke-Generator -Generator 'Build-AnsibleSecurityOptionTask' `
                 -Rule (New-SecurityOptionRule) -StigName 'WindowsServer-2022-MS').Task
 
             $task.name | Should-Be 'V-140 | MEDIUM | Domain member: Maximum machine account password age'
@@ -62,7 +62,7 @@ Describe 'New-AnsibleSecurityOptionTask' {
                 OrganizationValueRequired = $false
             }
 
-            $policy = (Invoke-Generator -Generator 'New-AnsibleSecurityOptionTask' `
+            $policy = (Invoke-Generator -Generator 'Build-AnsibleSecurityOptionTask' `
                 -Rule $rule -StigName 'WindowsServer-2022-MS').Task.'community.windows.win_security_policy'
 
             $policy.value | Should-Be $Expected
@@ -75,7 +75,7 @@ Describe 'New-AnsibleSecurityOptionTask' {
             $rule = New-SecurityOptionRule -OrganizationValueRequired $true
             $orgSetting = New-ContractOrgSetting '<OrganizationalSetting id="V-140" OptionValue="30" />'
 
-            $policy = (Invoke-Generator -Generator 'New-AnsibleSecurityOptionTask' -Rule $rule `
+            $policy = (Invoke-Generator -Generator 'Build-AnsibleSecurityOptionTask' -Rule $rule `
                 -StigName 'WindowsServer-2022-MS' -OrganizationalSetting $orgSetting).Task.'community.windows.win_security_policy'
 
             $policy.value | Should-BeLikeString '{{ stig_server_2022_140_*'
@@ -85,7 +85,7 @@ Describe 'New-AnsibleSecurityOptionTask' {
             $rule = New-SecurityOptionRule -OrganizationValueRequired $true
             $orgSetting = New-ContractOrgSetting '<OrganizationalSetting id="V-140" OptionValue="" />'
 
-            $task = (Invoke-Generator -Generator 'New-AnsibleSecurityOptionTask' -Rule $rule `
+            $task = (Invoke-Generator -Generator 'Build-AnsibleSecurityOptionTask' -Rule $rule `
                 -StigName 'WindowsServer-2022-MS' -OrganizationalSetting $orgSetting).Task
 
             $task.block[0].'ansible.builtin.assert' | Should-NotBeNull

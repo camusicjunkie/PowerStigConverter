@@ -34,7 +34,7 @@ BeforeAll {
 
 # Every access control entry on the rule becomes its own task inside one block, so this rule type
 # always groups even when the id carries no sub-rule suffix.
-Describe 'New-AnsiblePermissionTask' {
+Describe 'Build-AnsiblePermissionTask' {
 
     # The generator asks the filesystem whether the expanded path exists; mocked so the result
     # does not depend on the machine running the suite. See #8.
@@ -42,14 +42,14 @@ Describe 'New-AnsiblePermissionTask' {
         InModuleScope -ModuleName PowerStigConverter { Mock Test-Path { $true } }
     }
 
-    Add-GeneratorContractTests -Generator 'New-AnsiblePermissionTask' `
+    Add-GeneratorContractTests -Generator 'Build-AnsiblePermissionTask' `
         -Module 'ansible.windows.win_acl' `
         -Factory { New-PermissionRule }
 
     Context 'the task it builds' {
 
         It 'sets the principal and rights the entry names' {
-            $task = (Invoke-Generator -Generator 'New-AnsiblePermissionTask' `
+            $task = (Invoke-Generator -Generator 'Build-AnsiblePermissionTask' `
                 -Rule (New-PermissionRule) -StigName 'WindowsServer-2022-MS').Task
 
             $acl = $task.block[0].'ansible.windows.win_acl'
@@ -58,7 +58,7 @@ Describe 'New-AnsiblePermissionTask' {
         }
 
         It 'translates the inheritance phrase into the flags win_acl takes' {
-            $task = (Invoke-Generator -Generator 'New-AnsiblePermissionTask' `
+            $task = (Invoke-Generator -Generator 'Build-AnsiblePermissionTask' `
                 -Rule (New-PermissionRule) -StigName 'WindowsServer-2022-MS').Task
 
             $acl = $task.block[0].'ansible.windows.win_acl'
@@ -72,7 +72,7 @@ Describe 'New-AnsiblePermissionTask' {
                 [pscustomobject] @{ Principal = 'Users'; Rights = 'ReadAndExecute'; Type = 'Allow'; Inheritance = 'This folder only' }
             )
 
-            $task = (Invoke-Generator -Generator 'New-AnsiblePermissionTask' `
+            $task = (Invoke-Generator -Generator 'Build-AnsiblePermissionTask' `
                 -Rule $rule -StigName 'WindowsServer-2022-MS').Task
 
             @($task.block).Count | Should-Be 2
@@ -88,7 +88,7 @@ Describe 'New-AnsiblePermissionTask' {
                 [pscustomobject] @{ Principal = 'Users'; Rights = 'ReadAndExecute'; Type = ''; Inheritance = 'This folder only' }
             )
 
-            $task = (Invoke-Generator -Generator 'New-AnsiblePermissionTask' `
+            $task = (Invoke-Generator -Generator 'Build-AnsiblePermissionTask' `
                 -Rule $rule -StigName 'WindowsServer-2022-MS').Task
 
             $task.block[0].'ansible.windows.win_acl'.type | Should-Be 'Allow'
@@ -101,7 +101,7 @@ Describe 'New-AnsiblePermissionTask' {
         It 'sends the expanded path when it exists on the converting machine' {
             InModuleScope -ModuleName PowerStigConverter { Mock Test-Path { $true } }
 
-            $task = (Invoke-Generator -Generator 'New-AnsiblePermissionTask' `
+            $task = (Invoke-Generator -Generator 'Build-AnsiblePermissionTask' `
                 -Rule (New-PermissionRule) -StigName 'WindowsServer-2022-MS').Task
 
             $task.block[0].'ansible.windows.win_acl'.path |
@@ -111,7 +111,7 @@ Describe 'New-AnsiblePermissionTask' {
         It 'falls back to the unexpanded path when it does not' {
             InModuleScope -ModuleName PowerStigConverter { Mock Test-Path { $false } }
 
-            $task = (Invoke-Generator -Generator 'New-AnsiblePermissionTask' `
+            $task = (Invoke-Generator -Generator 'Build-AnsiblePermissionTask' `
                 -Rule (New-PermissionRule) -StigName 'WindowsServer-2022-MS').Task
 
             $task.block[0].'ansible.windows.win_acl'.path | Should-Be '%SystemRoot%\System32\config'

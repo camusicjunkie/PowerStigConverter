@@ -478,7 +478,7 @@ Describe 'Resolve-AnsibleOrganizationValue: the values the org settings file doe
                 Should-BeCollection @('ServiceName', 'StartupType')
         }
 
-        # New-AnsibleIisLoggingTask already omits LogCustomFields from the DSC task when it is
+        # Build-AnsibleIisLoggingTask already omits LogCustomFields from the DSC task when it is
         # empty, so requiring it would refuse a conversion that has everything it needs.
         It 'does not require a field the task treats as optional' {
             $rule = [pscustomobject] @{ Id = 'V-300'; OrganizationValueRequired = $true }

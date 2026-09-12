@@ -23,7 +23,7 @@ BeforeAll {
     function Get-RootCertificateTask {
         param ($Rule, $OrganizationalSetting = @{})
 
-        (Invoke-Generator -Generator 'New-AnsibleRootCertificateTask' -Rule $Rule `
+        (Invoke-Generator -Generator 'Build-AnsibleRootCertificateTask' -Rule $Rule `
             -StigName 'WindowsServer-2022-MS' -OrganizationalSetting $OrganizationalSetting).Task
     }
 
@@ -34,9 +34,9 @@ BeforeAll {
 
 # The store is always an organization value, so every rule of this type takes that path.
 # An unanswered one stops the conversion rather than dropping the rule - docs/adr/0001.
-Describe 'New-AnsibleRootCertificateTask' {
+Describe 'Build-AnsibleRootCertificateTask' {
 
-    Add-GeneratorContractTests -Generator 'New-AnsibleRootCertificateTask' `
+    Add-GeneratorContractTests -Generator 'Build-AnsibleRootCertificateTask' `
         -Module 'community.windows.win_certificate_info' `
         -Factory { New-RootCertificateRule }
 
@@ -76,17 +76,29 @@ Describe 'New-AnsibleRootCertificateTask' {
             $gather.store_location | Should-Be '{{ stig_server_2022_180_store_location }}'
         }
 
+        # The guard wraps the task that consumes the value, the same way it does for every other
+        # rule type, rather than sitting beside it as a sibling.
         It 'guards both unanswered variables with an assert, rather than dropping the rule' {
             $task = Get-RootCertificateTask -Rule (New-RootCertificateRule) `
                 -OrganizationalSetting (New-ContractOrgSetting '<OrganizationalSetting id="V-180" Location="" />')
 
-            $guard = $task.block | Where-Object { $_.name -like 'Assert the organization values*' }
+            $gather = $task.block | Where-Object { $_.name -like 'Gather info*' }
+            $guard = $gather.block | Where-Object { $_.name -like 'Assert the organization values*' }
 
             $guard | Should-NotBeNull
             $guard.'ansible.builtin.assert'.that | Should-BeCollection @(
                 'stig_server_2022_180_store_name | default("", true) | length > 0'
                 'stig_server_2022_180_store_location | default("", true) | length > 0'
             )
+        }
+
+        It 'leaves the gather task unwrapped once the store has been answered' {
+            $task = Get-RootCertificateTask -Rule (New-RootCertificateRule) -OrganizationalSetting (New-RootStore)
+
+            $gather = $task.block | Where-Object { $_.name -like 'Gather info*' }
+
+            $gather.Contains('block') | Should-BeFalse
+            $gather.'community.windows.win_certificate_info' | Should-NotBeNull
         }
 
         It 'builds no such guard once the store has been answered' {

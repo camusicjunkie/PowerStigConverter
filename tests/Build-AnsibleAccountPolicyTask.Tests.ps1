@@ -25,16 +25,16 @@ BeforeAll {
     }
 }
 
-Describe 'New-AnsibleAccountPolicyTask' {
+Describe 'Build-AnsibleAccountPolicyTask' {
 
-    Add-GeneratorContractTests -Generator 'New-AnsibleAccountPolicyTask' `
+    Add-GeneratorContractTests -Generator 'Build-AnsibleAccountPolicyTask' `
         -Module 'community.windows.win_security_policy' `
         -Factory { New-AccountPolicyRule }
 
     Context 'the task it builds' {
 
         It 'looks the section and key up rather than taking them off the rule' {
-            $task = (Invoke-Generator -Generator 'New-AnsibleAccountPolicyTask' `
+            $task = (Invoke-Generator -Generator 'Build-AnsibleAccountPolicyTask' `
                 -Rule (New-AccountPolicyRule) -StigName 'WindowsServer-2022-MS').Task
 
             $policy = $task.'community.windows.win_security_policy'
@@ -44,7 +44,7 @@ Describe 'New-AnsibleAccountPolicyTask' {
 
         # win_security_policy wants the number, and yaml would otherwise read a quoted 60 as text.
         It 'passes a numeric value through as a number' {
-            $task = (Invoke-Generator -Generator 'New-AnsibleAccountPolicyTask' `
+            $task = (Invoke-Generator -Generator 'Build-AnsibleAccountPolicyTask' `
                 -Rule (New-AccountPolicyRule) -StigName 'WindowsServer-2022-MS').Task
 
             $task.'community.windows.win_security_policy'.value | Should-Be 60
@@ -52,7 +52,7 @@ Describe 'New-AnsibleAccountPolicyTask' {
         }
 
         It 'names the task for the rule id, its severity and the policy' {
-            $task = (Invoke-Generator -Generator 'New-AnsibleAccountPolicyTask' `
+            $task = (Invoke-Generator -Generator 'Build-AnsibleAccountPolicyTask' `
                 -Rule (New-AccountPolicyRule) -StigName 'WindowsServer-2022-MS').Task
 
             $task.name | Should-Be 'V-100 | MEDIUM | Maximum password age'
@@ -67,7 +67,7 @@ Describe 'New-AnsibleAccountPolicyTask' {
             $rule = New-AccountPolicyRule -OrganizationValueRequired $true
             $orgSetting = New-ContractOrgSetting '<OrganizationalSetting id="V-100" PolicyValue="15" />'
 
-            $task = (Invoke-Generator -Generator 'New-AnsibleAccountPolicyTask' -Rule $rule `
+            $task = (Invoke-Generator -Generator 'Build-AnsibleAccountPolicyTask' -Rule $rule `
                 -StigName 'WindowsServer-2022-MS' -OrganizationalSetting $orgSetting).Task
 
             $task.'community.windows.win_security_policy'.value |
@@ -80,7 +80,7 @@ Describe 'New-AnsibleAccountPolicyTask' {
             $rule = New-AccountPolicyRule -OrganizationValueRequired $true
             $orgSetting = New-ContractOrgSetting '<OrganizationalSetting id="V-100" PolicyValue="" />'
 
-            $task = (Invoke-Generator -Generator 'New-AnsibleAccountPolicyTask' -Rule $rule `
+            $task = (Invoke-Generator -Generator 'Build-AnsibleAccountPolicyTask' -Rule $rule `
                 -StigName 'WindowsServer-2022-MS' -OrganizationalSetting $orgSetting).Task
 
             $task.block[0].'ansible.builtin.assert' | Should-NotBeNull
