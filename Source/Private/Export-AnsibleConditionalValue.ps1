@@ -19,7 +19,7 @@ function Export-AnsibleConditionalValue {
         $null = $items.Add(@{
             Id = $baseId
             Severity = $rule.Severity
-            Value = New-AnsibleVariable -TaskId $baseId -StigName $StigName -Type ConditionalValue
+            Value = New-AnsibleToggleLine -TaskId $baseId -StigName $StigName
         })
     }
     end {

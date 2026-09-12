@@ -9,7 +9,7 @@ function Build-AnsibleIisLoggingTask {
 
     # No org settings attribute feeds the log path, so it is a role variable the site fills in
     # rather than an organization value. See docs/adr/0004.
-    $logPath = New-AnsibleVariable -TaskId $Rule.Id -TaskName 'logpath' -StigName $StigName -Type Organization
+    $logPath = Get-AnsibleVariableReference -TaskId $Rule.Id -TaskName 'logpath' -StigName $StigName
 
     $dsc = [ordered] @{
         'resource_name' = 'IISLogging'

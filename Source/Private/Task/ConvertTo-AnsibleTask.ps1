@@ -66,7 +66,7 @@ function ConvertTo-AnsibleTask {
 
             if (-not $group) {
                 $task = $tasks[0]
-                $task['when'] = New-AnsibleVariable -TaskId $rule.Id -StigName $StigName -Type Conditional
+                $task['when'] = Get-AnsibleToggleName -TaskId $rule.Id -StigName $StigName
                 Write-Verbose "  Task: $($task.name)"
 
                 $null = $items.Add(@{
@@ -78,7 +78,7 @@ function ConvertTo-AnsibleTask {
             $groupTask = [ordered] @{
                 'name' = '{0} | {1} | {2}' -f $baseId, $severity, $built.GroupDetail
                 'block' = [System.Collections.ArrayList]::new()
-                'when' = New-AnsibleVariable -TaskId $baseId -StigName $StigName -Type Conditional
+                'when' = Get-AnsibleToggleName -TaskId $baseId -StigName $StigName
             }
 
             # One assert per rule, on the first task it produces - the one that consumes the value.

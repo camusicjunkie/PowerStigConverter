@@ -38,7 +38,7 @@ function Export-AnsibleOrganizationValue {
                 # and a reference with no declaration fails the play on an undefined variable.
                 # Build-AnsibleIisLoggingTask builds the reference from the same task name.
                 if ($ruleType -eq 'IisLogging') {
-                    New-AnsibleVariable -TaskId $rule.Id -TaskName 'LogPath' -StigName $StigName -Type OrganizationValue
+                    New-AnsibleVariableLine -TaskId $rule.Id -TaskName 'LogPath' -StigName $StigName
                 }
             )
 
@@ -56,7 +56,7 @@ function Export-AnsibleOrganizationValue {
 {0}_cat2: true
 {0}_cat3: true
 
-'@ -f (New-AnsibleVariable -StigName $StigName -Type OrganizationValueGroup))
+'@ -f (Get-AnsibleVariablePrefix -StigName $StigName))
 
         if ($organization.Count -gt 0) { $content += $organization.Values }
 
