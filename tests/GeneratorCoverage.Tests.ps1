@@ -8,7 +8,7 @@
 BeforeDiscovery {
     $sourceRoot = Join-Path (Split-Path $PSScriptRoot -Parent) 'Source'
 
-    $script:generators = Get-ChildItem (Join-Path $sourceRoot 'Private/Task') -Filter 'New-Ansible*Task.ps1' -Recurse |
+    $script:generators = Get-ChildItem (Join-Path $sourceRoot 'Private/Task') -Include 'New-Ansible*Task.ps1', 'Build-Ansible*Task.ps1' -Recurse |
         ForEach-Object {
             $body = Get-Content $_.FullName -Raw
             $testPath = Join-Path $PSScriptRoot "$($_.BaseName).Tests.ps1"
@@ -17,17 +17,19 @@ BeforeDiscovery {
                 Name = $_.BaseName
                 TestPath = $testPath
                 TestBody = if (Test-Path $testPath) { Get-Content $testPath -Raw } else { '' }
-                # A generator that resolves organization values has to show that the value reaches
-                # the task as a reference rather than a literal.
-                ResolvesOrganizationValue = $body -match 'Resolve-AnsibleOrganizationValue'
+                # Judged on OrganizationData.psd1 below, not on whether the file mentions the
+                # resolver - a rule type whose values the shared module resolves would otherwise
+                # stop being required to cover the path.
+                ResolvesOrganizationValue = $false
                 # A rule type with a List key in OrganizationData.psd1 has a field the ansible
                 # module takes as a list, so a one-element case has to be pinned.
-                RuleType = $_.BaseName -replace '^New-Ansible' -replace 'Task$'
+                RuleType = $_.BaseName -replace '^(New|Build)-Ansible' -replace 'Task$'
             }
         }
 
     $organizationData = Import-PowerShellDataFile (Join-Path $sourceRoot 'Files/OrganizationData.psd1')
     foreach ($generator in $script:generators) {
+        $generator['ResolvesOrganizationValue'] = $organizationData.ContainsKey($generator.RuleType)
         $generator['HasListField'] = $null -ne $organizationData[$generator.RuleType] -and
             $organizationData[$generator.RuleType].ContainsKey('List')
     }

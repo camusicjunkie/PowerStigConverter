@@ -23,15 +23,15 @@ BeforeAll {
     function Get-MimeTypeTask {
         param ($Rule, $StigId = 'IIS_10-0_Server')
 
-        (Invoke-Generator -Generator 'New-AnsibleMimeTypeTask' -Rule $Rule `
+        (Invoke-Generator -Generator 'Build-AnsibleMimeTypeTask' -Rule $Rule `
             -StigName 'IISServer-10.0' -ExtraParams @{ StigId = $StigId }).Task
     }
 }
 
 # There is no ansible module for IIS MIME type mappings, so this one goes through win_dsc.
-Describe 'New-AnsibleMimeTypeTask' {
+Describe 'Build-AnsibleMimeTypeTask' {
 
-    Add-GeneratorContractTests -Generator 'New-AnsibleMimeTypeTask' `
+    Add-GeneratorContractTests -Generator 'Build-AnsibleMimeTypeTask' `
         -Module 'ansible.windows.win_dsc' `
         -StigName 'IISServer-10.0' `
         -ExtraParams @{ StigId = 'IIS_10-0_Server' } `
@@ -87,7 +87,7 @@ Describe 'New-AnsibleMimeTypeTask' {
                         Extension = '.dll'; MimeType = 'binary/octet-stream'; Ensure = 'Absent'
                         OrganizationValueRequired = $false
                     }
-                ) | New-AnsibleMimeTypeTask -StigName 'IISServer-10.0' -StigId 'IIS_10-0_Server'
+                ) | ConvertTo-AnsibleTask -RuleType 'MimeType' -StigName 'IISServer-10.0' -StigId 'IIS_10-0_Server'
             }
         }
 

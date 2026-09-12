@@ -22,14 +22,14 @@ BeforeAll {
     function Get-WebConfigTask {
         param ($Rule, $StigId = 'IIS_10-0_Server')
 
-        (Invoke-Generator -Generator 'New-AnsibleWebConfigurationPropertyTask' -Rule $Rule `
+        (Invoke-Generator -Generator 'Build-AnsibleWebConfigurationPropertyTask' -Rule $Rule `
             -StigName 'IISServer-10.0' -ExtraParams @{ StigId = $StigId }).Task
     }
 }
 
-Describe 'New-AnsibleWebConfigurationPropertyTask' {
+Describe 'Build-AnsibleWebConfigurationPropertyTask' {
 
-    Add-GeneratorContractTests -Generator 'New-AnsibleWebConfigurationPropertyTask' `
+    Add-GeneratorContractTests -Generator 'Build-AnsibleWebConfigurationPropertyTask' `
         -Module 'ansible.windows.win_dsc' `
         -StigName 'IISServer-10.0' `
         -ExtraParams @{ StigId = 'IIS_10-0_Server' } `
@@ -92,7 +92,7 @@ Describe 'New-AnsibleWebConfigurationPropertyTask' {
                         ConfigSection = '/system.webServer/security/requestFiltering'
                         Key = 'allowHighBitCharacters'; Value = 'false'
                     }
-                ) | New-AnsibleWebConfigurationPropertyTask -StigName 'IISServer-10.0' -StigId 'IIS_10-0_Server'
+                ) | ConvertTo-AnsibleTask -RuleType 'WebConfigurationProperty' -StigName 'IISServer-10.0' -StigId 'IIS_10-0_Server'
             }
         }
 

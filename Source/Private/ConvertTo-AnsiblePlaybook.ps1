@@ -25,9 +25,18 @@ function ConvertTo-AnsiblePlaybook {
 
         if ($dscResourceModule -like '*WebAdministration*') { $natParams.Add('StigId', $stigId) }
 
+        # A rule type with an adapter goes through the shared module; the rest still carry their
+        # own plumbing. Both are looked up by name, and neither existing is what "not supported"
+        # means.
         try {
-            Write-Verbose "New-Ansible$($ruleName)Task is being processed."
-            $stigRule | & "New-Ansible$($ruleName)Task" @natParams
+            if (Get-Command "Build-Ansible$($ruleName)Task" -ErrorAction Ignore) {
+                Write-Verbose "Build-Ansible$($ruleName)Task is being processed."
+                $stigRule | ConvertTo-AnsibleTask -RuleType $ruleName @natParams
+            }
+            else {
+                Write-Verbose "New-Ansible$($ruleName)Task is being processed."
+                $stigRule | & "New-Ansible$($ruleName)Task" @natParams
+            }
         }
         catch [System.Management.Automation.CommandNotFoundException] {
             Write-Warning "New-Ansible$($ruleName)Task is not currently supported."

@@ -19,16 +19,16 @@ BeforeAll {
     }
 }
 
-Describe 'New-AnsibleAuditPolicyTask' {
+Describe 'Build-AnsibleAuditPolicyTask' {
 
-    Add-GeneratorContractTests -Generator 'New-AnsibleAuditPolicyTask' `
+    Add-GeneratorContractTests -Generator 'Build-AnsibleAuditPolicyTask' `
         -Module 'community.windows.win_audit_policy_system' `
         -Factory { New-AuditPolicyRule }
 
     Context 'the task it builds' {
 
         It 'carries the subcategory and audit flag the rule names' {
-            $task = (Invoke-Generator -Generator 'New-AnsibleAuditPolicyTask' `
+            $task = (Invoke-Generator -Generator 'Build-AnsibleAuditPolicyTask' `
                 -Rule (New-AuditPolicyRule) -StigName 'WindowsServer-2022-MS').Task
 
             $audit = $task.'community.windows.win_audit_policy_system'
@@ -37,7 +37,7 @@ Describe 'New-AnsibleAuditPolicyTask' {
         }
 
         It 'names the task for the rule id, its severity and the audit setting' {
-            $task = (Invoke-Generator -Generator 'New-AnsibleAuditPolicyTask' `
+            $task = (Invoke-Generator -Generator 'Build-AnsibleAuditPolicyTask' `
                 -Rule (New-AuditPolicyRule) -StigName 'WindowsServer-2022-MS').Task
 
             $task.name | Should-Be 'V-110 | MEDIUM | Credential Validation - Success'

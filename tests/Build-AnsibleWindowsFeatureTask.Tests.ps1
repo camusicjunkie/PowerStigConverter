@@ -19,16 +19,16 @@ BeforeAll {
     }
 }
 
-Describe 'New-AnsibleWindowsFeatureTask' {
+Describe 'Build-AnsibleWindowsFeatureTask' {
 
-    Add-GeneratorContractTests -Generator 'New-AnsibleWindowsFeatureTask' `
+    Add-GeneratorContractTests -Generator 'Build-AnsibleWindowsFeatureTask' `
         -Module 'ansible.windows.win_feature' `
         -Factory { New-WindowsFeatureRule }
 
     Context 'the task it builds' {
 
         It 'sets the feature named on the rule to the state it asks for' {
-            $task = (Invoke-Generator -Generator 'New-AnsibleWindowsFeatureTask' `
+            $task = (Invoke-Generator -Generator 'Build-AnsibleWindowsFeatureTask' `
                 -Rule (New-WindowsFeatureRule) -StigName 'WindowsServer-2022-MS').Task
 
             $feature = $task.'ansible.windows.win_feature'
@@ -37,14 +37,14 @@ Describe 'New-AnsibleWindowsFeatureTask' {
         }
 
         It 'carries Present through as well as Absent' {
-            $task = (Invoke-Generator -Generator 'New-AnsibleWindowsFeatureTask' `
+            $task = (Invoke-Generator -Generator 'Build-AnsibleWindowsFeatureTask' `
                 -Rule (New-WindowsFeatureRule -Ensure 'Present') -StigName 'WindowsServer-2022-MS').Task
 
             $task.'ansible.windows.win_feature'.state | Should-Be 'Present'
         }
 
         It 'names the task for the rule id, its severity and the change it makes' {
-            $task = (Invoke-Generator -Generator 'New-AnsibleWindowsFeatureTask' `
+            $task = (Invoke-Generator -Generator 'Build-AnsibleWindowsFeatureTask' `
                 -Rule (New-WindowsFeatureRule) -StigName 'WindowsServer-2022-MS').Task
 
             $task.name | Should-Be 'V-130 | HIGH | Set TFTP-Client to Absent'
@@ -56,7 +56,7 @@ Describe 'New-AnsibleWindowsFeatureTask' {
     Context 'the conditional toggle' {
 
         It 'names the toggle from the rule id, whatever the task name' {
-            $task = (Invoke-Generator -Generator 'New-AnsibleWindowsFeatureTask' `
+            $task = (Invoke-Generator -Generator 'Build-AnsibleWindowsFeatureTask' `
                 -Rule (New-WindowsFeatureRule) -StigName 'WindowsServer-2022-MS').Task
 
             $task.when | Should-Be 'stig_server_2022_130_when'
@@ -68,7 +68,7 @@ Describe 'New-AnsibleWindowsFeatureTask' {
 
             $tasks = InModuleScope -ModuleName PowerStigConverter -Parameters @{ Rules = @($first, $second) } {
                 param ($Rules)
-                $Rules | New-AnsibleWindowsFeatureTask -StigName 'WindowsServer-2022-MS'
+                $Rules | ConvertTo-AnsibleTask -RuleType 'WindowsFeature' -StigName 'WindowsServer-2022-MS'
             }
 
             $tasks[1].Task.when | Should-Be 'stig_server_2022_131_when'

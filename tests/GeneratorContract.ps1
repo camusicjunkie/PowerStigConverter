@@ -112,7 +112,15 @@ function Invoke-Generator {
         param ($Generator, $Rule, $StigName, $ExtraParams, $OrganizationalSetting)
 
         $params = @{ StigName = $StigName; OrganizationalSetting = $OrganizationalSetting } + $ExtraParams
-        $Rule | & $Generator @params
+
+        # A rule type with an adapter is driven through the shared module; the rest still carry
+        # their own plumbing. The one place that knows the difference.
+        if ($Generator -like 'Build-*') {
+            $Rule | ConvertTo-AnsibleTask -RuleType ($Generator -replace '^Build-Ansible' -replace 'Task$') @params
+        }
+        else {
+            $Rule | & $Generator @params
+        }
     }
 }
 

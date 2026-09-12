@@ -22,16 +22,16 @@ BeforeAll {
     function Get-ServiceTask {
         param ($Rule, $OrganizationalSetting = @{})
 
-        (Invoke-Generator -Generator 'New-AnsibleServiceTask' -Rule $Rule `
+        (Invoke-Generator -Generator 'Build-AnsibleServiceTask' -Rule $Rule `
             -StigName 'WindowsServer-2022-MS' -OrganizationalSetting $OrganizationalSetting).Task
     }
 }
 
 # The service task is a block: gather the service state, then assert on it. There is no ansible
 # module that sets a startup type and asserts in one step.
-Describe 'New-AnsibleServiceTask' {
+Describe 'Build-AnsibleServiceTask' {
 
-    Add-GeneratorContractTests -Generator 'New-AnsibleServiceTask' `
+    Add-GeneratorContractTests -Generator 'Build-AnsibleServiceTask' `
         -Module 'ansible.windows.win_service_info' `
         -Factory { New-ServiceRule }
 
