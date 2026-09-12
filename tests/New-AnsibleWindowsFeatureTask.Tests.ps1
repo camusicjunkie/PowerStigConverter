@@ -51,10 +51,8 @@ Describe 'New-AnsibleWindowsFeatureTask' {
         }
     }
 
-    # The generator reads $name into its splat one line before assigning it, so the toggle is
-    # built from an empty task name. It is invisible today because the Conditional variable type
-    # is named from the rule id alone and ignores the task name - but the toggle still has to be
-    # the one defaults/ declares, so pin it.
+    # The generator reads $name a line before assigning it. Inert, because a Conditional
+    # variable is named from the rule id alone - but pin the toggle anyway. See #9.
     Context 'the conditional toggle' {
 
         It 'names the toggle from the rule id, whatever the task name' {

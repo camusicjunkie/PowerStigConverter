@@ -36,9 +36,8 @@ BeforeAll {
 # always groups even when the id carries no sub-rule suffix.
 Describe 'New-AnsiblePermissionTask' {
 
-    # The generator asks the filesystem whether the expanded path exists. Mocked so both branches
-    # are covered and the result does not depend on the machine running the suite - which is also
-    # true of the generated role, and is filed as a defect rather than fixed here.
+    # The generator asks the filesystem whether the expanded path exists; mocked so the result
+    # does not depend on the machine running the suite. See #8.
     BeforeAll {
         InModuleScope -ModuleName PowerStigConverter { Mock Test-Path { $true } }
     }

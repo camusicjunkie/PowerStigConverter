@@ -2,9 +2,8 @@
 .SYNOPSIS
     The cases every task generator test has to cover, so a rule type cannot arrive thinly tested.
 .DESCRIPTION
-    Dot-source this at file scope - not inside BeforeAll - because Pester builds the test tree at
-    discovery time and a function used to declare Contexts has to exist by then. The rule factory
-    reaches each It through -ForEach, which is how Pester marshals data from discovery into run.
+    Dot-source at file scope for discovery and in BeforeAll for run time; the rule factory
+    reaches each It through -ForEach.
 
     The checklist, and where each item lives:
 
@@ -18,16 +17,14 @@
       7. an organization value reaches the task as a      each test file, the generators that
          reference rather than a literal                  call Resolve-AnsibleOrganizationValue
 
-    GeneratorCoverage.Tests.ps1 enforces all of it: that every generator has a test file, that the
-    file calls this, and that items 6 and 7 are present wherever they apply.
+    GeneratorCoverage.Tests.ps1 enforces all of it.
 #>
 
 <#
 .SYNOPSIS
     Adds the shared contract cases to the calling Describe.
 .PARAMETER Factory
-    Builds a fresh rule. A factory rather than a rule so each case gets its own object and a
-    mutation in one cannot reach another - the property the idempotency case is about.
+    Builds a fresh rule, so a mutation in one case cannot reach another.
 .PARAMETER Module
     The ansible module or DSC resource key the task is expected to carry. Looked for anywhere in
     the emitted task, because five generators nest the real task inside a block.
@@ -60,9 +57,8 @@ function Add-GeneratorContractTests {
             Test-TaskCarriesModule -Task $item.Task -Module $Module | Should-BeTrue
         }
 
-        # Without this the rule would be applied unconditionally, and an operator could not switch
-        # one generated rule off. The toggle sits on whatever task reaches the severity file, which
-        # for a grouped rule type is the block rather than the task inside it.
+        # Without it the rule applies unconditionally. Sits on whatever task reaches the
+        # severity file - for a grouped type, the block.
         It 'guards the task with the conditional toggle for the rule' -ForEach $case {
             $item = Invoke-Generator -Generator $Generator -Rule (& $Factory) -StigName $StigName -ExtraParams $ExtraParams
 
@@ -80,9 +76,7 @@ function Add-GeneratorContractTests {
             @($item).Count | Should-Be 0
         }
 
-        # Two generators used to write OrganizationValueRequired back onto the rule they were
-        # handed purely to steer the exporter's filter, which made a second pass over the same
-        # object produce something different. ADR-0003 deleted both write-backs.
+        # Two generators used to write back to the rule; ADR-0003 deleted both.
         It 'leaves the rule it was given unchanged' -ForEach $case {
             $rule = & $Factory
             $before = $rule | ConvertTo-Json -Depth 6 -Compress

@@ -17,9 +17,7 @@ BeforeAll {
             Id = $Id
             Severity = 'medium'
             DuplicateOf = ''
-            # Has to be a key of AccountPolicyData.psd1 once punctuation is flattened - the
-            # generator looks the ansible section and key up there rather than taking them off
-            # the rule.
+            # Flattens to a key of AccountPolicyData.psd1, where the section and key live.
             PolicyName = 'Maximum password age'
             PolicyValue = '60'
             OrganizationValueRequired = $OrganizationValueRequired
