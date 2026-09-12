@@ -39,6 +39,9 @@ Task generators do not modify the rule they were handed, so the same rule object
 one twice. Tests still build a fresh rule per case, so a failure cannot be an artefact of a
 previous case's leftovers.
 
+A task generator reads the rule and nothing else — never the converting machine's filesystem,
+environment or registry, since that is not the machine the rule describes. See `docs/adr/0005`.
+
 Organisation values — the ones a STIG leaves for the adopting organisation to decide — reach the
 generated role as variables in `defaults/`, never as literals. `New-AnsiblePlaybook` refuses to
 convert while any of them is unanswered; `-AllowIncompleteOrganizationValue` overrides that. See

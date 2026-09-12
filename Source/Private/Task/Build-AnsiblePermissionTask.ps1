@@ -5,6 +5,7 @@ function Build-AnsiblePermissionTask {
     .DESCRIPTION
         The path is emitted exactly as the STIG wrote it, environment variables and all. win_acl
         expands them on the target, which is the only machine whose filesystem the rule is about.
+        See docs/adr/0005.
     #>
     param ($Rule, $StigName, $StigId, $Resolution)
 
