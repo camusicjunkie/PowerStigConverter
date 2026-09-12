@@ -5,7 +5,7 @@ function Build-AnsibleMimeTypeTask {
     #>
     param ($Rule, $StigName, $StigId, $Resolution)
 
-    $parsedMimeType = if (Test-PowerStigSubRuleId -Id $Rule.Id) { Split-Path -Path $Rule.MimeType } else { $Rule.MimeType }
+    $parsedMimeType = if (Test-PowerStigSubRuleId -Id $Rule.Id) { Get-PowerStigPathLeaf -Path $Rule.MimeType } else { $Rule.MimeType }
 
     $configurationPath = Get-AnsibleIisScopePath -StigId $StigId -MachinePath 'MACHINE/WEBROOT/APPHOST' `
         -TaskId $Rule.Id -StigName $StigName

@@ -5,7 +5,7 @@ function Build-AnsibleWebConfigurationPropertyTask {
     #>
     param ($Rule, $StigName, $StigId, $Resolution)
 
-    $parsedConfigSection = if (Test-PowerStigSubRuleId -Id $Rule.Id) { Split-Path -Path $Rule.ConfigSection } else { $Rule.ConfigSection }
+    $parsedConfigSection = if (Test-PowerStigSubRuleId -Id $Rule.Id) { Get-PowerStigPathLeaf -Path $Rule.ConfigSection } else { $Rule.ConfigSection }
 
     # A system.web section lives under the web root, everything else under the app host.
     $machinePath = if ($Rule.ConfigSection -match '/system.web/') { 'MACHINE/WEBROOT' } else { 'MACHINE/WEBROOT/APPHOST' }

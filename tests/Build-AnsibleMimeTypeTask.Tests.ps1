@@ -99,5 +99,9 @@ Describe 'Build-AnsibleMimeTypeTask' {
         It 'guards the block with one toggle named for the base id' {
             $grouped.Task.when | Should-Be 'stig_iisserver_10_0_201_when'
         }
+
+        It 'names the block for the leaf of the shared mime type' {
+            $grouped.Task.name | Should-Be 'V-201 | MEDIUM | Ensure octet-stream MIME types are set'
+        }
     }
 }
