@@ -222,10 +222,8 @@ Describe 'Resolve-AnsibleOrganizationValue: the value the task consumes' {
             $identity -join '|' | Should-Be 'Administrators|Authenticated Users'
         }
 
-        # A one-element list is the usual case, not the edge one - a single-identity UserRight
-        # and a LogTargetW3C of just File are both common - and it is the one PowerShell will
-        # quietly unroll back to a string on the way out of an if. win_user_right then receives
-        # users: as a string rather than a list.
+        # The common case, and the one PowerShell unrolls back to a string on the way out
+        # of an if - win_user_right then gets users: as a string.
         It 'keeps a single-valued list a list, rather than unrolling it to a string' {
             $rule = [pscustomobject] @{
                 Id = 'V-104'
@@ -348,15 +346,32 @@ Describe 'Resolve-AnsibleOrganizationValue: the organization variables it declar
                 Should-Be 'stig_server_2022_104_access_this_computer_from_the_network: [Administrators]'
         }
 
-        # PowerStig holds Cert:\LocalMachine\Root where win_certificate_info takes a store name
-        # of Root.
-        It 'reduces a certificate store path to the store name' {
+        # One answered question, two variables. The location used to be dropped, leaving the
+        # module's LocalMachine default to stand in - wrong under Cert:\CurrentUser\. See #4.
+        It 'splits <Path> into a store name and a store location' -ForEach @(
+            @{ Path = 'Cert:\LocalMachine\Root'; StoreName = 'Root'; StoreLocation = 'LocalMachine' }
+            @{ Path = 'Cert:\LocalMachine\Disallowed'; StoreName = 'Disallowed'; StoreLocation = 'LocalMachine' }
+            @{ Path = 'Cert:\CurrentUser\Root'; StoreName = 'Root'; StoreLocation = 'CurrentUser' }
+        ) {
             $rule = [pscustomobject] @{ Id = 'V-500'; OrganizationValueRequired = $true }
 
             $variable = (Resolve-OrgValue -Rule $rule -RuleType RootCertificate `
-                -OrganizationalSetting (New-TestOrgSetting '<OrganizationalSetting id="V-500" Location="Cert:\LocalMachine\Root" />')).Variable
+                -OrganizationalSetting (New-TestOrgSetting "<OrganizationalSetting id=`"V-500`" Location=`"$Path`" />")).Variable
 
-            $variable.Default | Should-Be 'Root'
+            ($variable | Where-Object Part -eq 'store_name').Default | Should-Be $StoreName
+            ($variable | Where-Object Part -eq 'store_location').Default | Should-Be $StoreLocation
+        }
+
+        # Both come from the same org settings attribute, so a human told to go and fetch a
+        # matching org settings file is told about the attribute, not about the halves.
+        It 'reports both variables against the one field they came from' {
+            $rule = [pscustomobject] @{ Id = 'V-500'; OrganizationValueRequired = $true }
+
+            $variable = (Resolve-OrgValue -Rule $rule -RuleType RootCertificate `
+                -OrganizationalSetting (New-TestOrgSetting '<OrganizationalSetting id="V-500" Location="" />')).Variable
+
+            $variable.Field | Should-BeCollection @('Location', 'Location')
+            $variable.Part | Should-BeCollection @('store_name', 'store_location')
         }
     }
 

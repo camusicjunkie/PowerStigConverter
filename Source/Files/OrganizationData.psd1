@@ -33,6 +33,11 @@
     'RootCertificate' = @{
         'Value' = 'Location'
         'Required' = @('Location')
+        # One store path (Cert:\LocalMachine\Root) answers two win_certificate_info
+        # parameters, so it becomes two variables named for them. See #4.
+        'Part' = @{
+            'Location' = @('store_name', 'store_location')
+        }
     }
     'Service' = @{
         'Value' = 'ServiceName'
