@@ -81,10 +81,10 @@ function Resolve-AnsibleOrganizationValue {
                         Part = $part   # which of that field's values this variable holds
                         Status = $status
                         # Declaration, reference and assert all build on this one name.
-                        Name = New-AnsibleVariable @navParams -Type OrganizationName
-                        Reference = New-AnsibleVariable @navParams -Type Organization
+                        Name = Get-AnsibleVariableName @navParams
+                        Reference = Get-AnsibleVariableReference @navParams
                         Default = $default
-                        Declaration = New-AnsibleVariable @navParams -NodeValue $default -Type OrganizationValue
+                        Declaration = New-AnsibleVariableLine @navParams -NodeValue $default
                     }
                 }
             }
