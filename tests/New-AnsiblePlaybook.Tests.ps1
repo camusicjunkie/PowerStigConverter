@@ -294,13 +294,13 @@ Describe 'New-AnsiblePlaybook' {
             $refusal | Should-NotBeNull
         }
 
-        It 'reports the gap as objects rather than only as prose' {
-            $gap = @($refusal.TargetObject).Where({ $_.RuleId -eq 'V-202' })
+        It 'reports the incomplete values as objects rather than only as prose' {
+            $incomplete = @($refusal.TargetObject).Where({ $_.RuleId -eq 'V-202' })
 
-            @($gap).Count | Should-Be 1
-            $gap[0].RuleType | Should-Be 'AccountPolicy'
-            $gap[0].Field | Should-Be 'PolicyValue'
-            $gap[0].Reason | Should-Be 'Unanswered'
+            @($incomplete).Count | Should-Be 1
+            $incomplete[0].RuleType | Should-Be 'AccountPolicy'
+            $incomplete[0].Field | Should-Be 'PolicyValue'
+            $incomplete[0].Status | Should-Be 'Unanswered'
         }
 
         It 'names the unanswered id in the message a human reads' {

@@ -1,32 +1,34 @@
-function Format-AnsibleOrganizationValueGap {
+function Format-AnsibleIncompleteOrganizationValue {
     <#
     .SYNOPSIS
-        Renders organization value gaps as the message a human reads.
+        Renders incomplete organization values as the message a human reads.
     .DESCRIPTION
-        The gaps themselves travel on the terminating error's TargetObject so that tests and
-        tooling assert on objects rather than on prose; this is only the human-readable half.
+        The organization variables themselves travel on the terminating error's TargetObject so
+        that tests and tooling assert on objects rather than on prose; this is only the
+        human-readable half.
     #>
     [CmdletBinding()]
     [OutputType([string])]
     param (
+        # The Incomplete organization variables of one or more resolved rules.
         [Parameter(Mandatory)]
-        [object[]] $Gap,
+        [object[]] $Variable,
 
         [Parameter(Mandatory)]
         [string] $StigName
     )
 
-    $unanswered = @($Gap).Where({ $_.Reason -eq 'Unanswered' }).Count
-    $missing = @($Gap).Where({ $_.Reason -eq 'Missing' }).Count
+    $unanswered = @($Variable).Where({ $_.Status -eq 'Unanswered' }).Count
+    $missing = @($Variable).Where({ $_.Status -eq 'Missing' }).Count
 
     $counts = @(
         if ($unanswered -gt 0) { '{0} unanswered' -f $unanswered }
         if ($missing -gt 0) { '{0} missing' -f $missing }
     ) -join ' and '
 
-    $width = ($Gap.RuleId | Measure-Object -Property Length -Maximum).Maximum
-    $lines = foreach ($item in $Gap) {
-        $remedy = if ($item.Reason -eq 'Missing') {
+    $width = ($Variable.RuleId | Measure-Object -Property Length -Maximum).Maximum
+    $lines = foreach ($item in $Variable) {
+        $remedy = if ($item.Status -eq 'Missing') {
             'no entry in the org settings file - it may not match this STIG version'
         }
         else {

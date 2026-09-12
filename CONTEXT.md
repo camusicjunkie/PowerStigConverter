@@ -56,6 +56,14 @@ A rule that requires an organization value for which the org settings file carri
 settings file does not match the STIG version in hand.
 _Avoid_: blank value, null setting
 
+**Incomplete organization value**:
+The collective for the two above — an organization value the org settings file does not answer,
+whether because the setting is unanswered or because it is missing. It is the thing
+`New-AnsiblePlaybook` refuses on, and it already names the public
+`-AllowIncompleteOrganizationValue` switch and the `IncompleteOrganizationValue` error id. Name
+the individual fault where the remedy matters, and this where it does not.
+_Avoid_: gap
+
 ### Generated role
 
 **Task generator**:
@@ -72,7 +80,9 @@ _Avoid_: flag, switch, feature toggle
 **Organization variable**:
 The `prefix_<id>_<name>` variable in the role's `defaults/` holding an organization value, which
 the generated task references rather than inlining. The single place an operator edits to answer
-a policy question without regenerating the role.
+a policy question without regenerating the role. Not every variable in `defaults/` is one: the IIS
+log path is shaped the same way but has no organization value behind it, so it is a role variable
+the site fills in rather than one of these. See ADR-0004.
 _Avoid_: default, parameter, override
 
 **Variable prefix**:

@@ -7,7 +7,7 @@ function New-AnsibleRegistryTask {
         [Parameter(Mandatory)]
         [string] $StigName,
 
-        [hashtable] $OrgSetting = @{}
+        [hashtable] $OrganizationalSetting = @{}
     )
 
     begin {
@@ -21,7 +21,8 @@ function New-AnsibleRegistryTask {
             $baseId = $rule.Id -replace '\.[a-z]$'
             $navParams = @{ TaskId = $rule.Id; TaskName = $rule.ValueName; StigName = $StigName }
 
-            $valueData = Get-AnsibleOrganizationValue -Rule $rule -RuleType 'Registry' -StigName $StigName -OrgSetting $OrgSetting
+            $resolution = Resolve-AnsibleOrganizationValue -Rule $rule -RuleType 'Registry' -StigName $StigName -OrganizationalSetting $OrganizationalSetting
+            $valueData = $resolution.Value
             $parsedValueData = if ([int32]::TryParse($valueData, [ref] $null)) { [int] $valueData } else { $valueData }
             $parsedValueName = if ($rule.Id -match '\.[a-z]$') { Split-Path -Path $rule.Key -Leaf } else { $rule.ValueName }
 
@@ -46,7 +47,7 @@ function New-AnsibleRegistryTask {
 
                 $item = @{
                     GroupId = $baseId
-                    Task = Add-AnsibleOrganizationValueAssert -Task $task -Rule $rule -RuleType 'Registry' -StigName $StigName -OrgSetting $OrgSetting
+                    Task = Add-AnsibleOrganizationValueAssert -Task $task -Resolution $resolution
                     Output = @{
                         Rule = $rule
                         Name = $parsedValueName
@@ -60,7 +61,7 @@ function New-AnsibleRegistryTask {
                 $item = @{
                     Output = @{
                         Rule = $rule
-                        Task = Add-AnsibleOrganizationValueAssert -Task $task -Rule $rule -RuleType 'Registry' -StigName $StigName -OrgSetting $OrgSetting
+                        Task = Add-AnsibleOrganizationValueAssert -Task $task -Resolution $resolution
                     }
                 }
             }

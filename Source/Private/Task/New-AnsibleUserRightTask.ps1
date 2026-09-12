@@ -7,7 +7,7 @@ function New-AnsibleUserRightTask {
         [Parameter(Mandatory)]
         [string] $StigName,
 
-        [hashtable] $OrgSetting = @{}
+        [hashtable] $OrganizationalSetting = @{}
     )
 
     process {
@@ -16,7 +16,8 @@ function New-AnsibleUserRightTask {
             if (-not [string]::IsNullOrEmpty($rule.DuplicateOf)) { continue }
 
             $navParams = @{ TaskId = $rule.Id; TaskName = $rule.DisplayName; StigName = $StigName }
-            $identity = Get-AnsibleOrganizationValue -Rule $rule -RuleType 'UserRight' -StigName $StigName -OrgSetting $OrgSetting
+            $resolution = Resolve-AnsibleOrganizationValue -Rule $rule -RuleType 'UserRight' -StigName $StigName -OrganizationalSetting $OrganizationalSetting
+            $identity = $resolution.Value
 
             $task = [ordered] @{
                 'name' = '{0} | {1} | {2}' -f $rule.Id, $rule.Severity.ToUpper(), $rule.DisplayName
@@ -32,7 +33,7 @@ function New-AnsibleUserRightTask {
 
             @{
                 Rule = $rule
-                Task = Add-AnsibleOrganizationValueAssert -Task $task -Rule $rule -RuleType 'UserRight' -StigName $StigName -OrgSetting $OrgSetting
+                Task = Add-AnsibleOrganizationValueAssert -Task $task -Resolution $resolution
             }
         }
     }

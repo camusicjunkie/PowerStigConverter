@@ -27,34 +27,15 @@ function New-AnsibleVariable {
     # have to name the same variable, so they all build that name here.
     $organizationName = '{0}_{1}_{2}' -f $base, $id, $name
 
-    # Org values are STIG text, and some of them (the DoD legal notice above all) contain a
-    # colon followed by a space, which yaml reads as a nested mapping and which would make the
-    # defaults file unparseable. Quote anything that cannot stand as a plain scalar, and leave
-    # everything else alone so numbers keep being numbers.
-    $quote = {
-        param ($Value, [switch] $InSequence)
-
-        # Inside a flow sequence a comma and a closing bracket end the element, so those need
-        # quoting too; a plain scalar can hold both without any help.
-        $unsafe = if ($InSequence) { ':\s|^\s|\s$|,|]|^[#&*!|>%@`\[]' } else { ':\s|^\s|\s$|^[#&*!|>%@`\[\]]' }
-
-        if ($Value -is [string] -and $Value -match $unsafe) {
-            "'{0}'" -f ($Value -replace "'", "''")
-        }
-        else {
-            $Value
-        }
-    }
-
     # A value the task needs as a list is split before it gets here, and is written as a yaml
     # flow sequence so the whole variable can be interpolated as one. Splitting it on the host
     # instead would make the shape the module receives depend on a jinja expression no test can
     # see. See docs/adr/0003.
     $quotedNodeValue = if ($NodeValue -is [array]) {
-        '[{0}]' -f (($NodeValue | ForEach-Object { & $quote $_ -InSequence }) -join ', ')
+        '[{0}]' -f (($NodeValue | ForEach-Object { Format-AnsibleYamlScalar -Value $_ -InSequence }) -join ', ')
     }
     else {
-        & $quote $NodeValue
+        Format-AnsibleYamlScalar -Value $NodeValue
     }
 
     switch ($Type) {

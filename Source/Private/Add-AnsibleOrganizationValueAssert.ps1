@@ -15,25 +15,17 @@ function Add-AnsibleOrganizationValueAssert {
         [Parameter(Mandatory)]
         [object] $Task,
 
+        # One rule as Resolve-AnsibleOrganizationValue resolved it - the whole record, not just
+        # its Value.
         [Parameter(Mandatory)]
-        [object] $Rule,
-
-        [Parameter(Mandatory)]
-        [ValidateSet('AccountPolicy', 'IisLogging', 'Registry', 'RootCertificate', 'SecurityOption', 'Service', 'UserRight')]
-        [string] $RuleType,
-
-        [Parameter(Mandatory)]
-        [string] $StigName,
-
-        [hashtable] $OrgSetting = @{}
+        [object] $Resolution
     )
 
-    $assert = New-AnsibleOrganizationValueAssert -Rule $Rule -RuleType $RuleType -StigName $StigName -OrgSetting $OrgSetting
-    if ($null -eq $assert) { return $Task }
+    if ($null -eq $Resolution.Assert) { return $Task }
 
     $block = [ordered] @{
         'name' = $Task.name
-        'block' = @($assert, $Task)
+        'block' = @($Resolution.Assert, $Task)
     }
     if ($Task.Contains('when')) { $block['when'] = $Task['when'] }
 

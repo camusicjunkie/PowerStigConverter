@@ -7,7 +7,7 @@ function New-AnsibleIisLoggingTask {
         [Parameter(Mandatory)]
         [string] $StigName,
 
-        [hashtable] $OrgSetting = @{},
+        [hashtable] $OrganizationalSetting = @{},
 
         [string] $StigId
     )
@@ -19,11 +19,12 @@ function New-AnsibleIisLoggingTask {
 
             $navParams = @{ TaskId = $rule.Id; StigName = $StigName }
 
-            $logging = Get-AnsibleOrganizationValue -Rule $rule -RuleType 'IisLogging' -StigName $StigName -OrgSetting $OrgSetting
+            $resolution = Resolve-AnsibleOrganizationValue -Rule $rule -RuleType 'IisLogging' -StigName $StigName -OrganizationalSetting $OrganizationalSetting
+            $logging = $resolution.Value
             $logFlags = $logging.LogFlags
             $logFormat = $logging.LogFormat
             $logPeriod = $logging.LogPeriod
-            # Get-AnsibleOrganizationValue reports these two under its own names, not under the
+            # The resolved value reports these two under its own names, not under the
             # names the STIG rule uses for them, so read the names it actually returns.
             $logTarget = $logging.LogTarget
             $logCustomFields = $logging.LogCustomFields
@@ -61,7 +62,7 @@ function New-AnsibleIisLoggingTask {
 
             @{
                 Rule = $rule
-                Task = Add-AnsibleOrganizationValueAssert -Task $task -Rule $rule -RuleType 'IisLogging' -StigName $StigName -OrgSetting $OrgSetting
+                Task = Add-AnsibleOrganizationValueAssert -Task $task -Resolution $resolution
             }
         }
     }

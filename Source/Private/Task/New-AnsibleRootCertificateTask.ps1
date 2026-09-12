@@ -7,7 +7,7 @@ function New-AnsibleRootCertificateTask {
         [Parameter(Mandatory)]
         [string] $StigName,
 
-        [hashtable] $OrgSetting = @{}
+        [hashtable] $OrganizationalSetting = @{}
     )
 
     begin {
@@ -25,7 +25,8 @@ function New-AnsibleRootCertificateTask {
             # than naming a store. This rule used to be dropped outright when the value was
             # blank, which left a STIG requirement silently absent from the role; an unanswered
             # value now stops the conversion instead, or produces an assert. See docs/adr/0001.
-            $location = Get-AnsibleOrganizationValue -Rule $rule -RuleType 'RootCertificate' -StigName $StigName -OrgSetting $OrgSetting
+            $resolution = Resolve-AnsibleOrganizationValue -Rule $rule -RuleType 'RootCertificate' -StigName $StigName -OrganizationalSetting $OrganizationalSetting
+            $location = $resolution.Value
 
             $parsedCertificateName = if ($rule.Id -match '\.[a-z]$') {
                 $rule.CertificateName -replace '\s\d$'
@@ -36,7 +37,7 @@ function New-AnsibleRootCertificateTask {
             $registerName = '{0}_{1}_certificate_info' -f (Get-AnsibleVariablePrefix -StigName $StigName), ($baseId -replace 'V-' -replace '[^A-Za-z0-9]+', '_')
 
             $tasks = @(
-                New-AnsibleOrganizationValueAssert -Rule $rule -RuleType 'RootCertificate' -StigName $StigName -OrgSetting $OrgSetting
+                $resolution.Assert
                 [ordered] @{
                     'name' = 'Gather info for {0}' -f $rule.CertificateName
                     'community.windows.win_certificate_info' = [ordered] @{
