@@ -1,12 +1,8 @@
 #requires -Modules @{ ModuleName = 'Pester'; ModuleVersion = '6.2.0' }
 
 <#
-    Six of thirteen task generators were never executed by any test, because no fixture STIG
-    carried a rule of their type and none had a test file of its own. Nothing said so: the suite
-    was green, and a refactor touching them would have been verified by nothing.
-
-    This is what says so. It reads the generators off disk rather than taking a list, so a rule
-    type added tomorrow is held to the same bar as the thirteen here.
+    Six of thirteen generators were once never executed by any test, and nothing said so. This
+    does. It reads the generators off disk, so a new rule type meets the same bar.
 #>
 
 BeforeDiscovery {
@@ -43,9 +39,7 @@ Describe 'every task generator is tested' {
         Test-Path $TestPath | Should-BeTrue
     }
 
-    # The contract carries the cases that are the same for every rule type - the module it emits,
-    # the conditional toggle, the duplicate skip, and idempotency over the same rule object. A
-    # test file that does not call it has quietly opted out of all four.
+    # A file that does not call the contract has quietly opted out of all four shared cases.
     It '<Name> covers the shared generator contract' -ForEach $generators {
         $TestBody | Should-BeLikeString '*Add-GeneratorContractTests*'
     }

@@ -60,9 +60,8 @@ Describe 'New-AnsibleUserRightTask' {
         }
     }
 
-    # Item 6 of the contract. win_user_right takes a list of identities, and PowerShell will
-    # quietly unroll a one-element array back to a string on the way out of an if - which is how
-    # a single-identity rule came to send users: as a string rather than a list.
+    # Item 6. PowerShell unrolls a one-element array back to a string on the way out of an if,
+    # which is how a single identity came to reach win_user_right as a string.
     Context 'a value the task needs as a list' {
 
         It 'splits an identity list the rule carries itself' {

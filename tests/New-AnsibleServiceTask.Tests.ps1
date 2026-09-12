@@ -50,9 +50,7 @@ Describe 'New-AnsibleServiceTask' {
             $task.block[1].'ansible.builtin.assert'.that | Should-BeLikeString "$register*"
         }
 
-        # The register has to be named at generation time and has to be legal as an ansible
-        # variable, so it is named for the rule rather than for the service - whose name may be
-        # a variable reference by the time it gets here.
+        # Named for the rule, because the service name may be a variable reference by now.
         It 'names the register for the rule, not the service' {
             $register = (Get-ServiceTask -Rule (New-ServiceRule)).block[0].register
 

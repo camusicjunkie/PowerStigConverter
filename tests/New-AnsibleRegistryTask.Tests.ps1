@@ -70,9 +70,8 @@ Describe 'New-AnsibleRegistryTask' {
         }
     }
 
-    # PowerStig splits one requirement into sub-rules when it needs several tasks. They collapse
-    # into a single block guarded by one toggle named for the base id, so an operator switches the
-    # requirement off rather than one of its halves.
+    # Sub-rules collapse into one block under one toggle, so an operator switches the whole
+    # requirement off rather than half of it.
     Context 'sub-rules that share a base id' {
 
         BeforeAll {

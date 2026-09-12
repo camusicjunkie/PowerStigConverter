@@ -45,9 +45,8 @@ Describe 'New-AnsibleSecurityOptionTask' {
         }
     }
 
-    # win_security_policy wants the number the policy takes, not the word the STIG uses. The
-    # lookup table is keyed by the value asked for - indexing it by the property name instead
-    # misses every time, and the cast then turns every one of these rules into 0.
+    # win_security_policy wants the number, not the word. The table is keyed by the value
+    # asked for - indexing by property name misses and the cast then yields 0.
     Context 'an option expressed as Enabled or Disabled' {
 
         It 'maps <OptionValue> to <Expected>' -ForEach @(

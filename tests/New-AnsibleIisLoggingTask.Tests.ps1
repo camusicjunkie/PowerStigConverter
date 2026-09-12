@@ -6,10 +6,7 @@ BeforeAll {
     . $PSScriptRoot/Initialize-TestModule.ps1
     . $PSScriptRoot/GeneratorContract.ps1
 
-    # Every test builds its own rule. The generators no longer write OrganizationValueRequired
-    # back onto the rule they were handed - ADR-0003 deleted both write-backs, and the contract's
-    # idempotency case now holds them to it - but a fresh rule per case still keeps a failure from
-    # being an artefact of the case before it.
+    # A fresh rule per case, so a failure cannot be an artefact of the case before it.
     function New-LoggingRule {
         param ($Id = 'V-300')
 
@@ -67,9 +64,8 @@ Describe 'New-AnsibleIisLoggingTask' {
         }
     }
 
-    # Each of these comes off the resolved organization value. They are read by the names the
-    # resolution reports, which are not all the names the STIG rule uses - reading the rule's
-    # names instead yields null and the setting is silently dropped.
+    # Read by the names the resolution reports, not the rule's - reading the rule's yields
+    # null and the setting is silently dropped.
     Context 'carrying the logging settings through' {
 
         It 'carries the <Property> through unchanged' -ForEach @(
@@ -104,9 +100,7 @@ Describe 'New-AnsibleIisLoggingTask' {
         }
     }
 
-    # Item 6 of the contract. The DSC resource takes these two as lists, and PowerShell will
-    # quietly unroll a one-element array back to a string on the way out of an if - which is how
-    # a LogTargetW3C of just File came to be written as a scalar rather than a sequence.
+    # Item 6. A LogTargetW3C of just File unrolled to a string and was written as a scalar.
     Context 'a value the task needs as a list' {
 
         It 'splits the log flags into a list' {
