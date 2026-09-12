@@ -2,10 +2,7 @@ function Export-AnsibleTaskBySeverity {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory, ValueFromPipeline)]
-        [object] $Task,
-
-        [Parameter(Mandatory)]
-        [string] $OutputPath
+        [object] $Task
     )
 
     begin {
@@ -21,10 +18,10 @@ function Export-AnsibleTaskBySeverity {
     end {
         $bySeverity = Group-AnsibleRuleBySeverity -InputObject $items.ToArray()
 
-        Save-AnsibleRoleFile -OutputPath $OutputPath -Content ([ordered] @{
+        [ordered] @{
             cat1 = $bySeverity.high.Values | ForEach-Object { ConvertTo-Yaml $_ -KeepArray }
             cat2 = $bySeverity.medium.Values | ForEach-Object { ConvertTo-Yaml $_ -KeepArray }
             cat3 = $bySeverity.low.Values | ForEach-Object { ConvertTo-Yaml $_ -KeepArray }
-        })
+        }
     }
 }

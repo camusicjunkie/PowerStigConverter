@@ -8,10 +8,7 @@ function Export-AnsibleOrganizationValue {
 
         # The org settings loaded once by Get-PowerStigOrgSetting, keyed by rule id.
         [Parameter()]
-        [hashtable] $OrganizationalSetting = @{},
-
-        [Parameter(Mandatory)]
-        [string] $OutputPath
+        [hashtable] $OrganizationalSetting = @{}
     )
 
     begin {
@@ -63,6 +60,6 @@ function Export-AnsibleOrganizationValue {
 
         if ($organization.Count -gt 0) { $content += $organization.Values }
 
-        Save-AnsibleRoleFile -OutputPath $OutputPath -Content ([ordered] @{ main_default_org = $content })
+        [ordered] @{ main_default_org = $content }
     }
 }
