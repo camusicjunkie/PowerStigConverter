@@ -28,6 +28,13 @@ Tests tagged `KnownDefect` are excluded by default and are expected to fail; non
 present. Tag a test that way when it describes a defect you are not fixing in that pass, and
 untag it when the defect is fixed.
 
+Every task generator has a test file of its own that calls `Add-GeneratorContractTests` from
+`tests/GeneratorContract.ps1` — the cases that are the same for every rule type, plus two that
+apply conditionally. `tests/GeneratorCoverage.Tests.ps1` reads the generators off disk and fails
+the suite if one has no test file, does not call the contract, or skips the list-shape or
+organization-value case where its rule type needs it. Adding a rule type therefore means adding
+a test file; the contract file itself says what that file has to cover.
+
 Task generators do not modify the rule they were handed, so the same rule object can go through
 one twice. Tests still build a fresh rule per case, so a failure cannot be an artefact of a
 previous case's leftovers.
