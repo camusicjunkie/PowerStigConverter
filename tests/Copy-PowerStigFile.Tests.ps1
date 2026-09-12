@@ -95,7 +95,12 @@ Describe 'Copy-PowerStigFile' {
                 throw [System.Management.Automation.CommandNotFoundException]::new('git is not installed')
             }
 
-            { Copy-PowerStigFile -Path (Join-Path $TestDrive 'nogit2') 3>$null } | Should -Not -Throw
+            # An error escaping fails this case on the call itself. The count then says the clone
+            # failing stops the checkout rather than carrying on against a repository that is
+            # not there.
+            Copy-PowerStigFile -Path (Join-Path $TestDrive 'nogit2') 3>$null
+
+            Should-Invoke -ModuleName PowerStigConverter -CommandName git -Exactly -Times 1
         }
     }
 }
