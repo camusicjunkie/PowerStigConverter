@@ -33,6 +33,13 @@
     'RootCertificate' = @{
         'Value' = 'Location'
         'Required' = @('Location')
+        # The org settings file answers with one store path (Cert:\LocalMachine\Root), but
+        # win_certificate_info takes the store and its location as separate parameters. One
+        # answered question, two variables - named for the parameters they feed, because that is
+        # what an operator editing defaults/ is choosing between.
+        'Part' = @{
+            'Location' = @('store_name', 'store_location')
+        }
     }
     'Service' = @{
         'Value' = 'ServiceName'

@@ -67,26 +67,29 @@ Describe 'New-AnsibleRootCertificateTask' {
 
     Context 'a value the organization decides' {
 
-        # PowerStig holds a store path; win_certificate_info takes a store name. The leaf is taken
-        # at generation time so defaults/ holds the value the module actually consumes, and the
-        # assert's non-empty check is about that value. See docs/adr/0003.
-        It 'interpolates the store variable rather than inlining a path' {
+        # PowerStig holds a store path; win_certificate_info takes the store and its location as
+        # separate parameters. Both are taken at generation time so defaults/ holds the values the
+        # module actually consumes, and the assert's non-empty check is about those values.
+        # See docs/adr/0003.
+        It 'interpolates a variable for the store and another for its location' {
             $task = Get-RootCertificateTask -Rule (New-RootCertificateRule) -OrganizationalSetting (New-RootStore)
-            $gather = $task.block | Where-Object { $_.Contains('community.windows.win_certificate_info') }
+            $gather = ($task.block | Where-Object { $_.Contains('community.windows.win_certificate_info') }).'community.windows.win_certificate_info'
 
-            $gather.'community.windows.win_certificate_info'.store_name |
-                Should-Be '{{ stig_server_2022_180_location }}'
+            $gather.store_name | Should-Be '{{ stig_server_2022_180_store_name }}'
+            $gather.store_location | Should-Be '{{ stig_server_2022_180_store_location }}'
         }
 
-        It 'guards an unanswered store with an assert, rather than dropping the rule' {
+        It 'guards both unanswered variables with an assert, rather than dropping the rule' {
             $task = Get-RootCertificateTask -Rule (New-RootCertificateRule) `
                 -OrganizationalSetting (New-ContractOrgSetting '<OrganizationalSetting id="V-180" Location="" />')
 
             $guard = $task.block | Where-Object { $_.name -like 'Assert the organization values*' }
 
             $guard | Should-NotBeNull
-            $guard.'ansible.builtin.assert'.that |
-                Should-BeCollection @('stig_server_2022_180_location | default("", true) | length > 0')
+            $guard.'ansible.builtin.assert'.that | Should-BeCollection @(
+                'stig_server_2022_180_store_name | default("", true) | length > 0'
+                'stig_server_2022_180_store_location | default("", true) | length > 0'
+            )
         }
 
         It 'builds no such guard once the store has been answered' {

@@ -56,56 +56,73 @@ function Resolve-AnsibleOrganizationValue {
     $variables = @(
         if ($decidedByOrganization) {
             foreach ($field in $data['Required']) {
-                # Rule types with a Name property - a policy name, a value name, the display name
-                # of a user right - name the variable after it, because one such type carries a
-                # single value and the rule's own word for it reads better than the org node's
-                # attribute name. The types whose task needs several fields have no single such
-                # name, so each variable is named for its field instead.
-                $taskName = if ([string]::IsNullOrEmpty($data['Name'])) { $field } else { $Rule.($data['Name']) }
 
                 # Two faults, because their remedies differ. A missing setting means the org
                 # settings file carries no entry for the rule at all, which usually means it does
                 # not match the STIG version in hand; the operator fetches the right file. An
                 # unanswered setting means the entry is there and empty; the operator fills it in.
+                # Both are judged on the field, so every part of it shares the verdict.
                 $status = if ($null -eq $node) { 'Missing' }
                     elseif ([string]::IsNullOrWhiteSpace($node.$field)) { 'Unanswered' }
                     else { 'Answered' }
 
-                # Usually the org settings attribute verbatim. Two types need the value reshaped
-                # here rather than on the host, because the shape the ansible module consumes
-                # should be decided where a test can see it - see docs/adr/0003: a field the task
-                # needs as a list is split, so the variable holds a yaml sequence; and a
-                # certificate store path is reduced to its leaf, because PowerStig holds
-                # Cert:\LocalMachine\Root where win_certificate_info takes a store name of Root.
-                #
-                # An unanswered or missing setting has no default, which is what declares the
-                # variable blank for the operator to fill in.
-                #
-                # The unary comma on the list branch is load-bearing: PowerShell enumerates an
-                # array written to the output stream, so a one-element split would arrive here as
-                # a bare string and New-AnsibleVariable, which decides on -is [array], would write
-                # it as a plain scalar instead of a yaml sequence. A single-identity UserRight and
-                # a LogTargetW3C of just File are both common, so this is the usual case, not the
-                # edge one.
-                $default = if ($status -ne 'Answered') { $null }
-                    elseif ($RuleType -eq 'RootCertificate' -and $field -eq 'Location') { Split-Path -Path $node.$field -Leaf }
-                    elseif ($data['List'] -contains $field) { , ($node.$field -split ',') }
-                    else { $node.$field }
+                # Usually one field is one variable. RootCertificate is the exception: the org
+                # settings file answers with a store path and win_certificate_info takes the store
+                # and its location separately, so the one answer becomes two variables named for
+                # the parameters they feed. See docs/adr/0003 and OrganizationData.psd1.
+                $parts = if ($null -ne $data['Part'] -and $data['Part'].ContainsKey($field)) {
+                    $data['Part'][$field]
+                }
+                else {
+                    @($field)
+                }
 
-                $navParams = @{ TaskId = $Rule.Id; TaskName = $taskName; StigName = $StigName }
+                foreach ($part in $parts) {
+                    # Rule types with a Name property - a policy name, a value name, the display
+                    # name of a user right - name the variable after it, because one such type
+                    # carries a single value and the rule's own word for it reads better than the
+                    # org node's attribute name. The types whose task needs several values have no
+                    # single such name, so each variable is named for its part instead.
+                    $taskName = if ([string]::IsNullOrEmpty($data['Name'])) { $part } else { $Rule.($data['Name']) }
 
-                [pscustomobject] @{
-                    RuleId = $Rule.Id
-                    RuleType = $RuleType
-                    Field = $field
-                    Status = $status
-                    # The declaration in defaults/, the reference the task interpolates and the
-                    # assert that guards it must all name the same variable. They are all built
-                    # from this one name so they cannot drift apart.
-                    Name = New-AnsibleVariable @navParams -Type OrganizationName
-                    Reference = New-AnsibleVariable @navParams -Type Organization
-                    Default = $default
-                    Declaration = New-AnsibleVariable @navParams -NodeValue $default -Type OrganizationValue
+                    # Reshaped here rather than on the host, because the shape the ansible module
+                    # consumes should be decided where a test can see it - see docs/adr/0003.
+                    #
+                    # An unanswered or missing setting has no default, which is what declares the
+                    # variable blank for the operator to fill in.
+                    #
+                    # The unary comma on the list branch is load-bearing: PowerShell enumerates an
+                    # array written to the output stream, so a one-element split would arrive here
+                    # as a bare string and New-AnsibleVariable, which decides on -is [array], would
+                    # write it as a plain scalar instead of a yaml sequence. A single-identity
+                    # UserRight and a LogTargetW3C of just File are both common, so this is the
+                    # usual case, not the edge one.
+                    $default = if ($status -ne 'Answered') { $null }
+                        elseif ($part -eq 'store_name') { Split-Path -Path $node.$field -Leaf }
+                        elseif ($part -eq 'store_location') { Split-Path -Path (Split-Path -Path $node.$field -Parent) -Leaf }
+                        elseif ($data['List'] -contains $field) { , ($node.$field -split ',') }
+                        else { $node.$field }
+
+                    $navParams = @{ TaskId = $Rule.Id; TaskName = $taskName; StigName = $StigName }
+
+                    [pscustomobject] @{
+                        RuleId = $Rule.Id
+                        RuleType = $RuleType
+                        # The org settings attribute the value came from, which is what a human
+                        # fetching a matching org settings file needs to hear about.
+                        Field = $field
+                        # The value the variable holds, which is what distinguishes two variables
+                        # answering the same field.
+                        Part = $part
+                        Status = $status
+                        # The declaration in defaults/, the reference the task interpolates and the
+                        # assert that guards it must all name the same variable. They are all built
+                        # from this one name so they cannot drift apart.
+                        Name = New-AnsibleVariable @navParams -Type OrganizationName
+                        Reference = New-AnsibleVariable @navParams -Type Organization
+                        Default = $default
+                        Declaration = New-AnsibleVariable @navParams -NodeValue $default -Type OrganizationValue
+                    }
                 }
             }
         }
@@ -116,8 +133,10 @@ function Resolve-AnsibleOrganizationValue {
     # themselves are still resolved, so a caller that does reach one still gets its reference.
     $incomplete = @(if (-not $duplicate) { $variables.Where({ $_.Status -ne 'Answered' }) })
 
+    # Keyed by part rather than by field, because a field that answers more than one parameter has
+    # one variable per part. For every other rule type the part is the field.
     $reference = @{}
-    foreach ($variable in $variables) { $reference[$variable.Field] = $variable.Reference }
+    foreach ($variable in $variables) { $reference[$variable.Part] = $variable.Reference }
 
     $value = if ($decidedByOrganization) {
 
@@ -144,7 +163,22 @@ function Resolve-AnsibleOrganizationValue {
                     LogCustomFields = $node.LogCustomFieldEntry
                 }
             }
+            'RootCertificate' {
+                [pscustomobject] @{
+                    StoreName = $reference['store_name']
+                    StoreLocation = $reference['store_location']
+                }
+            }
             default { $reference[$data['Value']] }
+        }
+    }
+    # RootCertificate answers with a store path whichever way the value arrived, so both halves of
+    # this hand the generator the same shape. In practice every rule of this type leaves the store
+    # to the organization, so this branch is the unlikely one.
+    elseif ($RuleType -eq 'RootCertificate') {
+        [pscustomobject] @{
+            StoreName = Split-Path -Path $Rule.Location -Leaf
+            StoreLocation = Split-Path -Path (Split-Path -Path $Rule.Location -Parent) -Leaf
         }
     }
     elseif ($Rule.($data['Value']) -match 'Enabled|Disabled') {

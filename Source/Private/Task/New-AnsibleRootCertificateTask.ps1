@@ -26,7 +26,10 @@ function New-AnsibleRootCertificateTask {
             # blank, which left a STIG requirement silently absent from the role; an unanswered
             # value now stops the conversion instead, or produces an assert. See docs/adr/0001.
             $resolution = Resolve-AnsibleOrganizationValue -Rule $rule -RuleType 'RootCertificate' -StigName $StigName -OrganizationalSetting $OrganizationalSetting
-            $location = $resolution.Value
+            # win_certificate_info takes the store and its location separately. Sending only the
+            # store left the location to the module's LocalMachine default, which was right by
+            # luck for every Cert:\LocalMachine\ store and wrong for anything under Cert:\CurrentUser\.
+            $store = $resolution.Value
 
             $parsedCertificateName = if ($rule.Id -match '\.[a-z]$') {
                 $rule.CertificateName -replace '\s\d$'
@@ -41,16 +44,17 @@ function New-AnsibleRootCertificateTask {
                 [ordered] @{
                     'name' = 'Gather info for {0}' -f $rule.CertificateName
                     'community.windows.win_certificate_info' = [ordered] @{
-                        'store_name' = $location
+                        'store_name' = $store.StoreName
+                        'store_location' = $store.StoreLocation
                         'thumbprint' = $rule.Thumbprint
                     }
                     'register' = $registerName
                 }
                 [ordered] @{
-                    'name' = 'Assert {0} is set to {1}' -f $rule.CertificateName, $location
+                    'name' = 'Assert {0} is set to {1}' -f $rule.CertificateName, $store.StoreName
                     'ansible.builtin.assert' = [ordered] @{
                         'that' = "$registerName.certificates.issued_by exists"
-                        'fail_msg' = '{0} does not exist in the {1} certificate store' -f $rule.CertificateName, $location
+                        'fail_msg' = '{0} does not exist in the {1} certificate store' -f $rule.CertificateName, $store.StoreName
                     }
                 }
             ).Where({ $null -ne $_ })

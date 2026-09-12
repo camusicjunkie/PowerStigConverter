@@ -33,12 +33,20 @@ regeneration once the org settings file is filled in.
 
 ## Two values that cannot be a plain scalar variable
 
-- **`RootCertificate`'s store name.** The org settings file holds a store *path*
-  (`Cert:\LocalMachine\Root`) but `win_certificate_info` takes a store *name* (`Root`), so that
-  value was always going to be taken apart before it reached Ansible. The leaf is taken at
-  generation time and the variable holds the store name, which is the value the module consumes
-  and the value the assert's non-empty check should be about. `defaults/` therefore does not echo
-  the org settings file verbatim for this one type.
+- **`RootCertificate`'s store.** The org settings file holds a store *path*
+  (`Cert:\LocalMachine\Root`) but `win_certificate_info` takes a store *name* (`Root`) and a store
+  *location* (`LocalMachine`) as separate parameters, so that value was always going to be taken
+  apart before it reached Ansible. It is taken apart at generation time and the variables hold the
+  values the module consumes, which are the values the assert's non-empty checks should be about.
+  `defaults/` therefore does not echo the org settings file verbatim for this one type.
+
+  > **Amended, see [#4](https://github.com/camusicjunkie/PowerStigConverter/issues/4).** This
+  > originally said the variable holds the store name, singular: only the leaf was taken and the
+  > `LocalMachine` segment was dropped, leaving `win_certificate_info`'s own default to stand in.
+  > That was right by luck for every store under `Cert:\LocalMachine\` and silently wrong for
+  > anything under `Cert:\CurrentUser\`, where the role checked a store the STIG never named. One
+  > answered question now becomes two organization variables, named `store_name` and
+  > `store_location` for the parameters they feed; `OrganizationData.psd1` declares the split.
 - **`IisLogging`'s `LogCustomFields`.** It is a nested structure built from the org node's entries,
   not a scalar, so it stays generated in place. It is the one field `OrganizationData.psd1` marks
   optional, so nothing asserts on it and it needs no variable to be filled in.

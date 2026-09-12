@@ -348,15 +348,35 @@ Describe 'Resolve-AnsibleOrganizationValue: the organization variables it declar
                 Should-Be 'stig_server_2022_104_access_this_computer_from_the_network: [Administrators]'
         }
 
-        # PowerStig holds Cert:\LocalMachine\Root where win_certificate_info takes a store name
-        # of Root.
-        It 'reduces a certificate store path to the store name' {
+        # PowerStig answers with one store path; win_certificate_info takes the store and its
+        # location as separate parameters. One answered question, two variables - and the location
+        # used to be thrown away, leaving the module's LocalMachine default to stand in. That was
+        # right by luck for every Cert:\LocalMachine\ store and silently wrong for anything under
+        # Cert:\CurrentUser\, where the role then checked a store the STIG never named.
+        It 'splits <Path> into a store name and a store location' -ForEach @(
+            @{ Path = 'Cert:\LocalMachine\Root'; StoreName = 'Root'; StoreLocation = 'LocalMachine' }
+            @{ Path = 'Cert:\LocalMachine\Disallowed'; StoreName = 'Disallowed'; StoreLocation = 'LocalMachine' }
+            @{ Path = 'Cert:\CurrentUser\Root'; StoreName = 'Root'; StoreLocation = 'CurrentUser' }
+        ) {
             $rule = [pscustomobject] @{ Id = 'V-500'; OrganizationValueRequired = $true }
 
             $variable = (Resolve-OrgValue -Rule $rule -RuleType RootCertificate `
-                -OrganizationalSetting (New-TestOrgSetting '<OrganizationalSetting id="V-500" Location="Cert:\LocalMachine\Root" />')).Variable
+                -OrganizationalSetting (New-TestOrgSetting "<OrganizationalSetting id=`"V-500`" Location=`"$Path`" />")).Variable
 
-            $variable.Default | Should-Be 'Root'
+            ($variable | Where-Object Part -eq 'store_name').Default | Should-Be $StoreName
+            ($variable | Where-Object Part -eq 'store_location').Default | Should-Be $StoreLocation
+        }
+
+        # Both come from the same org settings attribute, so a human told to go and fetch a
+        # matching org settings file is told about the attribute, not about the halves.
+        It 'reports both variables against the one field they came from' {
+            $rule = [pscustomobject] @{ Id = 'V-500'; OrganizationValueRequired = $true }
+
+            $variable = (Resolve-OrgValue -Rule $rule -RuleType RootCertificate `
+                -OrganizationalSetting (New-TestOrgSetting '<OrganizationalSetting id="V-500" Location="" />')).Variable
+
+            $variable.Field | Should-BeCollection @('Location', 'Location')
+            $variable.Part | Should-BeCollection @('store_name', 'store_location')
         }
     }
 
