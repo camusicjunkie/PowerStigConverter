@@ -75,6 +75,58 @@ Describe 'Copy-PowerStigFile' {
         }
     }
 
+    # git reports trouble by exit code rather than by throwing, so a failed clone used to be
+    # followed by two commands run against a repository that was never created, and the whole
+    # thing returned as if it had worked.
+    Context 'a git command that fails' {
+
+        It 'warns which step failed rather than returning as if it worked' {
+            Mock -ModuleName PowerStigConverter -CommandName git -MockWith { $global:LASTEXITCODE = 128 }
+
+            $warnings = Copy-PowerStigFile -Path (Join-Path $TestDrive 'failed') 3>&1 |
+                Where-Object { $_ -is [System.Management.Automation.WarningRecord] }
+
+            $warnings.Message | Should-BeLikeString '*clone*'
+            $warnings.Message | Should-BeLikeString '*128*'
+        }
+
+        It 'stops rather than running the rest against a clone that is not there' {
+            Mock -ModuleName PowerStigConverter -CommandName git -MockWith { $global:LASTEXITCODE = 128 }
+
+            Copy-PowerStigFile -Path (Join-Path $TestDrive 'failed2') 3>$null
+
+            Should-Invoke -ModuleName PowerStigConverter -CommandName git -Exactly -Times 1
+        }
+
+        # The failure the user is most likely to meet: fetching again into a path that already
+        # holds a clone, which git refuses with the same silent 128.
+        It 'stops at the step that failed rather than the first one' {
+            Mock -ModuleName PowerStigConverter -CommandName git -MockWith {
+                $global:LASTEXITCODE = if ($args -contains 'sparse-checkout') { 128 } else { 0 }
+            }
+
+            Copy-PowerStigFile -Path (Join-Path $TestDrive 'failed3') 3>$null
+
+            Should-Invoke -ModuleName PowerStigConverter -CommandName git -Exactly -Times 2
+            Should-Invoke -ModuleName PowerStigConverter -CommandName git -Times 0 -ParameterFilter {
+                $args -contains 'checkout' -and $args -contains 'origin/dev'
+            }
+        }
+    }
+
+    # A stale exit code from something the caller ran earlier must not read as this fetch failing.
+    Context 'a non-zero exit code left over from an earlier command' {
+
+        It 'still completes all three steps' {
+            Mock -ModuleName PowerStigConverter -CommandName git -MockWith { }
+            $global:LASTEXITCODE = 1
+
+            Copy-PowerStigFile -Path (Join-Path $TestDrive 'stale') 3>$null
+
+            Should-Invoke -ModuleName PowerStigConverter -CommandName git -Exactly -Times 3
+        }
+    }
+
     # The module cannot fetch anything without git, and the README lists it as a requirement.
     # A missing git has to be reported rather than throwing an unhandled error at the user.
     Context 'git not available' {
