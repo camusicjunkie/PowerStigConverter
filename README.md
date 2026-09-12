@@ -217,8 +217,6 @@ loses the tag.
 ## Roadmap
 
 - Error handling and relative-path support in `Copy-PowerStigFile`
-- `New-AnsiblePermissionTask` asks the converting machine whether a path exists, so a generated
-  role can differ by the machine that produced it (#8)
 
 ## Authors and acknowledgment
 
