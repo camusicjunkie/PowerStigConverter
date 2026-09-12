@@ -12,18 +12,19 @@ function ConvertTo-AnsiblePlaybook {
     )
 
     begin {
+        # Every adapter takes -StigId; the two that configure IIS read it and the rest ignore it,
+        # so there is nothing to decide. This used to be granted by matching the rule's dsc module
+        # against *WebAdministration*, which was rule data standing in for a parameter set. See #17.
         $natParams = @{
             StigName = $StigName
             OrganizationalSetting = $OrganizationalSetting
+            StigId = $StigId
             ErrorAction = 'Stop'
         }
     }
     process {
-        $dscResourceModule = $InputObject.DscResourceModule
         $ruleName = $InputObject.PowerStigRule -replace 'Rule'
         $stigRule = $InputObject.StigRule
-
-        if ($dscResourceModule -like '*WebAdministration*') { $natParams.Add('StigId', $stigId) }
 
         # A rule type is supported exactly when it has an adapter, so that is the question asked -
         # rather than calling a function named after it and reading the failure.
@@ -34,7 +35,5 @@ function ConvertTo-AnsiblePlaybook {
         else {
             Write-Warning "Build-Ansible$($ruleName)Task is not currently supported."
         }
-
-        $natParams.Remove('StigId')
     }
 }

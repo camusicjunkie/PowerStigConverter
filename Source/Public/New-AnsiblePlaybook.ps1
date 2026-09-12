@@ -29,9 +29,7 @@ function New-AnsiblePlaybook {
 
     $ruleNames = $xml.DISASTIG.psobject.Properties.Name -like '*Rule'
     $rules = $ruleNames.Where({ $_ -notmatch 'Document|Manual' }).Foreach({
-        $dscResourceModule = $xml.DISASTIG.$_.dscresourcemodule
         [pscustomobject] @{
-            DscResourceModule = $dscResourceModule
             PowerStigRule = $_
             StigRule = $xml.DISASTIG.$_.Rule
         }
