@@ -7,15 +7,6 @@ BeforeAll {
     # WindowsServer-2022-MS as stig_server_2022, so that is what the expected values use.
     $script:stig = 'WindowsServer-2022-MS'
     $script:prefix = 'stig_server_2022'
-
-    function Invoke-Namer {
-        param ([string] $Command, [hashtable] $Splat)
-
-        InModuleScope -ModuleName PowerStigConverter -Parameters @{ Command = $Command; Splat = $Splat } {
-            param ($Command, $Splat)
-            & $Command @Splat
-        }
-    }
 }
 
 Describe 'Get-AnsibleToggleName' {
@@ -23,14 +14,14 @@ Describe 'Get-AnsibleToggleName' {
     Context 'the conditional toggle a task is guarded by' {
 
         It 'names it from the prefix and the rule id' {
-            Invoke-Namer -Command 'Get-AnsibleToggleName' -Splat @{ TaskId = 'V-254239'; StigName = $stig } |
+            Invoke-PrivateCommand -Command 'Get-AnsibleToggleName' -Splat @{ TaskId = 'V-254239'; StigName = $stig } |
                 Should-Be "${prefix}_254239_when"
         }
 
         # A toggle switches a whole requirement off, so a sub-rule takes its base id - and the
         # suffix is not legal in an ansible variable name either way.
         It 'flattens a sub-rule suffix' {
-            Invoke-Namer -Command 'Get-AnsibleToggleName' -Splat @{ TaskId = 'V-254343.b'; StigName = $stig } |
+            Invoke-PrivateCommand -Command 'Get-AnsibleToggleName' -Splat @{ TaskId = 'V-254343.b'; StigName = $stig } |
                 Should-Be "${prefix}_254343_b_when"
         }
     }
@@ -39,7 +30,7 @@ Describe 'Get-AnsibleToggleName' {
 Describe 'New-AnsibleToggleLine' {
 
     It 'declares the toggle on' {
-        Invoke-Namer -Command 'New-AnsibleToggleLine' -Splat @{ TaskId = 'V-254239'; StigName = $stig } |
+        Invoke-PrivateCommand -Command 'New-AnsibleToggleLine' -Splat @{ TaskId = 'V-254239'; StigName = $stig } |
             Should-Be "${prefix}_254239_when: true"
     }
 }
@@ -49,7 +40,7 @@ Describe 'Get-AnsibleRegisterName' {
     Context 'the variable a gather task registers its result in' {
 
         It 'names it from the prefix, the rule id and the suffix the caller asked for' {
-            Invoke-Namer -Command 'Get-AnsibleRegisterName' -Splat @{
+            Invoke-PrivateCommand -Command 'Get-AnsibleRegisterName' -Splat @{
                 TaskId = 'V-160'; StigName = $stig; Suffix = 'service_info'
             } | Should-Be "${prefix}_160_service_info"
         }
@@ -57,7 +48,7 @@ Describe 'Get-AnsibleRegisterName' {
         # A register is named for the rule it belongs to, so a sub-rule id reaches it the same way
         # it reaches every other variable name.
         It 'flattens a sub-rule suffix, which is not legal in an ansible variable name' {
-            Invoke-Namer -Command 'Get-AnsibleRegisterName' -Splat @{
+            Invoke-PrivateCommand -Command 'Get-AnsibleRegisterName' -Splat @{
                 TaskId = 'V-254343.b'; StigName = $stig; Suffix = 'certificate_info'
             } | Should-Be "${prefix}_254343_b_certificate_info"
         }
@@ -69,13 +60,13 @@ Describe 'Get-AnsibleVariableName' {
     Context 'organization values the organization decides' {
 
         It 'names it from the prefix, the rule id and the task name' {
-            Invoke-Namer -Command 'Get-AnsibleVariableName' -Splat @{
+            Invoke-PrivateCommand -Command 'Get-AnsibleVariableName' -Splat @{
                 TaskId = 'V-254239'; TaskName = 'Account lockout duration'; StigName = $stig
             } | Should-Be "${prefix}_254239_account_lockout_duration"
         }
 
         It 'strips punctuation so the variable name stays legal' {
-            Invoke-Namer -Command 'Get-AnsibleVariableName' -Splat @{
+            Invoke-PrivateCommand -Command 'Get-AnsibleVariableName' -Splat @{
                 TaskId = 'V-254239'; TaskName = 'Accounts: Guest account status'; StigName = $stig
             } | Should-Be "${prefix}_254239_accounts_guest_account_status"
         }
@@ -85,7 +76,7 @@ Describe 'Get-AnsibleVariableName' {
 Describe 'Get-AnsibleVariableReference' {
 
     It 'renders a jinja reference a task can interpolate' {
-        Invoke-Namer -Command 'Get-AnsibleVariableReference' -Splat @{
+        Invoke-PrivateCommand -Command 'Get-AnsibleVariableReference' -Splat @{
             TaskId = 'V-254239'; TaskName = 'Account lockout duration'; StigName = $stig
         } | Should-Be "{{ ${prefix}_254239_account_lockout_duration }}"
     }
@@ -95,8 +86,8 @@ Describe 'Get-AnsibleVariableReference' {
     It 'references exactly the name the declaration uses' {
         $splat = @{ TaskId = 'V-254239'; TaskName = 'Account lockout duration'; StigName = $stig }
 
-        $name = Invoke-Namer -Command 'Get-AnsibleVariableName' -Splat $splat
-        $reference = Invoke-Namer -Command 'Get-AnsibleVariableReference' -Splat $splat
+        $name = Invoke-PrivateCommand -Command 'Get-AnsibleVariableName' -Splat $splat
+        $reference = Invoke-PrivateCommand -Command 'Get-AnsibleVariableReference' -Splat $splat
 
         $reference | Should-Be "{{ $name }}"
     }
@@ -105,7 +96,7 @@ Describe 'Get-AnsibleVariableReference' {
 Describe 'New-AnsibleVariableLine' {
 
     It 'declares the variable with the value from the org settings' {
-        Invoke-Namer -Command 'New-AnsibleVariableLine' -Splat @{
+        Invoke-PrivateCommand -Command 'New-AnsibleVariableLine' -Splat @{
             TaskId = 'V-254239'; TaskName = 'Account lockout duration'; StigName = $stig; NodeValue = 60
         } | Should-Be "${prefix}_254239_account_lockout_duration: 60"
     }
@@ -122,13 +113,13 @@ Describe 'New-AnsibleVariableLine' {
             @{ Reason = 'opens with a yaml anchor marker'; NodeValue = '&anchor'; Expected = "'&anchor'" }
             @{ Reason = 'opens with a yaml block scalar marker'; NodeValue = '|block'; Expected = "'|block'" }
         ) {
-            Invoke-Namer -Command 'New-AnsibleVariableLine' -Splat @{
+            Invoke-PrivateCommand -Command 'New-AnsibleVariableLine' -Splat @{
                 TaskId = 'V-1'; TaskName = 'name'; StigName = $stig; NodeValue = $NodeValue
             } | Should-Be "${prefix}_1_name: $Expected"
         }
 
         It 'doubles an embedded single quote so the quoting survives' {
-            Invoke-Namer -Command 'New-AnsibleVariableLine' -Splat @{
+            Invoke-PrivateCommand -Command 'New-AnsibleVariableLine' -Splat @{
                 TaskId = 'V-1'; TaskName = 'name'; StigName = $stig; NodeValue = "Don't: really"
             } | Should-Be "${prefix}_1_name: 'Don''t: really'"
         }
@@ -139,7 +130,7 @@ Describe 'New-AnsibleVariableLine' {
             @{ NodeValue = 'Administrators' }
             @{ NodeValue = 'Administrators,Guests' }
         ) {
-            Invoke-Namer -Command 'New-AnsibleVariableLine' -Splat @{
+            Invoke-PrivateCommand -Command 'New-AnsibleVariableLine' -Splat @{
                 TaskId = 'V-1'; TaskName = 'name'; StigName = $stig; NodeValue = $NodeValue
             } | Should-Be "${prefix}_1_name: $NodeValue"
         }
@@ -150,13 +141,13 @@ Describe 'New-AnsibleVariableLine' {
     Context 'a value the task needs as a list' {
 
         It 'writes it as a yaml flow sequence' {
-            Invoke-Namer -Command 'New-AnsibleVariableLine' -Splat @{
+            Invoke-PrivateCommand -Command 'New-AnsibleVariableLine' -Splat @{
                 TaskId = 'V-1'; TaskName = 'name'; StigName = $stig; NodeValue = [string[]] @('Administrators', 'Guests')
             } | Should-Be "${prefix}_1_name: [Administrators, Guests]"
         }
 
         It 'writes a single-valued list as a sequence too' {
-            Invoke-Namer -Command 'New-AnsibleVariableLine' -Splat @{
+            Invoke-PrivateCommand -Command 'New-AnsibleVariableLine' -Splat @{
                 TaskId = 'V-1'; TaskName = 'name'; StigName = $stig; NodeValue = [string[]] @('Administrators')
             } | Should-Be "${prefix}_1_name: [Administrators]"
         }
@@ -164,7 +155,7 @@ Describe 'New-AnsibleVariableLine' {
         # Inside a flow sequence a comma ends the element, so it needs quoting where a plain
         # scalar would not.
         It 'quotes an element containing a comma' {
-            Invoke-Namer -Command 'New-AnsibleVariableLine' -Splat @{
+            Invoke-PrivateCommand -Command 'New-AnsibleVariableLine' -Splat @{
                 TaskId = 'V-1'; TaskName = 'name'; StigName = $stig; NodeValue = [string[]] @('a,b', 'c')
             } | Should-Be "${prefix}_1_name: ['a,b', c]"
         }

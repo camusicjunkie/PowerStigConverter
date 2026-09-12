@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    The names every generated variable is built from, and the four things built on them.
+    Every name a generated role uses, and the defaults/ lines built on them.
 .DESCRIPTION
     The declaration in defaults/, the reference a task interpolates and the assert that guards it
     all have to name the same variable, so they all come through here. See docs/adr/0003.

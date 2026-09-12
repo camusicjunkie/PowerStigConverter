@@ -57,3 +57,20 @@ function New-TestOrgSetting {
     }
     $settings
 }
+
+<#
+.SYNOPSIS
+    Calls a private function by name, splatting its parameters.
+.DESCRIPTION
+    A test of a private function needs InModuleScope and has to hand its arguments across the
+    boundary; without this every such file writes the same wrapper.
+#>
+function Invoke-PrivateCommand {
+    param ([string] $Command, [hashtable] $Splat)
+
+    InModuleScope -ModuleName PowerStigConverter -Parameters @{ Command = $Command; Splat = $Splat } {
+        param ($Command, $Splat)
+
+        & $Command @Splat
+    }
+}
