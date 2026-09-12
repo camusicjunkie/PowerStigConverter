@@ -80,13 +80,16 @@ function New-AnsiblePlaybook {
     # no task, and so can no longer leave a toggle behind in defaults/ that guards nothing.
     $tasks = $rules | ConvertTo-AnsiblePlaybook -StigName $StigName -StigId $stigId -OrganizationalSetting $organizationalSetting
 
-    $tasks | Export-AnsibleTaskBySeverity -OutputPath $role.TaskPath
-    $tasks | Export-AnsibleConditionalValue -StigName $StigName -OutputPath $role.DefaultPath
+    # The exporters decide what the role declares; writing it is this function's job, so a test
+    # can read their answer without a filesystem. See #19.
+    Save-AnsibleRoleFile -OutputPath $role.TaskPath -Content ($tasks | Export-AnsibleTaskBySeverity)
+    Save-AnsibleRoleFile -OutputPath $role.DefaultPath -Content ($tasks | Export-AnsibleConditionalValue -StigName $StigName)
 
     # Every rule type goes through the exporter now that all of them reach the role through a
     # variable. It used to exclude RootCertificate and Service by name and filter the rest on
     # OrganizationValueRequired, which is the filter the two write-backs existed to steer.
-    $rules | Export-AnsibleOrganizationValue -StigName $StigName -OrganizationalSetting $organizationalSetting -OutputPath $role.DefaultPath
+    Save-AnsibleRoleFile -OutputPath $role.DefaultPath `
+        -Content ($rules | Export-AnsibleOrganizationValue -StigName $StigName -OrganizationalSetting $organizationalSetting)
 
     $role
 }

@@ -4,10 +4,7 @@ function Export-AnsibleConditionalValue {
         [Parameter(Mandatory, ValueFromPipeline)]
         [object] $InputObject,
 
-        [string] $StigName,
-
-        [Parameter(Mandatory)]
-        [string] $OutputPath
+        [string] $StigName
     )
 
     begin {
@@ -28,10 +25,10 @@ function Export-AnsibleConditionalValue {
     end {
         $bySeverity = Group-AnsibleRuleBySeverity -InputObject $items.ToArray()
 
-        Save-AnsibleRoleFile -OutputPath $OutputPath -Content ([ordered] @{
+        [ordered] @{
             main_default_cat1 = $bySeverity.high.Values
             main_default_cat2 = $bySeverity.medium.Values
             main_default_cat3 = $bySeverity.low.Values
-        })
+        }
     }
 }
