@@ -99,6 +99,13 @@ Describe 'Build-AnsibleRegistryTask' {
         It 'guards the block with one toggle named for the base id' {
             $grouped.Task.when | Should-Be 'stig_server_2022_171_when'
         }
+
+        # Registry keys are always backslash-delimited, whatever platform does the converting
+        # (see #45), so the block name has to come from that literal character rather than a
+        # filesystem cmdlet's separator, which varies by platform.
+        It 'names the block for the key leaf regardless of platform separator conventions' {
+            $grouped.Task.name | Should-Be 'V-171 | MEDIUM | Alpha'
+        }
     }
 
     Context 'a value the organization decides' {
