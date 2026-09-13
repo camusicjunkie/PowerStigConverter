@@ -150,8 +150,8 @@ Describe 'ConvertTo-AnsibleTask' {
 }
 
 # A rule type that cannot be expressed as one task per rule returns a handler alongside its
-# task - the single write several rules notify. No shipped generator returns one yet, so these
-# drive the channel through a probe adapter rather than waiting on SslSettings.
+# task - the single write several rules notify. These drive the channel through a probe adapter
+# rather than through SslSettings, so what is under test is the channel and not that generator.
 Describe 'ConvertTo-AnsibleTask handler channel' {
 
     BeforeAll {

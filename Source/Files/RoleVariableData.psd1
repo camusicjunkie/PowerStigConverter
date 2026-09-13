@@ -9,4 +9,5 @@
     IisLogging               = @{ PerRule = @('LogPath') }
     WebConfigurationProperty = @{ PerRule = @('website') }
     MimeType                 = @{ PerRule = @('website') }
+    SslSettings              = @{ PerRole = @('websites') }
 }
