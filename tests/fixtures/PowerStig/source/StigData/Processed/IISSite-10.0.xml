@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Fixture STIG for the site branch of the IIS generators. Its stigid is the one
+    Get-AnsibleIisScopePath reads as "a site, not the machine", which is what makes the MIME type
+    and web configuration rules here the counterpart of the ones in IISServer-10.0.xml.
+
+    The two SslSettings rules sit in different severities on purpose: they are the pair that
+    proved a win_dsc write per rule would have the CAT 2 rule undo the CAT 1 one, so a conversion
+    has to show both contributing to one handler.
+
+    WebAppPool carries both of its shapes - V-218777's own literal $true, and V-218778's value
+    left to the organisation and answered as a PowerShell literal in the org settings file.
+-->
+<DISASTIG version="1" classification="UNCLASSIFIED" customname="" stigid="IIS_10-0_Site" description="Fixture STIG." filename="U_MS_IIS_10-0_Site_STIG_V1R0_Manual-xccdf.xml" releaseinfo="Release: 0" title="Microsoft IIS 10.0 Site Security Technical Implementation Guide" notice="terms-of-use" source="STIG.DOD.MIL" fullversion="10.0" created="1/1/2026">
+  <SslSettingsRule dscresourcemodule="xWebAdministration">
+    <Rule id="V-218737" severity="high" conversionstatus="pass" title="SRG-APP-000172-WSR-000104" dscresource="xSslSettings">
+      <Description>Fixture SSL settings rule. The CAT 1 flag every site must carry.</Description>
+      <DuplicateOf />
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+      <Value>Ssl128</Value>
+    </Rule>
+    <Rule id="V-218768" severity="medium" conversionstatus="pass" title="SRG-APP-000427-WSR-000186" dscresource="xSslSettings">
+      <Description>Fixture SSL settings rule. Several flags at once, in a lower severity than the rule above.</Description>
+      <DuplicateOf />
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+      <Value>Ssl,SslNegotiateCert,SslRequireCert</Value>
+    </Rule>
+  </SslSettingsRule>
+  <WebAppPoolRule dscresourcemodule="xWebAdministration">
+    <Rule id="V-218777" severity="medium" conversionstatus="pass" title="SRG-APP-000516-WSR-000174" dscresource="xWebAppPool">
+      <Description>Fixture application pool rule carrying its own value.</Description>
+      <DuplicateOf />
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+      <Key>rapidFailProtection</Key>
+      <Value>$true</Value>
+    </Rule>
+    <Rule id="V-218778" severity="medium" conversionstatus="pass" title="SRG-APP-000516-WSR-000174" dscresource="xWebAppPool">
+      <Description>Fixture application pool rule whose interval the organisation decides.</Description>
+      <DuplicateOf />
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <OrganizationValueRequired>True</OrganizationValueRequired>
+      <OrganizationValueTestString>{0} -le 5</OrganizationValueTestString>
+      <Key>rapidFailProtectionInterval</Key>
+      <Value />
+    </Rule>
+  </WebAppPoolRule>
+  <MimeTypeRule dscresourcemodule="WebAdministrationDsc">
+    <Rule id="V-218785" severity="medium" conversionstatus="pass" title="SRG-APP-000141-WSR-000081" dscresource="MimeType">
+      <Description>Fixture MIME type rule. A site STIG configures one website, not the machine.</Description>
+      <DuplicateOf />
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+      <Extension>.exe</Extension>
+      <MimeType>application/octet-stream</MimeType>
+      <Ensure>Absent</Ensure>
+    </Rule>
+  </MimeTypeRule>
+  <WebConfigurationPropertyRule dscresourcemodule="WebAdministrationDsc">
+    <Rule id="V-218786" severity="medium" conversionstatus="pass" title="SRG-APP-000141-WSR-000085" dscresource="WebConfigProperty">
+      <Description>Fixture web configuration property rule, against one website.</Description>
+      <DuplicateOf />
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+      <ConfigSection>/system.webServer/directoryBrowse</ConfigSection>
+      <Key>enabled</Key>
+      <Value>false</Value>
+    </Rule>
+  </WebConfigurationPropertyRule>
+</DISASTIG>
