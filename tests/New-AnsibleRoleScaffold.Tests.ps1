@@ -33,6 +33,7 @@ Describe 'New-AnsibleRoleScaffold' {
         It 'reports where the generated files go' {
             $scaffold.TaskPath | Should-Be (Join-Path $scaffold.Path 'tasks')
             $scaffold.DefaultPath | Should-Be (Join-Path $scaffold.Path 'defaults' | Join-Path -ChildPath 'main')
+            $scaffold.HandlerPath | Should-Be (Join-Path $scaffold.Path 'handlers')
         }
 
         It 'creates the hand-editable <RelativePath>' -ForEach @(
@@ -47,6 +48,13 @@ Describe 'New-AnsibleRoleScaffold' {
         It 'creates the directories the generated files are written into' {
             $scaffold.TaskPath | Should -Exist
             $scaffold.DefaultPath | Should -Exist
+            $scaffold.HandlerPath | Should -Exist
+        }
+
+        # The hand-editable one is written once and never again, so the generated handlers go in
+        # a file of their own that it imports.
+        It 'has the hand-editable handler file import the generated one' {
+            Join-Path $scaffold.Path 'handlers/main.yml' | Should -FileContentMatch 'import_tasks: generated.yml'
         }
     }
 

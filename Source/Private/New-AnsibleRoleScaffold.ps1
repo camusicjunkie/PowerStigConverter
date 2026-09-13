@@ -39,8 +39,9 @@ function New-AnsibleRoleScaffold {
 
     $taskPath = Join-Path $rolePath 'tasks'
     $defaultPath = Join-Path $rolePath 'defaults' | Join-Path -ChildPath 'main'
+    $handlerPath = Join-Path $rolePath 'handlers'
 
-    foreach ($required in $taskPath, $defaultPath) {
+    foreach ($required in $taskPath, $defaultPath, $handlerPath) {
         if (-not (Test-Path -Path $required)) {
             $null = New-Item -Path $required -ItemType Directory -Force
         }
@@ -50,5 +51,6 @@ function New-AnsibleRoleScaffold {
         Path = $rolePath
         TaskPath = $taskPath
         DefaultPath = $defaultPath
+        HandlerPath = $handlerPath
     }
 }

@@ -23,9 +23,61 @@ function Get-AnsibleVariableName {
     )
 
     $id = Get-AnsibleVariableIdFragment -TaskId $TaskId
-    $name = $TaskName.ToLower() -replace '\s', '_' -replace '[^\w]+'
+    $name = Get-AnsibleVariableNameFragment -TaskName $TaskName
 
     '{0}_{1}_{2}' -f (Get-AnsibleVariablePrefix -StigName $StigName), $id, $name
+}
+
+<#
+.SYNOPSIS
+    The role variable every rule of a type shares - prefix_name.
+.DESCRIPTION
+    Carries no rule id because it is declared once for the role rather than once per rule: the
+    list of IIS sites a STIG's rules configure is the same list whichever rule is reading it.
+#>
+function Get-AnsibleRoleVariableName {
+    [CmdletBinding()]
+    [OutputType([string])]
+    param (
+        [Parameter(Mandatory)] [string] $TaskName,
+        [Parameter(Mandatory)] [string] $StigName
+    )
+
+    '{0}_{1}' -f (Get-AnsibleVariablePrefix -StigName $StigName), (Get-AnsibleVariableNameFragment -TaskName $TaskName)
+}
+
+<#
+.SYNOPSIS
+    The jinja reference a task interpolates in place of a role variable.
+#>
+function Get-AnsibleRoleVariableReference {
+    [CmdletBinding()]
+    [OutputType([string])]
+    param (
+        [Parameter(Mandatory)] [string] $TaskName,
+        [Parameter(Mandatory)] [string] $StigName
+    )
+
+    '{0} {1} {2}' -f '{{', (Get-AnsibleRoleVariableName @PSBoundParameters), '}}'
+}
+
+<#
+.SYNOPSIS
+    The defaults/ line declaring a role variable, as an empty list.
+.DESCRIPTION
+    Empty because nothing in the STIG answers it - the site names its own IIS sites and app
+    pools. A list because every task that reads one loops over it; a scalar role variable would
+    need RoleVariableData.psd1 to say so, and none exists yet.
+#>
+function New-AnsibleRoleVariableLine {
+    [CmdletBinding()]
+    [OutputType([string])]
+    param (
+        [Parameter(Mandatory)] [string] $TaskName,
+        [Parameter(Mandatory)] [string] $StigName
+    )
+
+    '{0}: []' -f (Get-AnsibleRoleVariableName @PSBoundParameters)
 }
 
 <#
@@ -68,6 +120,23 @@ function New-AnsibleVariableLine {
     }
 
     '{0}: {1}' -f (Get-AnsibleVariableName -TaskId $TaskId -TaskName $TaskName -StigName $StigName), $quoted
+}
+
+<#
+.SYNOPSIS
+    A task name as an ansible variable name fragment.
+.DESCRIPTION
+    Both the per-rule and the role-scoped name are built from one, so the mangling lives in one
+    place the way the id's does.
+#>
+function Get-AnsibleVariableNameFragment {
+    [CmdletBinding()]
+    [OutputType([string])]
+    param (
+        [Parameter(Mandatory)] [AllowEmptyString()] [string] $TaskName
+    )
+
+    $TaskName.ToLower() -replace '\s', '_' -replace '[^\w]+'
 }
 
 <#

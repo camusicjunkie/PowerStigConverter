@@ -89,5 +89,14 @@ function New-AnsiblePlaybook {
     Save-AnsibleRoleFile -OutputPath $role.DefaultPath `
         -Content ($rules | Export-AnsibleOrganizationValue -StigName $StigName -OrganizationalSetting $organizationalSetting)
 
+    Save-AnsibleRoleFile -OutputPath $role.HandlerPath -Content ($tasks | Export-AnsibleHandler)
+
+    # The scaffolding writes handlers/main.yml once and never again, so a role scaffolded before
+    # the handler channel existed has no import of the generated file and would run none of it.
+    $handlerMain = Join-Path $role.HandlerPath 'main.yml'
+    if ((Test-Path -Path $handlerMain) -and (Get-Content -Path $handlerMain -Raw) -notlike '*generated.yml*') {
+        Write-Warning ('{0} does not import generated.yml, so the generated handlers will never run. Add an "ansible.builtin.import_tasks: generated.yml" entry to it.' -f $handlerMain)
+    }
+
     $role
 }
