@@ -18,7 +18,12 @@ function Format-AnsibleYamlScalar {
         [switch] $InSequence
     )
 
-    $unsafe = if ($InSequence) { ':\s|^\s|\s$|,|]|^[#&*!|>%@`\[]' } else { ':\s|^\s|\s$|^[#&*!|>%@`\[\]]' }
+    # Digits separated by colons are a sexagesimal integer in the yaml 1.1 ansible parses, so an
+    # unquoted 00:05:00 reaches the module as 300 rather than as the timespan the STIG wrote.
+    $sexagesimal = '|^-?\d+(:\d+)+$'
+
+    $unsafe = if ($InSequence) { ':\s|^\s|\s$|,|]|^[#&*!|>%@`\[]' + $sexagesimal }
+        else { ':\s|^\s|\s$|^[#&*!|>%@`\[\]]' + $sexagesimal }
 
     if ($Value -is [string] -and $Value -match $unsafe) {
         "'{0}'" -f ($Value -replace "'", "''")

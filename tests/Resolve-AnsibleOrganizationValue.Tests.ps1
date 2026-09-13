@@ -398,6 +398,30 @@ Describe 'Resolve-AnsibleOrganizationValue: the organization variables it declar
                 Should-Be 'stig_server_2022_104_access_this_computer_from_the_network: [Administrators]'
         }
 
+        # WebAppPool is the one rule type PowerStig interpolates into a built scriptblock, so its
+        # org values arrive quoted as PowerShell source. The quotes are that builder's syntax,
+        # not part of the value - left on, DSC's [TimeSpan]::Parse throws. See #53.
+        It 'strips the quotes PowerStig wrapped a <Key> default in' -ForEach @(
+            @{ Key = 'rapidFailProtectionInterval'; Setting = "'00:05:00'"; Expected = "stig_iissite_10_0_218778_rapidfailprotectioninterval: '00:05:00'" }
+            @{ Key = 'logEventOnRecycle'; Setting = "'Time,Schedule'"; Expected = 'stig_iissite_10_0_218778_logeventonrecycle: Time,Schedule' }
+        ) {
+            $rule = [pscustomobject] @{ Id = 'V-218778'; Key = $Key; OrganizationValueRequired = $true }
+
+            $variable = (Resolve-OrgValue -Rule $rule -RuleType WebAppPool -StigName 'IISSite-10.0' `
+                -OrganizationalSetting (New-TestOrgSetting "<OrganizationalSetting id=`"V-218778`" Value=`"$Setting`" />")).Variable
+
+            $variable.Declaration | Should-Be $Expected
+        }
+
+        It 'leaves an unquoted default alone' {
+            $rule = [pscustomobject] @{ Id = 'V-218772'; Key = 'restartRequestsLimit'; OrganizationValueRequired = $true }
+
+            $variable = (Resolve-OrgValue -Rule $rule -RuleType WebAppPool -StigName 'IISSite-10.0' `
+                -OrganizationalSetting (New-TestOrgSetting '<OrganizationalSetting id="V-218772" Value="35000" />')).Variable
+
+            $variable.Declaration | Should-Be 'stig_iissite_10_0_218772_restartrequestslimit: 35000'
+        }
+
         # One answered question, two variables. The location used to be dropped, leaving the
         # module's LocalMachine default to stand in - wrong under Cert:\CurrentUser\. See #4.
         It 'splits <Path> into a store name and a store location' -ForEach @(

@@ -61,6 +61,18 @@
             'StartupType' = 'StartupType'
         }
     }
+    'WebAppPool' = @{
+        # Every one of these rules reads the same org node attribute, so the variable is named
+        # after the app pool property the rule sets rather than after the attribute.
+        'Name' = 'Key'
+        'Value' = 'Value'
+        'Required' = @('Value')
+        # PowerStig's xWebAppPool builds its resource block as a string and interpolates the org
+        # value into it, so the value arrives as PowerShell source: '00:05:00', not 00:05:00.
+        'Unquote' = @('Value')
+        # No List: logEventOnRecycle is a single comma-separated string on the resource, not an
+        # array.
+    }
     'IisLogging' = @{
         'Value' = 'LogFlags'
         # LogCustomFieldEntry is deliberately absent: New-AnsibleIisLoggingTask already omits the

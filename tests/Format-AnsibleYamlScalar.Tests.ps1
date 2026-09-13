@@ -42,6 +42,27 @@ Describe 'Format-AnsibleYamlScalar' {
             Format-YamlScalar -Value $Value | Should-Be $Expected
         }
 
+        # Digits separated by colons are a sexagesimal integer to the yaml 1.1 parser ansible
+        # uses, so unquoted these reach the module as a number - 00:05:00 as 300. Two IIS
+        # organization values are timespans. See #56.
+        It 'quotes <Value>, which yaml would read as a sexagesimal number' -ForEach @(
+            @{ Value = '00:05:00'; Expected = "'00:05:00'" }
+            @{ Value = '00:15:00'; Expected = "'00:15:00'" }
+            @{ Value = '1:30'; Expected = "'1:30'" }
+        ) {
+            Format-YamlScalar -Value $Value | Should-Be $Expected
+            Format-YamlScalar -Value $Value -InSequence | Should-Be $Expected
+        }
+
+        # Only a value that is nothing but digits and colons; a colon inside text is already
+        # covered by the colon-space rule, and quoting more than this would quote ordinary prose.
+        It 'leaves <Value> alone, which yaml reads as the string it is' -ForEach @(
+            @{ Value = 'ETW:File' }
+            @{ Value = 'a:1' }
+        ) {
+            Format-YamlScalar -Value $Value | Should-Be $Value
+        }
+
         It 'doubles an embedded single quote so the quoting survives' {
             Format-YamlScalar -Value "Don't: really" | Should-Be "'Don''t: really'"
         }

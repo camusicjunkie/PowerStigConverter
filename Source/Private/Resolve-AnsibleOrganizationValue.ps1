@@ -70,6 +70,9 @@ function Resolve-AnsibleOrganizationValue {
                     $default = if ($status -ne 'Answered') { $null }
                         elseif ($data['Derive'] -and $data['Derive'][$part]) { Split-AnsibleValuePart -Value $node.$field -Derivation $data['Derive'][$part] }
                         elseif ($data['List'] -contains $field) { , ($node.$field -split ',') }
+                        # PowerStig quotes the values one consumer interpolates into a built
+                        # scriptblock; the quotes are that consumer's syntax, not the value.
+                        elseif ($data['Unquote'] -contains $field) { $node.$field -replace "^'(.*)'$", '$1' }
                         else { $node.$field }
 
                     $navParams = @{ TaskId = $Rule.Id; TaskName = $taskName; StigName = $StigName }
