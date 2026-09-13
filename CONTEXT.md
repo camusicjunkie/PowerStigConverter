@@ -87,6 +87,22 @@ log path is shaped the same way but has no organization value behind it, so it i
 the site fills in rather than one of these. See ADR-0004.
 _Avoid_: default, parameter, override
 
+**Role variable**:
+A variable in the role's `defaults/` that no organization value feeds — the adopting site fills
+it in, because it describes the site's own machines rather than DISA's requirement. Per-rule
+(`prefix_<id>_<name>`, the IIS log path) or role-scoped (`prefix_<name>`, the list of IIS sites
+every rule of a type configures). `RoleVariableData.psd1` says which rule types declare which.
+_Avoid_: site variable, input
+
+**Handler**:
+An ansible handler in the generated role's `handlers/`, notified by the tasks a rule type
+generates. The channel exists for a rule type whose DSC resource writes a whole set at once, so
+per-rule tasks would undo each other: each rule contributes its part and one shared handler
+performs the single write. Generated handlers are written to `handlers/generated.yml`, which the
+scaffolded `handlers/main.yml` imports; the scaffolded file is the operator's, the generated one
+is replaced every run.
+_Avoid_: hook, callback. (A task generator is not a handler — see the term above.)
+
 **Variable prefix**:
 The role-wide identifier stem derived from the STIG name (`server_2022_ms`), which every
 generated variable name is built on.

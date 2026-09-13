@@ -60,6 +60,18 @@ function ConvertTo-AnsibleTask {
                 $task
             })
 
+            # A rule type that cannot be expressed as one task per rule returns a handler as
+            # well - the single write several rules notify. It is named outright because notify
+            # addresses it by name, and takes neither toggle nor assert: those guard the rule's
+            # own task, which is the thing that notifies.
+            $handlers = @(foreach ($item in @($built.Handler)) {
+                if ($null -eq $item) { continue }
+
+                $handler = [ordered] @{ 'name' = $item.Name }
+                foreach ($key in $item.Body.Keys) { $handler[$key] = $item.Body[$key] }
+                $handler
+            })
+
             # Sub-rules share a block so an operator switches the requirement off rather than one
             # of its halves; a rule that becomes several tasks needs one for the same reason.
             $group = $built.Group -or (Test-PowerStigSubRuleId -Id $rule.Id) -or $tasks.Count -gt 1
@@ -70,7 +82,7 @@ function ConvertTo-AnsibleTask {
                 Write-Verbose "  Task: $($task.name)"
 
                 $null = $items.Add(@{
-                    Output = @{ Rule = $rule; Task = Add-AnsibleAssert -Task $task -Resolution $resolution }
+                    Output = @{ Rule = $rule; Task = Add-AnsibleAssert -Task $task -Resolution $resolution; Handler = $handlers }
                 })
                 continue
             }
@@ -91,7 +103,7 @@ function ConvertTo-AnsibleTask {
                 $null = $items.Add(@{
                     GroupId = $baseId
                     Task = if ($first) { Add-AnsibleAssert -Task $task -Resolution $resolution } else { $task }
-                    Output = @{ Rule = $rule; Task = $groupTask }
+                    Output = @{ Rule = $rule; Task = $groupTask; Handler = $handlers }
                 })
                 $first = $false
             }

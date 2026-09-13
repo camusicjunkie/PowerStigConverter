@@ -1,3 +1,6 @@
 ---
 - name: reboot_windows
   ansible.windows.win_reboot:
+
+- name: Import the generated handlers
+  ansible.builtin.import_tasks: generated.yml
