@@ -26,10 +26,11 @@ Describe 'New-AnsiblePlaybook' {
 
     Context 'what the command hands back' {
 
-        It 'returns the role path and the two directories it writes into' {
+        It 'returns the role path and the directories it writes into' {
             $role.Path | Should -Exist
             $role.TaskPath | Should-Be (Join-Path $role.Path 'tasks')
             $role.DefaultPath | Should-Be (Join-Path $role.Path 'defaults' | Join-Path -ChildPath 'main')
+            $role.HandlerPath | Should-Be (Join-Path $role.Path 'handlers')
         }
     }
 
@@ -48,8 +49,23 @@ Describe 'New-AnsiblePlaybook' {
             @{ RelativePath = 'defaults/main/main_default_org.yml' }
             @{ RelativePath = 'vars/main.yml' }
             @{ RelativePath = 'handlers/main.yml' }
+            @{ RelativePath = 'handlers/generated.yml' }
         ) {
             Join-Path $role.Path $RelativePath | Should -Exist
+        }
+    }
+
+    # No rule type in this fixture generates one, which is the case that has to keep working:
+    # handlers/main.yml imports generated.yml whatever the STIG is, and an import of a file that
+    # is not there fails the play before a single task runs.
+    Context 'the generated handlers' {
+
+        It 'imports the generated handler file from the one the scaffolding wrote' {
+            Get-RoleFile 'handlers/main.yml' | Should-BeLikeString '*import_tasks: generated.yml*'
+        }
+
+        It 'writes an empty handler list when no rule generated a handler' {
+            Get-RoleFile 'handlers/generated.yml' | Should-BeLikeString '*`[`]*'
         }
     }
 

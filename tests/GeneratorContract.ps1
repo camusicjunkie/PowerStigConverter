@@ -28,7 +28,8 @@
     Builds a fresh rule, so a mutation in one case cannot reach another.
 .PARAMETER Module
     The ansible module or DSC resource key the task is expected to carry. Looked for anywhere in
-    the emitted task, because five generators nest the real task inside a block.
+    the emitted task, because five generators nest the real task inside a block, and on the handler
+    a generator returns instead when the real write is the one several rules share.
 .PARAMETER ExtraParams
     Anything beyond -StigName the generator needs, e.g. @{ StigId = 'IIS_10-0_Server' }.
 #>
@@ -56,7 +57,7 @@ function Add-GeneratorContractTests {
             $item = Invoke-Generator -Generator $Generator -Rule (& $Factory) -StigName $StigName -ExtraParams $ExtraParams
 
             $item | Should-NotBeNull
-            Test-TaskCarriesModule -Task $item.Task -Module $Module | Should-BeTrue
+            Test-TaskCarriesModule -Task $item.Task -Handler $item.Handler -Module $Module | Should-BeTrue
         }
 
         # Without it the rule applies unconditionally. Sits on whatever task reaches the
@@ -133,8 +134,8 @@ function Add-GeneratorContractTests {
             $first = Invoke-Generator -Generator $Generator -Rule $rule -StigName $StigName -ExtraParams $ExtraParams
             $second = Invoke-Generator -Generator $Generator -Rule $rule -StigName $StigName -ExtraParams $ExtraParams
 
-            $second.Task | ConvertTo-Json -Depth 12 -Compress |
-                Should-Be ($first.Task | ConvertTo-Json -Depth 12 -Compress)
+            @($second.Task, $second.Handler) | ConvertTo-Json -Depth 12 -Compress |
+                Should-Be (@($first.Task, $first.Handler) | ConvertTo-Json -Depth 12 -Compress)
         }
     }
 }
@@ -223,23 +224,28 @@ function Invoke-Generator {
 
 <#
 .SYNOPSIS
-    True when the module key appears on the task or on any task nested in its block.
+    True when the module key appears on the task, on any task nested in its block, or on a
+    handler the rule notifies.
 .DESCRIPTION
     Five rule types collapse their tasks into a block, and Service and RootCertificate wrap theirs
     alongside a register and an assert, so the key the caller cares about is rarely on the outer
-    task. Searching the tree keeps the contract's interface to one module name.
+    task. A rule type that cannot be expressed as one task per rule puts the real write on a
+    handler instead, so that is searched too - otherwise item 1 would vouch for a set_fact.
+    Searching the tree keeps the contract's interface to one module name.
 #>
 function Test-TaskCarriesModule {
-    param ($Task, [string] $Module)
+    param ($Task, $Handler, [string] $Module)
 
-    if ($null -eq $Task) { return $false }
+    foreach ($candidate in @($Task) + @($Handler)) {
+        if ($null -eq $candidate) { continue }
 
-    foreach ($key in @($Task.Keys)) {
-        if ($key -eq $Module) { return $true }
-    }
+        foreach ($key in @($candidate.Keys)) {
+            if ($key -eq $Module) { return $true }
+        }
 
-    foreach ($nested in @($Task.block)) {
-        if (Test-TaskCarriesModule -Task $nested -Module $Module) { return $true }
+        foreach ($nested in @($candidate.block)) {
+            if (Test-TaskCarriesModule -Task $nested -Module $Module) { return $true }
+        }
     }
 
     return $false

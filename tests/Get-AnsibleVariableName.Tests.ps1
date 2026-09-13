@@ -161,3 +161,44 @@ Describe 'New-AnsibleVariableLine' {
         }
     }
 }
+
+Describe 'Get-AnsibleRoleVariableName' {
+
+    Context 'a variable declared once for the whole role' {
+
+        # No rule id: every rule of the type reads the same list of IIS sites, so a per-rule name
+        # would declare the same answer once per rule and let them drift apart.
+        It 'names it from the prefix and the task name alone' {
+            Invoke-PrivateCommand -Command 'Get-AnsibleRoleVariableName' -Splat @{ TaskName = 'websites'; StigName = $stig } |
+                Should-Be "${prefix}_websites"
+        }
+
+        It 'strips punctuation so the variable name stays legal' {
+            Invoke-PrivateCommand -Command 'Get-AnsibleRoleVariableName' -Splat @{ TaskName = 'App Pools (IIS)'; StigName = $stig } |
+                Should-Be "${prefix}_app_pools_iis"
+        }
+    }
+}
+
+Describe 'Get-AnsibleRoleVariableReference' {
+
+    It 'references exactly the name the declaration uses' {
+        $splat = @{ TaskName = 'websites'; StigName = $stig }
+
+        $name = Invoke-PrivateCommand -Command 'Get-AnsibleRoleVariableName' -Splat $splat
+        $declaration = Invoke-PrivateCommand -Command 'New-AnsibleRoleVariableLine' -Splat $splat
+
+        Invoke-PrivateCommand -Command 'Get-AnsibleRoleVariableReference' -Splat $splat | Should-Be "{{ $name }}"
+        $declaration | Should-Be "${name}: []"
+    }
+}
+
+Describe 'New-AnsibleRoleVariableLine' {
+
+    # Nothing in the STIG answers it - the site names its own IIS sites - and the tasks that read
+    # one loop over it, so an empty list rather than a blank scalar.
+    It 'declares it as an empty list for the site to fill in' {
+        Invoke-PrivateCommand -Command 'New-AnsibleRoleVariableLine' -Splat @{ TaskName = 'websites'; StigName = $stig } |
+            Should-Be "${prefix}_websites: []"
+    }
+}

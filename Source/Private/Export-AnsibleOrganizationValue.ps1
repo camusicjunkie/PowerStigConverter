@@ -41,8 +41,16 @@ function Export-AnsibleOrganizationValue {
                 # with no declaration fails the play on an undefined variable. RoleVariableData.psd1
                 # names the task each rule type's generator builds the same reference from.
                 if ($hasRoleVariable) {
-                    foreach ($taskName in $script:roleVariableData[$ruleType]) {
+                    $roleVariable = $script:roleVariableData[$ruleType]
+
+                    foreach ($taskName in $roleVariable.PerRule) {
                         New-AnsibleVariableLine -TaskId $rule.Id -TaskName $taskName -StigName $StigName
+                    }
+
+                    # A role-scoped one is the same variable for every rule of the type, so every
+                    # rule produces the identical line and the SortedList below keeps one.
+                    foreach ($taskName in $roleVariable.PerRole) {
+                        New-AnsibleRoleVariableLine -TaskName $taskName -StigName $StigName
                     }
                 }
             )

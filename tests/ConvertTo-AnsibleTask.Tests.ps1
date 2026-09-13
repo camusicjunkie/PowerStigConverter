@@ -148,3 +148,59 @@ Describe 'ConvertTo-AnsibleTask' {
         }
     }
 }
+
+# A rule type that cannot be expressed as one task per rule returns a handler alongside its
+# task - the single write several rules notify. No shipped generator returns one yet, so these
+# drive the channel through a probe adapter rather than waiting on SslSettings.
+Describe 'ConvertTo-AnsibleTask handler channel' {
+
+    BeforeAll {
+        function Convert-ProbeTask {
+            param ($Built, $Rule = ([pscustomobject] @{ Id = 'V-300'; Severity = 'medium'; DuplicateOf = '' }))
+
+            InModuleScope -ModuleName PowerStigConverter -Parameters @{ Rule = $Rule; Built = $Built } {
+                param ($Rule, $Built)
+
+                # The adapter is reached by name, so one defined here stands in for a generator.
+                function Build-AnsibleHandlerProbeTask {
+                    param ($Rule, $StigName, $StigId, $Resolution)
+                    $Built
+                }
+
+                @($Rule | ConvertTo-AnsibleTask -RuleType 'HandlerProbe' -StigName 'IISSite-10.0')
+            }
+        }
+
+        $script:probeBuilt = @{
+            Task = @{ Detail = 'contribute the ssl flags'; Body = @{ 'ansible.builtin.set_fact' = @{ flags = 'Ssl' } } }
+            Handler = @{ Name = 'apply_ssl_settings'; Body = @{ 'ansible.windows.win_dsc' = @{ resource_name = 'SslSettings' } } }
+        }
+    }
+
+    It 'carries the handler through beside the task' {
+        $item = Convert-ProbeTask -Built $probeBuilt
+
+        @($item.Handler).Count | Should-Be 1
+        $item.Handler[0].'ansible.windows.win_dsc'.resource_name | Should-Be 'SslSettings'
+    }
+
+    # notify addresses a handler by name, so the name is the generator's to state - not one built
+    # from the rule id and severity the way a task's is.
+    It 'names the handler exactly what the generator asked for' {
+        (Convert-ProbeTask -Built $probeBuilt).Handler[0].name | Should-Be 'apply_ssl_settings'
+    }
+
+    # The toggle guards the rule's own task, which is the thing that notifies; a handler that
+    # carried one too would be switched off by a variable no operator knows names it.
+    It 'leaves the handler unguarded' {
+        $handler = (Convert-ProbeTask -Built $probeBuilt).Handler[0]
+
+        $handler.Contains('when') | Should-BeFalse
+    }
+
+    It 'reports no handler for a rule type that returns none' {
+        $item = Convert-ProbeTask -Built @{ Task = @{ Detail = 'set it'; Body = @{ 'ansible.windows.win_dsc' = @{} } } }
+
+        @($item.Handler).Count | Should-Be 0
+    }
+}

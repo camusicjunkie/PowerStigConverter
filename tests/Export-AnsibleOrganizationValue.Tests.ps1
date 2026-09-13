@@ -63,6 +63,51 @@ Describe 'Export-AnsibleOrganizationValue' {
         }
     }
 
+    # RoleVariableData.psd1 gives a rule type either scope. No shipped rule type declares a
+    # role-scoped one yet - SslSettings and WebAppPool are the first - so these state the entry
+    # rather than waiting on them.
+    Context 'a role variable declared once for the whole role' {
+
+        BeforeAll {
+            InModuleScope -ModuleName PowerStigConverter {
+                $script:roleVariableDataBefore = $script:roleVariableData
+                $script:roleVariableData = @{ AccountPolicy = @{ PerRole = @('websites') } }
+            }
+        }
+
+        AfterAll {
+            InModuleScope -ModuleName PowerStigConverter {
+                $script:roleVariableData = $script:roleVariableDataBefore
+            }
+        }
+
+        It 'declares it as an empty list, carrying no rule id' {
+            $rule = [pscustomobject] @{
+                Id = 'V-100'; PolicyName = 'Maximum password age'; PolicyValue = '60'
+                DuplicateOf = ''; OrganizationValueRequired = $false
+            }
+
+            $content = (Export-OrgValues -Groups @(New-RuleGroup 'AccountPolicyRule' @($rule))).main_default_org
+
+            $content | Should-ContainCollection @('stig_server_2022_websites: []')
+        }
+
+        # Every rule of the type reads the same one, so it arrives once per rule and must still
+        # be declared once.
+        It 'declares it once however many rules of the type there are' {
+            $rules = 'V-100', 'V-101' | ForEach-Object {
+                [pscustomobject] @{
+                    Id = $_; PolicyName = 'Maximum password age'; PolicyValue = '60'
+                    DuplicateOf = ''; OrganizationValueRequired = $false
+                }
+            }
+
+            $content = (Export-OrgValues -Groups @(New-RuleGroup 'AccountPolicyRule' $rules)).main_default_org
+
+            @($content | Where-Object { $_ -eq 'stig_server_2022_websites: []' }).Count | Should-Be 1
+        }
+    }
+
     Context 'rules that declare nothing' {
 
         It 'declares no variable for a rule carrying its own value' {
