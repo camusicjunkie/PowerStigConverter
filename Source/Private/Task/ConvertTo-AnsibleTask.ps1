@@ -60,6 +60,12 @@ function ConvertTo-AnsibleTask {
                 $task
             })
 
+            # A generator names the role variables its tasks reference - the sites or app pools
+            # the implementing site fills in. Carried through without branching on rule type, the
+            # way the handler is: this is the single source for the reference, the defaults/
+            # declaration and the assert guarding it. See #57.
+            $roleVariables = @($built.RoleVariable | Where-Object { $_ })
+
             # A rule type that cannot be expressed as one task per rule returns a handler as
             # well - the single write several rules notify. It is named outright because notify
             # addresses it by name, and takes neither toggle nor assert: those guard the rule's
@@ -82,7 +88,12 @@ function ConvertTo-AnsibleTask {
                 Write-Verbose "  Task: $($task.name)"
 
                 $null = $items.Add(@{
-                    Output = @{ Rule = $rule; Task = Add-AnsibleAssert -Task $task -Resolution $resolution; Handler = $handlers }
+                    Output = @{
+                        Rule = $rule
+                        Task = Add-AnsibleAssert -Task $task -Resolution $resolution
+                        Handler = $handlers
+                        RoleVariable = $roleVariables
+                    }
                 })
                 continue
             }
@@ -103,7 +114,7 @@ function ConvertTo-AnsibleTask {
                 $null = $items.Add(@{
                     GroupId = $baseId
                     Task = if ($first) { Add-AnsibleAssert -Task $task -Resolution $resolution } else { $task }
-                    Output = @{ Rule = $rule; Task = $groupTask; Handler = $handlers }
+                    Output = @{ Rule = $rule; Task = $groupTask; Handler = $handlers; RoleVariable = $roleVariables }
                 })
                 $first = $false
             }

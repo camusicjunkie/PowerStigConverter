@@ -23,6 +23,9 @@ function Build-AnsibleSslSettingsTask {
         (($flags | ForEach-Object { "'{0}'" -f ($_ -replace "'", "''") }) -join ', ')
 
     @{
+        # The handler loops over the site list; the flag list is the tasks' own running total and
+        # defaults/ says nothing about it, so only the one is declared. See #55.
+        RoleVariable = 'websites'
         Task = @(
             @{
                 Detail = 'Ensure SSL settings include {0}' -f ($flags -join ', ')
@@ -42,7 +45,7 @@ function Build-AnsibleSslSettingsTask {
             Body = [ordered] @{
                 'ansible.windows.win_dsc' = [ordered] @{
                     'resource_name' = 'SslSettings'
-                    # A bare site name, not the IIS:\Sites\ path Get-AnsibleIisScopePath builds.
+                    # A bare site name, not the IIS:\Sites\ path Get-AnsibleIisScope builds.
                     'Name' = '{{ item }}'
                     'Bindings' = '{{{{ {0} | unique }}}}' -f $flagList
                     'Ensure' = 'Present'

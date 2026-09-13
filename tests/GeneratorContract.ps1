@@ -17,6 +17,8 @@
       7. an organization value reaches the task as a      each test file, the generators that
          reference rather than a literal                  call Resolve-AnsibleOrganizationValue
       8. reads the rule and nothing else                  here
+      9. the role variables it references are the ones    each test file, the generators that
+         it declares                                      return a RoleVariable
 
     GeneratorCoverage.Tests.ps1 enforces all of it.
 #>
@@ -268,6 +270,28 @@ function New-ContractOrgSetting {
         $settings[$node.id] = $node
     }
     $settings
+}
+
+<#
+.SYNOPSIS
+    The defaults/ lines a role declares for the role variables a generator named.
+.DESCRIPTION
+    Item 9's second half. A generator's RoleVariable is the single source for the reference its
+    task interpolates and the declaration defaults/ carries, so a test pins the pair by feeding
+    the generator's own answer to the exporter rather than spelling the name out twice. See #57.
+#>
+function Get-RoleVariableDeclaration {
+    param ([string[]] $RoleVariable, [string] $StigName)
+
+    InModuleScope -ModuleName PowerStigConverter -Parameters @{
+        RoleVariable = $RoleVariable; StigName = $StigName
+    } {
+        param ($RoleVariable, $StigName)
+
+        # Piped empty rather than passed: the rules decide the organization values, and this is
+        # asking only what the role variables declare.
+        (@() | Export-AnsibleOrganizationValue -StigName $StigName -RoleVariable $RoleVariable).main_default_org
+    }
 }
 
 <#

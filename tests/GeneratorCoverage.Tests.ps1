@@ -21,6 +21,10 @@ BeforeDiscovery {
                 # resolver - a rule type whose values the shared module resolves would otherwise
                 # stop being required to cover the path.
                 ResolvesOrganizationValue = $false
+                # A generator that names a role variable owns all three of its uses - the
+                # reference, the declaration and the assert - so nothing off disk can say it
+                # needs covering; the generator's own source is the only place that knows. See #57.
+                DeclaresRoleVariable = $body -match 'RoleVariable'
                 # A rule type with a List key in OrganizationData.psd1 has a field the ansible
                 # module takes as a list, so a one-element case has to be pinned.
                 RuleType = $_.BaseName -replace '^(New|Build)-Ansible' -replace 'Task$'
@@ -57,6 +61,12 @@ Describe 'every task generator is tested' {
     It '<Name> covers the organization value path' -ForEach ($generators | Where-Object ResolvesOrganizationValue) {
         $TestBody | Should-BeLikeString "*Context 'a value the organization decides'*"
     }
+
+    # Item 9. A role variable referenced but not declared fails the play on an undefined variable;
+    # one declared but not referenced is the orphan #57 closed. Only the generator says which.
+    It '<Name> pins the role variables it declares' -ForEach ($generators | Where-Object DeclaresRoleVariable) {
+        $TestBody | Should-BeLikeString "*Context 'the role variables it declares'*"
+    }
 }
 
 Describe 'the checklist is discoverable' {
@@ -67,5 +77,6 @@ Describe 'the checklist is discoverable' {
         $contract | Should-BeLikeString '*the ansible module or DSC resource it emits*'
         $contract | Should-BeLikeString '*a single-valued list stays a list*'
         $contract | Should-BeLikeString '*reads the rule and nothing else*'
+        $contract | Should-BeLikeString '*the role variables it references are the ones*'
     }
 }

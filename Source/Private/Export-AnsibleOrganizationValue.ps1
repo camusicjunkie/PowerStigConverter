@@ -8,7 +8,13 @@ function Export-AnsibleOrganizationValue {
 
         # The org settings loaded once by Get-PowerStigOrgSetting, keyed by rule id.
         [Parameter()]
-        [hashtable] $OrganizationalSetting = @{}
+        [hashtable] $OrganizationalSetting = @{},
+
+        # The role-scoped variables the generated tasks reference, as task names. Comes from the
+        # tasks rather than from a table here, so a STIG whose rules reference no website declares
+        # none - which a rule-type table could not tell. See #57.
+        [Parameter()]
+        [string[]] $RoleVariable = @()
     )
 
     begin {
@@ -34,23 +40,15 @@ function Export-AnsibleOrganizationValue {
                     foreach ($variable in $resolution.Variable) { $variable.Declaration }
                 }
 
-                # Some role variables carry no organization value at all - the IIS log path and
-                # site name are the other way round: no org settings attribute feeds them, so
-                # they never appear above. A rule type that needs one still declares it blank for
-                # the site to fill in, because the task references it regardless, and a reference
-                # with no declaration fails the play on an undefined variable. RoleVariableData.psd1
-                # names the task each rule type's generator builds the same reference from.
+                # Some role variables carry no organization value at all - the IIS log path is the
+                # other way round: no org settings attribute feeds it, so it never appears above. A
+                # rule type that needs one still declares it blank for the site to fill in, because
+                # the task references it regardless, and a reference with no declaration fails the
+                # play on an undefined variable. RoleVariableData.psd1 names the task each rule
+                # type's generator builds the same reference from.
                 if ($hasRoleVariable) {
-                    $roleVariable = $script:roleVariableData[$ruleType]
-
-                    foreach ($taskName in $roleVariable.PerRule) {
+                    foreach ($taskName in $script:roleVariableData[$ruleType].PerRule) {
                         New-AnsibleVariableLine -TaskId $rule.Id -TaskName $taskName -StigName $StigName
-                    }
-
-                    # A role-scoped one is the same variable for every rule of the type, so every
-                    # rule produces the identical line and the SortedList below keeps one.
-                    foreach ($taskName in $roleVariable.PerRole) {
-                        New-AnsibleRoleVariableLine -TaskName $taskName -StigName $StigName
                     }
                 }
             )
@@ -64,6 +62,16 @@ function Export-AnsibleOrganizationValue {
         }
     }
     end {
+        # Role-scoped, so it carries no rule id and is declared once however many rules read it -
+        # an empty list for the site to fill in, guarded by the assert Export-AnsibleTaskBySeverity
+        # prepends. Sorted in among the rest by the same SortedList.
+        foreach ($taskName in $RoleVariable) {
+            $declaration = New-AnsibleRoleVariableLine -TaskName $taskName -StigName $StigName
+            if (-not $organization.ContainsKey($declaration)) {
+                $organization.Add($declaration, $declaration)
+            }
+        }
+
         $content = @(@'
 {0}_cat1: true
 {0}_cat2: true

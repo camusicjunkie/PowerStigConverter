@@ -91,7 +91,9 @@ _Avoid_: default, parameter, override
 A variable in the role's `defaults/` that no organization value feeds — the adopting site fills
 it in, because it describes the site's own machines rather than DISA's requirement. Per-rule
 (`prefix_<id>_<name>`, the IIS log path) or role-scoped (`prefix_<name>`, the list of IIS sites
-every rule of a type configures). `RoleVariableData.psd1` says which rule types declare which.
+every rule that references one configures). `RoleVariableData.psd1` names the per-rule ones by
+rule type; a role-scoped one is named by the generator that references it, as a `RoleVariable`
+output key, which is also what declares it in `defaults/` and asserts it is not empty.
 _Avoid_: site variable, input
 
 **Handler**:

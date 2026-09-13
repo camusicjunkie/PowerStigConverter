@@ -20,11 +20,17 @@ BeforeAll {
         }
     }
 
+    function Get-MimeTypeItem {
+        param ($Rule, $StigId = 'IIS_10-0_Server')
+
+        Invoke-Generator -Generator 'Build-AnsibleMimeTypeTask' -Rule $Rule `
+            -StigName 'IISServer-10.0' -ExtraParams @{ StigId = $StigId }
+    }
+
     function Get-MimeTypeTask {
         param ($Rule, $StigId = 'IIS_10-0_Server')
 
-        (Invoke-Generator -Generator 'Build-AnsibleMimeTypeTask' -Rule $Rule `
-            -StigName 'IISServer-10.0' -ExtraParams @{ StigId = $StigId }).Task
+        (Get-MimeTypeItem -Rule $Rule -StigId $StigId).Task
     }
 }
 
@@ -58,7 +64,8 @@ Describe 'Build-AnsibleMimeTypeTask' {
         }
     }
 
-    # A server STIG configures the machine-wide root; a site STIG configures one site.
+    # A server STIG configures the machine-wide root; a site STIG configures every site the role
+    # names, which is a loop rather than a path the operator picks per rule. See #57.
     Context 'where the configuration is applied' {
 
         It 'targets the machine web root for a server STIG' {
@@ -66,9 +73,30 @@ Describe 'Build-AnsibleMimeTypeTask' {
                 Should-Be 'MACHINE/WEBROOT/APPHOST'
         }
 
-        It 'interpolates the website variable for a site STIG' {
-            (Get-MimeTypeTask -Rule (New-MimeTypeRule) -StigId 'IIS_10-0_Site').'ansible.windows.win_dsc'.ConfigurationPath |
-                Should-Be 'IIS:\Sites\{{ stig_iisserver_10_0_200_website }}'
+        It 'adds no loop for a server STIG, which configures one machine' {
+            (Get-MimeTypeTask -Rule (New-MimeTypeRule)).Keys | Should-NotContainCollection 'loop'
+        }
+
+        It 'loops every site the role names for a site STIG' {
+            $task = Get-MimeTypeTask -Rule (New-MimeTypeRule) -StigId 'IIS_10-0_Site'
+
+            $task.'ansible.windows.win_dsc'.ConfigurationPath | Should-Be 'IIS:\Sites\{{ item }}'
+            $task.loop | Should-Be '{{ stig_iisserver_10_0_websites }}'
+        }
+    }
+
+    Context 'the role variables it declares' {
+
+        It 'declares nothing for a server STIG, which references no website' {
+            (Get-MimeTypeItem -Rule (New-MimeTypeRule)).RoleVariable | Should-BeFalsy
+        }
+
+        It 'declares the same list a site STIG''s task loops' {
+            $item = Get-MimeTypeItem -Rule (New-MimeTypeRule) -StigId 'IIS_10-0_Site'
+
+            $item.RoleVariable | Should-Be 'websites'
+            Get-RoleVariableDeclaration -RoleVariable $item.RoleVariable -StigName 'IISServer-10.0' |
+                Should-ContainCollection @('stig_iisserver_10_0_websites: []')
         }
     }
 

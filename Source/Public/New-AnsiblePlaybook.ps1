@@ -80,14 +80,20 @@ function New-AnsiblePlaybook {
 
     # The exporters decide what the role declares; writing it is this function's job, so a test
     # can read their answer without a filesystem. See #19.
-    Save-AnsibleRoleFile -OutputPath $role.TaskPath -Content ($tasks | Export-AnsibleTaskBySeverity)
+    # The role-scoped lists the generated tasks loop over, named by the generators that reference
+    # them. Derived from the tasks for the same reason the toggles are: a rule type that produced
+    # no task - or a server STIG, whose IIS rules reference no website - declares none. See #57.
+    $roleVariable = @($tasks.RoleVariable | Where-Object { $_ } | Sort-Object -Unique)
+
+    Save-AnsibleRoleFile -OutputPath $role.TaskPath -Content ($tasks | Export-AnsibleTaskBySeverity -StigName $StigName)
     Save-AnsibleRoleFile -OutputPath $role.DefaultPath -Content ($tasks | Export-AnsibleConditionalValue -StigName $StigName)
 
     # Every rule type goes through the exporter now that all of them reach the role through a
     # variable. It used to exclude RootCertificate and Service by name and filter the rest on
     # OrganizationValueRequired, which is the filter the two write-backs existed to steer.
     Save-AnsibleRoleFile -OutputPath $role.DefaultPath `
-        -Content ($rules | Export-AnsibleOrganizationValue -StigName $StigName -OrganizationalSetting $organizationalSetting)
+        -Content ($rules | Export-AnsibleOrganizationValue -StigName $StigName `
+            -OrganizationalSetting $organizationalSetting -RoleVariable $roleVariable)
 
     Save-AnsibleRoleFile -OutputPath $role.HandlerPath -Content ($tasks | Export-AnsibleHandler)
 

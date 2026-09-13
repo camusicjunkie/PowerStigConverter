@@ -10,13 +10,15 @@ BeforeAll {
     }
 
     function Export-OrgValues {
-        param ($Groups, $OrganizationalSetting = @{}, $StigName = 'WindowsServer-2022-MS')
+        param ($Groups, $OrganizationalSetting = @{}, $StigName = 'WindowsServer-2022-MS', [string[]] $RoleVariable = @())
 
         InModuleScope -ModuleName PowerStigConverter -Parameters @{
-            Groups = $Groups; OrganizationalSetting = $OrganizationalSetting; StigName = $StigName
+            Groups = $Groups; OrganizationalSetting = $OrganizationalSetting
+            StigName = $StigName; RoleVariable = $RoleVariable
         } {
-            param ($Groups, $OrganizationalSetting, $StigName)
-            $Groups | Export-AnsibleOrganizationValue -StigName $StigName -OrganizationalSetting $OrganizationalSetting
+            param ($Groups, $OrganizationalSetting, $StigName, $RoleVariable)
+            $Groups | Export-AnsibleOrganizationValue -StigName $StigName `
+                -OrganizationalSetting $OrganizationalSetting -RoleVariable $RoleVariable
         }
     }
 }
@@ -63,48 +65,28 @@ Describe 'Export-AnsibleOrganizationValue' {
         }
     }
 
-    # RoleVariableData.psd1 gives a rule type either scope. No shipped rule type declares a
-    # role-scoped one yet - SslSettings and WebAppPool are the first - so these state the entry
-    # rather than waiting on them.
+    # The role-scoped variables come in from the caller, derived from the tasks the generators
+    # built, rather than from a rule-type table here: a table cannot tell that a Server STIG's IIS
+    # rules reference no website. See #57.
     Context 'a role variable declared once for the whole role' {
 
-        BeforeAll {
-            InModuleScope -ModuleName PowerStigConverter {
-                $script:roleVariableDataBefore = $script:roleVariableData
-                $script:roleVariableData = @{ AccountPolicy = @{ PerRole = @('websites') } }
-            }
-        }
-
-        AfterAll {
-            InModuleScope -ModuleName PowerStigConverter {
-                $script:roleVariableData = $script:roleVariableDataBefore
-            }
-        }
-
         It 'declares it as an empty list, carrying no rule id' {
-            $rule = [pscustomobject] @{
-                Id = 'V-100'; PolicyName = 'Maximum password age'; PolicyValue = '60'
-                DuplicateOf = ''; OrganizationValueRequired = $false
-            }
-
-            $content = (Export-OrgValues -Groups @(New-RuleGroup 'AccountPolicyRule' @($rule))).main_default_org
+            $content = (Export-OrgValues -Groups @() -RoleVariable @('websites')).main_default_org
 
             $content | Should-ContainCollection @('stig_server_2022_websites: []')
         }
 
-        # Every rule of the type reads the same one, so it arrives once per rule and must still
-        # be declared once.
-        It 'declares it once however many rules of the type there are' {
-            $rules = 'V-100', 'V-101' | ForEach-Object {
-                [pscustomobject] @{
-                    Id = $_; PolicyName = 'Maximum password age'; PolicyValue = '60'
-                    DuplicateOf = ''; OrganizationValueRequired = $false
-                }
-            }
-
-            $content = (Export-OrgValues -Groups @(New-RuleGroup 'AccountPolicyRule' $rules)).main_default_org
+        It 'declares one line per name, however many rules referenced them' {
+            $content = (Export-OrgValues -Groups @() -RoleVariable @('websites', 'webapppools')).main_default_org
 
             @($content | Where-Object { $_ -eq 'stig_server_2022_websites: []' }).Count | Should-Be 1
+            $content | Should-ContainCollection @('stig_server_2022_webapppools: []')
+        }
+
+        It 'declares none when the tasks reference none' {
+            $content = (Export-OrgValues -Groups @()).main_default_org -join "`n"
+
+            $content | Should-NotBeLikeString '*websites*'
         }
     }
 
@@ -155,26 +137,21 @@ Describe 'Export-AnsibleOrganizationValue' {
         }
     }
 
-    # No org settings attribute feeds the site name either, so a site-scoped IIS task references
-    # a role variable the site fills in, the same way the log path does. See docs/adr/0004.
+    # The website used to be a per-rule variable declared by rule type, which meant an IISServer
+    # role declared one per MimeType and WebConfigurationProperty rule that no task ever read.
+    # It is role-scoped now and comes from the tasks, so the orphan cannot come back. See #57.
     Context 'the IIS website' {
 
-        It 'declares it blank for every WebConfigurationProperty rule' {
-            $rule = [pscustomobject] @{ Id = 'V-310'; DuplicateOf = ''; OrganizationValueRequired = $false }
+        It 'declares no per-rule website for a <RuleType> rule' -ForEach @(
+            @{ RuleType = 'WebConfigurationPropertyRule'; Id = 'V-310' }
+            @{ RuleType = 'MimeTypeRule'; Id = 'V-311' }
+        ) {
+            $rule = [pscustomobject] @{ Id = $Id; DuplicateOf = ''; OrganizationValueRequired = $false }
 
-            $content = (Export-OrgValues -Groups @(New-RuleGroup 'WebConfigurationPropertyRule' @($rule)) `
-                -StigName 'IISServer-10.0').main_default_org
+            $content = (Export-OrgValues -Groups @(New-RuleGroup $RuleType @($rule)) `
+                -StigName 'IISServer-10.0').main_default_org -join "`n"
 
-            $content | Should-ContainCollection @('stig_iisserver_10_0_310_website: ')
-        }
-
-        It 'declares it blank for every MimeType rule' {
-            $rule = [pscustomobject] @{ Id = 'V-311'; DuplicateOf = ''; OrganizationValueRequired = $false }
-
-            $content = (Export-OrgValues -Groups @(New-RuleGroup 'MimeTypeRule' @($rule)) `
-                -StigName 'IISServer-10.0').main_default_org
-
-            $content | Should-ContainCollection @('stig_iisserver_10_0_311_website: ')
+            $content | Should-NotBeLikeString '*_website*'
         }
     }
 }

@@ -33,6 +33,7 @@ function Build-AnsibleWebAppPoolTask {
     $dsc[$Rule.Key] = $value
 
     @{
+        RoleVariable = 'webapppools'
         Task = @(
             @{
                 Detail = 'Ensure {0}' -f $Rule.Key

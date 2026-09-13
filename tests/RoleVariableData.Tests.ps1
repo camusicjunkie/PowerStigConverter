@@ -19,42 +19,43 @@ BeforeAll {
     }
 }
 
-# RoleVariableData.psd1 names the task a generator builds a bare role variable's reference from,
-# and Export-AnsibleOrganizationValue.ps1 declares that same name in defaults/ - the two literal
-# strings agree only by convention, so this locks the pair down rather than trusting they won't
-# drift the way LogPath and website once could have. See docs/adr/0004.
+# A role variable is one the implementing site fills in, and its reference and its declaration are
+# two literal strings that agree only by convention - so each pair is locked down here rather than
+# trusted not to drift the way LogPath and website once could have. See docs/adr/0004.
+#
+# The two scopes are pinned differently because they are sourced differently. A per-rule one is
+# named in RoleVariableData.psd1 and read by the exporter, so the psd1 and the generator have to
+# agree. A role-scoped one comes from the generator's own RoleVariable output key, so there is
+# nothing for the psd1 to disagree with - each generator's test file pins its own pair, and this
+# checks the psd1 no longer claims to know about them. See #57.
 Describe 'RoleVariableData' {
 
-    It 'names the IIS log path the same for the reference and the declaration' {
-        $rule = [pscustomobject] @{
-            Id = 'V-300'; Severity = 'medium'; DuplicateOf = ''; OrganizationValueRequired = $false
-            LogFlags = ''; LogFormat = ''; LogPeriod = ''; LogTargetW3C = ''; LogCustomFieldEntry = ''
+    Context 'a variable named per rule' {
+
+        It 'names the IIS log path the same for the reference and the declaration' {
+            $rule = [pscustomobject] @{
+                Id = 'V-300'; Severity = 'medium'; DuplicateOf = ''; OrganizationValueRequired = $false
+                LogFlags = ''; LogFormat = ''; LogPeriod = ''; LogTargetW3C = ''; LogCustomFieldEntry = ''
+            }
+
+            $reference = (Invoke-Generator -Generator 'Build-AnsibleIisLoggingTask' -Rule $rule -StigName 'IISServer-10.0').Task.'ansible.windows.win_dsc'.LogPath
+            $declaration = (Export-OrgValues -PowerStigRule 'IisLoggingRule' -Rules @($rule) -StigName 'IISServer-10.0').main_default_org
+
+            $reference | Should-Be '{{ stig_iisserver_10_0_300_logpath }}'
+            $declaration | Should-ContainCollection @('stig_iisserver_10_0_300_logpath: ')
         }
-
-        $reference = (Invoke-Generator -Generator 'Build-AnsibleIisLoggingTask' -Rule $rule -StigName 'IISServer-10.0').Task.'ansible.windows.win_dsc'.LogPath
-        $declaration = (Export-OrgValues -PowerStigRule 'IisLoggingRule' -Rules @($rule) -StigName 'IISServer-10.0').main_default_org
-
-        $reference | Should-Be '{{ stig_iisserver_10_0_300_logpath }}'
-        $declaration | Should-ContainCollection @('stig_iisserver_10_0_300_logpath: ')
     }
 
-    It 'names the IIS website the same for <Generator>''s reference and the declaration' -ForEach @(
-        @{ Generator = 'Build-AnsibleWebConfigurationPropertyTask'; RuleType = 'WebConfigurationPropertyRule'; ExtraParams = @{ StigId = 'IIS_10-0_Site' } }
-        @{ Generator = 'Build-AnsibleMimeTypeTask'; RuleType = 'MimeTypeRule'; ExtraParams = @{ StigId = 'IIS_10-0_Site' } }
-    ) {
-        $rule = [pscustomobject] @{
-            Id = 'V-310'; Severity = 'medium'; DuplicateOf = ''; OrganizationValueRequired = $false
-            ConfigSection = '/system.webServer/security/requestFiltering'; Key = 'allowDoubleEscaping'; Value = 'false'
-            Extension = '.exe'; MimeType = 'application/octet-stream'; Ensure = 'Absent'
+    # Keeping the psd1 as the source for these was the live alternative #57 declined: it is a
+    # single source too, but it cannot tell that a Server STIG references no website, so the
+    # exporter would have had to learn the site-vs-machine predicate as well.
+    Context 'a variable named once for the role' {
+
+        It 'says nothing about the role-scoped lists, which the generators own' {
+            $data = InModuleScope -ModuleName PowerStigConverter { $script:roleVariableData }
+
+            $data.Keys | Should-BeCollection @('IisLogging')
+            ($data.Values.PerRole | Where-Object { $_ }) | Should-BeFalsy
         }
-
-        $task = (Invoke-Generator -Generator $Generator -Rule $rule -StigName 'IISServer-10.0' -ExtraParams $ExtraParams).Task
-        $path = $task.'ansible.windows.win_dsc'.WebsitePath, $task.'ansible.windows.win_dsc'.ConfigurationPath |
-            Where-Object { $_ }
-
-        $declaration = (Export-OrgValues -PowerStigRule $RuleType -Rules @($rule) -StigName 'IISServer-10.0').main_default_org
-
-        $path | Should-Be 'IIS:\Sites\{{ stig_iisserver_10_0_310_website }}'
-        $declaration | Should-ContainCollection @('stig_iisserver_10_0_310_website: ')
     }
 }

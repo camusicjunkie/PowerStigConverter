@@ -9,22 +9,28 @@ function Build-AnsibleWebConfigurationPropertyTask {
 
     # A system.web section lives under the web root, everything else under the app host.
     $machinePath = if ($Rule.ConfigSection -match '/system.web/') { 'MACHINE/WEBROOT' } else { 'MACHINE/WEBROOT/APPHOST' }
-    $websitePath = Get-AnsibleIisScopePath -StigId $StigId -MachinePath $machinePath -TaskId $Rule.Id -StigName $StigName
+    $scope = Get-AnsibleIisScope -StigId $StigId -MachinePath $machinePath -StigName $StigName
+
+    $body = [ordered] @{
+        'ansible.windows.win_dsc' = [ordered] @{
+            'resource_name' = 'WebConfigProperty'
+            'WebsitePath' = $scope.Path
+            'Filter' = $Rule.ConfigSection
+            'PropertyName' = $Rule.Key
+            'Value' = $Rule.Value
+        }
+    }
+
+    # A machine-wide scope is one write, so it has nothing to loop over.
+    if ($scope.Loop) { $body['loop'] = $scope.Loop }
 
     @{
         GroupDetail = 'Ensure section {0} is configured' -f $parsedConfigSection
+        RoleVariable = $scope.RoleVariable
         Task = @(
             @{
                 Detail = 'Ensure {0} is set to {1} on section {2}' -f $Rule.Value, $Rule.Key, $parsedConfigSection
-                Body = [ordered] @{
-                    'ansible.windows.win_dsc' = [ordered] @{
-                        'resource_name' = 'WebConfigProperty'
-                        'WebsitePath' = $websitePath
-                        'Filter' = $Rule.ConfigSection
-                        'PropertyName' = $Rule.Key
-                        'Value' = $Rule.Value
-                    }
-                }
+                Body = $body
             }
         )
     }

@@ -103,7 +103,8 @@ New-AnsiblePlaybook -StigName WindowsServer-2022-MS -OutputPath .\roles -RoleNam
     main_default_cat3.yml    generated
     main_default_org.yml     generated
   vars/main.yml
-  handlers/main.yml
+  handlers/main.yml         imports generated.yml
+  handlers/generated.yml    generated
 ```
 
 Re-running is safe. The generated files are replaced every run; the four scaffolding files are
@@ -139,6 +140,26 @@ New-AnsiblePlaybook -StigName WindowsServer-2022-MS
 
 A rule the org settings file has no entry for at all is reported separately, because that usually
 means the file does not match the STIG version in hand rather than that anything needs filling in.
+
+### Values the STIG cannot answer
+
+Some values no org settings file feeds at all, because they name things on the target rather than
+policy: an IIS Site STIG describes a hardened website, but only the implementing site knows which
+websites and application pools it has. Those are declared in `main_default_org.yml` as empty lists
+for you to fill in, one per role rather than one per rule, and every rule of the STIG that needs
+one reads the same list:
+
+| Variable | What it names |
+| --- | --- |
+| `<prefix>_websites` | the IIS sites the role hardens — MIME type, web configuration and SSL rules all loop over it |
+| `<prefix>_webapppools` | the IIS application pools the role hardens |
+
+An empty list is a no-op in Ansible rather than an error, so a role left with
+`stig_iissite_10_0_websites: []` would report success having configured nothing. Each severity file
+therefore opens with an `ansible.builtin.assert` per list, naming the variable and the file to set
+it in; the guard is repeated in each file because `tasks/main.yml` imports them by tag, so
+`--tags cat2` alone still asserts. An IIS **Server** role declares neither list, because its rules
+configure the machine-wide configuration root rather than any site.
 
 `-AllowIncompleteOrganizationValue` generates anyway, for iterating on a part-filled org settings
 file. The unanswered values are declared blank in `main_default_org.yml` and each one gains an

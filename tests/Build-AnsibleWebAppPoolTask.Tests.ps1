@@ -196,14 +196,17 @@ Describe 'Build-AnsibleWebAppPoolTask' {
         }
     }
 
-    # The reference above and the declaration Export-AnsibleOrganizationValue writes are two
-    # literal strings that only agree by convention. See docs/adr/0004.
-    Context 'the app pool list it declares' {
+    # The generator's RoleVariable is the single source for the reference above, the declaration
+    # defaults/ carries and the assert guarding it, so this pins the pair by feeding the
+    # generator's own answer to the exporter. See #57 and docs/adr/0004.
+    Context 'the role variables it declares' {
 
         It 'declares the same list the tasks loop' {
-            $declaration = (Export-WebAppPoolOrgValues -Rules @(New-WebAppPoolRule)).main_default_org
+            $item = Get-WebAppPoolItem -Rule (New-WebAppPoolRule)
 
-            $declaration | Should-ContainCollection @('stig_iissite_10_0_webapppools: []')
+            $item.RoleVariable | Should-Be 'webapppools'
+            Get-RoleVariableDeclaration -RoleVariable $item.RoleVariable -StigName 'IISSite-10.0' |
+                Should-ContainCollection @('stig_iissite_10_0_webapppools: []')
         }
     }
 }

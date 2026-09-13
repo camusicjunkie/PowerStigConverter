@@ -22,8 +22,16 @@ BeforeAll {
             -OutputPath (Join-Path $TestDrive $RoleName) -RoleName $RoleName `
             -WarningAction SilentlyContinue 6>$null
 
+        $taskFile = @{}
+        foreach ($file in Get-ChildItem $role.TaskPath -Filter 'cat*.yml') {
+            $taskFile[$file.BaseName] = Get-Content $file.FullName -Raw
+        }
+
         @{
             Tasks = (Get-ChildItem $role.TaskPath -Filter 'cat*.yml' | Get-Content -Raw) -join "`n"
+            # Kept apart as well as joined: the role-variable assert is repeated per severity file,
+            # so a case has to be able to look inside one rather than at all three at once.
+            TaskFile = $taskFile
             Defaults = (Get-ChildItem $role.DefaultPath -Filter '*.yml' | Get-Content -Raw) -join "`n"
             # SslSettings is the one rule type whose work lands outside tasks/, so this reads the
             # handler files too.
@@ -150,13 +158,56 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
     }
 
     # The site branch of the two generators that have one. The server fixture takes the other.
+    # A site STIG describes a hardened website, not one chosen site, so both loop the role's
+    # website list rather than naming a site per rule. See #57.
     Context 'the IIS rule types a site STIG scopes to a website' {
 
-        It 'scopes <RuleType> to a site rather than the machine' -ForEach @(
-            @{ RuleType = 'MimeType'; Reference = 'IIS:\Sites\{{ stig_iissite_10_0_218785_website }}' }
-            @{ RuleType = 'WebConfigurationProperty'; Reference = 'IIS:\Sites\{{ stig_iissite_10_0_218786_website }}' }
+        It 'scopes <RuleType> to every site the role names' -ForEach @(
+            @{ RuleType = 'MimeType'; Toggle = 'stig_iissite_10_0_218785_when' }
+            @{ RuleType = 'WebConfigurationProperty'; Toggle = 'stig_iissite_10_0_218786_when' }
         ) {
-            $site.Tasks | Should-BeLikeString "*$Reference*"
+            $site.Tasks | Should-BeLikeString '*IIS:\Sites\{{ item }}*'
+            $site.Tasks | Should-MatchString ("loop: '\{\{ stig_iissite_10_0_websites \}\}'\s*\r?\n\s*when: " + $Toggle)
+        }
+
+        # The four rule types that reference a website now share one list, so the role answers the
+        # question once. The per-rule variables they used to declare are gone.
+        It 'declares the one website list all four site rule types read' {
+            $site.Defaults | Should-MatchString 'stig_iissite_10_0_websites: \[\]'
+            $site.Defaults | Should-NotBeLikeString '*_website:*'
+        }
+    }
+
+    # An IISServer role used to declare a website variable per MimeType and WebConfigurationProperty
+    # rule that no task ever read: the exporter declared by rule type and could not tell a server
+    # STIG from a site one. Nothing declares it now, because the server branch references nothing.
+    Context 'the website lines a server role never read' {
+
+        It 'declares no website at all for a server STIG' {
+            $iis.Defaults | Should-NotBeLikeString '*website*'
+        }
+
+        It 'asserts nothing, having no role-scoped list to guard' {
+            $iis.Tasks | Should-NotBeLikeString '*names something*'
+        }
+    }
+
+    # An empty list is a no-op in ansible, so without this a site role whose lists are unanswered
+    # hardens nothing and says nothing. See #57.
+    Context 'the assert guarding the role-scoped lists' {
+
+        It 'guards <Variable> in <File>' -ForEach @(
+            @{ Variable = 'stig_iissite_10_0_websites'; File = 'cat1' }
+            @{ Variable = 'stig_iissite_10_0_websites'; File = 'cat2' }
+            @{ Variable = 'stig_iissite_10_0_webapppools'; File = 'cat2' }
+        ) {
+            $site.TaskFile.$File | Should-BeLikeString "*$Variable | length > 0*"
+        }
+
+        # tasks/main.yml imports each severity file behind its own tag, so --tags cat2 alone has
+        # to assert too.
+        It 'repeats the guard in every severity file that has tasks' {
+            $site.TaskFile.cat1 | Should-BeLikeString '*stig_iissite_10_0_webapppools | length > 0*'
         }
     }
 }

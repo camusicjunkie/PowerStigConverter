@@ -86,28 +86,33 @@ Describe 'Build-AnsibleSslSettingsTask' {
             $handler.'ansible.windows.win_dsc'.Ensure | Should-Be 'Present'
         }
 
-        # Every SSL rule applies to every site, and the handler is shared, so it cannot use the
-        # per-rule website variable MimeType and WebConfigurationProperty declare.
         It 'loops the role''s website list, naming each site bare' {
             $handler.loop | Should-Be '{{ stig_iissite_10_0_websites }}'
             $handler.'ansible.windows.win_dsc'.Name | Should-Be '{{ item }}'
         }
     }
 
-    # The reference above and the declaration Export-AnsibleOrganizationValue writes are two
-    # literal strings that only agree by convention. See docs/adr/0004.
-    Context 'the website list it declares' {
+    # The generator's RoleVariable is the single source for the reference above, the declaration
+    # defaults/ carries and the assert guarding it, so this pins the pair by feeding the
+    # generator's own answer to the exporter. See #57 and docs/adr/0004.
+    Context 'the role variables it declares' {
 
         It 'declares the same list the handler loops' {
-            $rule = New-SslSettingsRule
+            $item = Invoke-Generator -Generator 'Build-AnsibleSslSettingsTask' -Rule (New-SslSettingsRule) `
+                -StigName 'IISSite-10.0' -ExtraParams @{ StigId = 'IIS_10-0_Site' }
 
-            $declaration = InModuleScope -ModuleName PowerStigConverter -Parameters @{ Rule = $rule } {
-                param ($Rule)
-                [pscustomobject] @{ PowerStigRule = 'SslSettingsRule'; StigRule = @($Rule) } |
-                    Export-AnsibleOrganizationValue -StigName 'IISSite-10.0'
-            }
+            $item.RoleVariable | Should-Be 'websites'
+            Get-RoleVariableDeclaration -RoleVariable $item.RoleVariable -StigName 'IISSite-10.0' |
+                Should-ContainCollection @('stig_iissite_10_0_websites: []')
+        }
 
-            $declaration.main_default_org | Should-ContainCollection @('stig_iissite_10_0_websites: []')
+        # #55: the flag list is the tasks' own running total, seeded with default([]), so nothing
+        # in defaults/ answers it and nothing should assert on it either.
+        It 'does not declare the flag list the tasks accumulate' {
+            $item = Invoke-Generator -Generator 'Build-AnsibleSslSettingsTask' -Rule (New-SslSettingsRule) `
+                -StigName 'IISSite-10.0' -ExtraParams @{ StigId = 'IIS_10-0_Site' }
+
+            $item.RoleVariable | Should-NotContainCollection 'sslflags'
         }
     }
 }

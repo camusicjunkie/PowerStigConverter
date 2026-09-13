@@ -19,11 +19,17 @@ BeforeAll {
         }
     }
 
+    function Get-WebConfigItem {
+        param ($Rule, $StigId = 'IIS_10-0_Server')
+
+        Invoke-Generator -Generator 'Build-AnsibleWebConfigurationPropertyTask' -Rule $Rule `
+            -StigName 'IISServer-10.0' -ExtraParams @{ StigId = $StigId }
+    }
+
     function Get-WebConfigTask {
         param ($Rule, $StigId = 'IIS_10-0_Server')
 
-        (Invoke-Generator -Generator 'Build-AnsibleWebConfigurationPropertyTask' -Rule $Rule `
-            -StigName 'IISServer-10.0' -ExtraParams @{ StigId = $StigId }).Task
+        (Get-WebConfigItem -Rule $Rule -StigId $StigId).Task
     }
 }
 
@@ -57,7 +63,8 @@ Describe 'Build-AnsibleWebConfigurationPropertyTask' {
     }
 
     # A system.web section lives under the web root; everything else under the app host. A site
-    # STIG instead targets one site, whose name the implementing site fills in as a variable.
+    # STIG instead configures every site the role names, which is a loop rather than a path the
+    # operator picks per rule. See #57.
     Context 'which configuration path the property is set on' {
 
         It 'targets the web root for a system.web section on a server STIG' {
@@ -71,9 +78,30 @@ Describe 'Build-AnsibleWebConfigurationPropertyTask' {
                 Should-Be 'MACHINE/WEBROOT/APPHOST'
         }
 
-        It 'interpolates the website variable for a site STIG' {
-            (Get-WebConfigTask -Rule (New-WebConfigurationPropertyRule) -StigId 'IIS_10-0_Site').'ansible.windows.win_dsc'.WebsitePath |
-                Should-BeLikeString 'IIS:\Sites\{{ *_website }}'
+        It 'adds no loop for a server STIG, which configures one machine' {
+            (Get-WebConfigTask -Rule (New-WebConfigurationPropertyRule)).Keys | Should-NotContainCollection 'loop'
+        }
+
+        It 'loops every site the role names for a site STIG' {
+            $task = Get-WebConfigTask -Rule (New-WebConfigurationPropertyRule) -StigId 'IIS_10-0_Site'
+
+            $task.'ansible.windows.win_dsc'.WebsitePath | Should-Be 'IIS:\Sites\{{ item }}'
+            $task.loop | Should-Be '{{ stig_iisserver_10_0_websites }}'
+        }
+    }
+
+    Context 'the role variables it declares' {
+
+        It 'declares nothing for a server STIG, which references no website' {
+            (Get-WebConfigItem -Rule (New-WebConfigurationPropertyRule)).RoleVariable | Should-BeFalsy
+        }
+
+        It 'declares the same list a site STIG''s task loops' {
+            $item = Get-WebConfigItem -Rule (New-WebConfigurationPropertyRule) -StigId 'IIS_10-0_Site'
+
+            $item.RoleVariable | Should-Be 'websites'
+            Get-RoleVariableDeclaration -RoleVariable $item.RoleVariable -StigName 'IISServer-10.0' |
+                Should-ContainCollection @('stig_iisserver_10_0_websites: []')
         }
     }
 
