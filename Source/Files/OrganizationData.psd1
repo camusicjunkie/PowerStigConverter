@@ -73,6 +73,18 @@
         # No List: logEventOnRecycle is a single comma-separated string on the resource, not an
         # array.
     }
+    'SqlLogin' = @{
+        # Names the part, not the field: with a Part rename the reference map is keyed by part.
+        'Value' = 'logins'
+        'Required' = @('Name')
+        # PowerStig's own composite splits this attribute on commas, one resource per login.
+        'List' = @('Name')
+        # The org attribute is called Name; what it holds is a list of logins. The same rename
+        # RootCertificate uses, minus the split.
+        'Part' = @{
+            'Name' = @('logins')
+        }
+    }
     'IisLogging' = @{
         'Value' = 'LogFlags'
         # LogCustomFieldEntry is deliberately absent: New-AnsibleIisLoggingTask already omits the
