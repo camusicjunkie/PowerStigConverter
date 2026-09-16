@@ -20,6 +20,11 @@
       9. the role variables it references are the ones    each test file, the generators that
          it declares                                      return a RoleVariable
 
+    Under item 2, a field the DSC resource types Boolean arrives off the rule as text ('True' or
+    '$true') and converts in the generator with an explicit -eq, asserted with Should-HaveType
+    ([bool]) as well as for value. The property type decides, not the spelling: xWebConfigProperty's
+    Value is a String and stays text however boolean it reads.
+
     GeneratorCoverage.Tests.ps1 enforces all of it.
 #>
 

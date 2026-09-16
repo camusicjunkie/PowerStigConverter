@@ -31,9 +31,11 @@ function Build-AnsibleSqlLoginTask {
                         'InstanceName' = '{{ item.0 }}'
                         'Name' = '{{ item.1 }}'
                         'LoginType' = $Rule.LoginType
-                        'LoginPasswordPolicyEnforced' = $Rule.LoginPasswordPolicyEnforced
-                        'LoginPasswordExpirationEnabled' = $Rule.LoginPasswordExpirationEnabled
-                        'LoginMustChangePassword' = $Rule.LoginMustChangePassword
+                        # SqlServerDsc types these Boolean but PowerStig writes them as text, and
+                        # a cast would not do: [bool] 'False' is $true.
+                        'LoginPasswordPolicyEnforced' = $Rule.LoginPasswordPolicyEnforced -eq 'True'
+                        'LoginPasswordExpirationEnabled' = $Rule.LoginPasswordExpirationEnabled -eq 'True'
+                        'LoginMustChangePassword' = $Rule.LoginMustChangePassword -eq 'True'
                     }
                     'loop' = '{{{{ {0} | product({1}) | list }}}}' -f $instances, $logins
                 }
