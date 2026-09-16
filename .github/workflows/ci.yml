@@ -19,66 +19,66 @@ jobs:
     # The manifest declares PowerShellVersion 5.1, so both engines are tested rather than one
     # being assumed to follow from the other. They do not always agree: Set-Content -Encoding
     # utf8 writes a BOM on 5.1 and not on 7, which is how that divergence was found.
+    #
+    # The engine is invoked as a child process rather than selected with `shell`, because `shell`
+    # is validated against a fixed list of values before expressions are evaluated - a
+    # `shell: ${{ matrix.shell }}` fails the whole workflow at compile time, with no jobs started.
     name: Test (${{ matrix.engine }})
     runs-on: windows-latest
+
+    # The host shell that launches the child engine. A literal, for the reason in the comment
+    # above. The child is invoked bare rather than through the call operator, because a run
+    # scalar opening with & is a YAML anchor and fails the workflow the same way.
+    defaults:
+      run:
+        shell: pwsh
 
     strategy:
       fail-fast: false
       matrix:
         include:
           - engine: PowerShell 7
-            shell: pwsh
+            exe: pwsh
+            id: pwsh
             coverage: true
           - engine: Windows PowerShell 5.1
-            shell: powershell
+            exe: powershell
+            id: windows-powershell
             coverage: false
 
     steps:
       - name: Check out
         uses: actions/checkout@v4
 
+      # Has to run inside the engine under test: the two read different module directories, so
+      # installing from one leaves the other with nothing.
       - name: Install dependencies
-        shell: ${{ matrix.shell }}
-        run: |
-          # 5.1 ships PowerShellGet 1.0.0.1, which negotiates TLS 1.0 against a gallery that
-          # requires 1.2 and prompts for the NuGet provider. Both are no-ops on 7.
-          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-          Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force | Out-Null
-          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
-
-          # The runner ships Pester 5, which cannot run this suite: Should-Invoke and
-          # Should-MatchString arrived in 6.2.0. -SkipPublisherCheck is needed because the
-          # preinstalled Pester is signed by Microsoft and 6.x is not.
-          Install-Module -Name Pester -MinimumVersion 6.2.0 -Force -SkipPublisherCheck
-
-          # ModuleBuilder assembles the module the tests import; powershell-yaml and Plaster
-          # are the module's own runtime requirements, declared in its manifest.
-          Install-Module -Name ModuleBuilder, powershell-yaml, Plaster -Force
-
-      - name: Report versions
-        shell: ${{ matrix.shell }}
-        run: |
-          $PSVersionTable | Out-String
-          Get-Module -ListAvailable Pester, ModuleBuilder, powershell-yaml, Plaster |
-            Select-Object Name, Version |
-            Sort-Object Name |
-            Format-Table -AutoSize |
-            Out-String
+        run: ${{ matrix.exe }} -NoProfile -File ./ci/Install-Dependencies.ps1
 
       # Builds the module from Source and runs the suite against the build output. -CI writes
       # NUnit results and exits non-zero on any failure, so the step fails the job by itself.
       # Coverage is measured once, on 7 - it reports which lines ran, which does not differ by
       # engine, and two jobs writing it would race for the same artifact.
+      - name: Run tests with coverage
+        if: matrix.coverage
+        run: ${{ matrix.exe }} -NoProfile -File ./Invoke-Tests.ps1 -CI -CodeCoverage
+
       - name: Run tests
-        shell: ${{ matrix.shell }}
-        run: ./Invoke-Tests.ps1 -CI ${{ matrix.coverage && '-CodeCoverage' || '' }}
+        if: ${{ !matrix.coverage }}
+        run: ${{ matrix.exe }} -NoProfile -File ./Invoke-Tests.ps1 -CI
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-${{ matrix.shell }}
-          path: |
-            build/testResults.xml
-            ${{ matrix.coverage && 'build/coverage.xml' || '' }}
+          name: test-results-${{ matrix.id }}
+          path: build/testResults.xml
+          if-no-files-found: error
+
+      - name: Upload coverage
+        if: always() && matrix.coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: build/coverage.xml
           if-no-files-found: error
