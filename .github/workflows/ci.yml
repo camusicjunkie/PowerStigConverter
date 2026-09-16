@@ -8,22 +8,42 @@ on:
       - main
       - 'tests/**'
       - 'fix/**'
+      - 'feat/**'
       - 'feature/**'
+      - 'docs/**'
   pull_request:
   workflow_dispatch:
 
 jobs:
   test:
-    name: Test
+    # The manifest declares PowerShellVersion 5.1, so both engines are tested rather than one
+    # being assumed to follow from the other. They do not always agree: Set-Content -Encoding
+    # utf8 writes a BOM on 5.1 and not on 7, which is how that divergence was found.
+    name: Test (${{ matrix.engine }})
     runs-on: windows-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - engine: PowerShell 7
+            shell: pwsh
+            coverage: true
+          - engine: Windows PowerShell 5.1
+            shell: powershell
+            coverage: false
 
     steps:
       - name: Check out
         uses: actions/checkout@v4
 
       - name: Install dependencies
-        shell: pwsh
+        shell: ${{ matrix.shell }}
         run: |
+          # 5.1 ships PowerShellGet 1.0.0.1, which negotiates TLS 1.0 against a gallery that
+          # requires 1.2 and prompts for the NuGet provider. Both are no-ops on 7.
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+          Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force | Out-Null
           Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
 
           # The runner ships Pester 5, which cannot run this suite: Should-Invoke and
@@ -36,7 +56,7 @@ jobs:
           Install-Module -Name ModuleBuilder, powershell-yaml, Plaster -Force
 
       - name: Report versions
-        shell: pwsh
+        shell: ${{ matrix.shell }}
         run: |
           $PSVersionTable | Out-String
           Get-Module -ListAvailable Pester, ModuleBuilder, powershell-yaml, Plaster |
@@ -47,16 +67,18 @@ jobs:
 
       # Builds the module from Source and runs the suite against the build output. -CI writes
       # NUnit results and exits non-zero on any failure, so the step fails the job by itself.
+      # Coverage is measured once, on 7 - it reports which lines ran, which does not differ by
+      # engine, and two jobs writing it would race for the same artifact.
       - name: Run tests
-        shell: pwsh
-        run: ./Invoke-Tests.ps1 -CI -CodeCoverage
+        shell: ${{ matrix.shell }}
+        run: ./Invoke-Tests.ps1 -CI ${{ matrix.coverage && '-CodeCoverage' || '' }}
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results
+          name: test-results-${{ matrix.shell }}
           path: |
             build/testResults.xml
-            build/coverage.xml
+            ${{ matrix.coverage && 'build/coverage.xml' || '' }}
           if-no-files-found: error

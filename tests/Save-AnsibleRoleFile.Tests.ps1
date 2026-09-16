@@ -87,5 +87,16 @@ Describe 'Save-AnsibleRoleFile' {
             Get-Content -Path (Join-Path $TestDrive 'notice.yml') -Encoding utf8 |
                 Should-BeLikeString '*see policy*'
         }
+
+        # Set-Content -Encoding utf8 means two different things: 5.1 writes a BOM and 7 does not,
+        # so the same STIG converted on two machines produced two different files. Asserted on the
+        # bytes, because Get-Content hides the BOM on both engines.
+        It 'writes no byte order mark, so both engines produce the same file' {
+            Save-File -OutputPath $TestDrive -Content ([ordered] @{ no_bom = 'first: true' })
+
+            $bytes = [System.IO.File]::ReadAllBytes((Join-Path $TestDrive 'no_bom.yml'))
+            # 0xEF 0xBB 0xBF is the BOM; the file must open on the content's own first byte.
+            $bytes[0] | Should-Be ([byte][char] 'f')
+        }
     }
 }

@@ -42,6 +42,16 @@ Describe 'Resolve-AnsibleOrganizationValue' {
 
             { Resolve-OrgValue -Rule $rule -RuleType 'AuditPolicy' } | Should -Throw
         }
+
+        # The message is thrown from inside the ValidateScript rather than declared with
+        # ErrorMessage, which is 6.1+ and fails the call outright on Windows PowerShell 5.1. The
+        # rule type has to reach the message either way, or the refusal says nothing useful.
+        It 'names the rule type it refused' {
+            $rule = [pscustomobject] @{ Id = 'V-100'; OrganizationValueRequired = $false }
+
+            { Resolve-OrgValue -Rule $rule -RuleType 'AuditPolicy' } |
+                Should -Throw -ExpectedMessage "*'AuditPolicy' is not a rule type OrganizationData.psd1 describes.*"
+        }
     }
 }
 

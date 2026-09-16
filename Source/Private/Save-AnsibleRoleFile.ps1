@@ -18,6 +18,12 @@ function Save-AnsibleRoleFile {
         $lines = @($file.Value)
         if ($lines.Count -eq 0) { continue }
 
-        $lines | Set-Content -Path (Join-Path $OutputPath "$($file.Key).yml") -Encoding utf8
+        # Written through .NET rather than Set-Content because -Encoding utf8 does not mean the
+        # same thing on both engines: Windows PowerShell 5.1 writes a BOM, PowerShell 7 does not,
+        # and -Encoding utf8NoBOM is 6.0+ so it cannot spell the difference away. A BOM in a role
+        # file is a needless diff between two machines converting the same STIG.
+        $text = ($lines -join [System.Environment]::NewLine) + [System.Environment]::NewLine
+        $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+        [System.IO.File]::WriteAllText((Join-Path $OutputPath "$($file.Key).yml"), $text, $utf8NoBom)
     }
 }

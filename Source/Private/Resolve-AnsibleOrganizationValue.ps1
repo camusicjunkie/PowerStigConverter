@@ -18,12 +18,14 @@ function Resolve-AnsibleOrganizationValue {
         [Parameter(Mandatory)]
         [object] $Rule,
 
-        # Validated against OrganizationData.psd1's keys, not a copied list.
+        # Validated against OrganizationData.psd1's keys, not a copied list. The message is thrown
+        # from inside the scriptblock rather than declared with ErrorMessage, which needs 6.1+ and
+        # fails the call outright on Windows PowerShell 5.1.
         [Parameter(Mandatory)]
-        [ValidateScript(
-            { $script:organizationData.ContainsKey($_) },
-            ErrorMessage = "'{0}' is not a rule type OrganizationData.psd1 describes."
-        )]
+        [ValidateScript({
+            if ($script:organizationData.ContainsKey($_)) { return $true }
+            throw "'$_' is not a rule type OrganizationData.psd1 describes."
+        })]
         [string] $RuleType,
 
         [string] $StigName,
