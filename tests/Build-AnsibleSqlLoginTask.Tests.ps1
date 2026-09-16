@@ -95,10 +95,18 @@ Describe 'Build-AnsibleSqlLoginTask' {
         # Item 2.
         It 'maps <Property> off the rule' -ForEach @(
             @{ Property = 'LoginType'; Expected = 'SqlLogin' }
-            @{ Property = 'LoginPasswordPolicyEnforced'; Expected = 'True' }
-            @{ Property = 'LoginPasswordExpirationEnabled'; Expected = 'True' }
-            @{ Property = 'LoginMustChangePassword'; Expected = 'False' }
         ) {
+            $dsc.$Property | Should-Be $Expected
+        }
+
+        # Item 2. SqlServerDsc types these Boolean, so the type is asserted alongside the value:
+        # a value-only comparison passes on the string 'False' too.
+        It 'converts <Property> to a real boolean' -ForEach @(
+            @{ Property = 'LoginPasswordPolicyEnforced'; Expected = $true }
+            @{ Property = 'LoginPasswordExpirationEnabled'; Expected = $true }
+            @{ Property = 'LoginMustChangePassword'; Expected = $false }
+        ) {
+            $dsc.$Property | Should-HaveType ([bool])
             $dsc.$Property | Should-Be $Expected
         }
 
