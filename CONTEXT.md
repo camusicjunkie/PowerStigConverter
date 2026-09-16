@@ -29,6 +29,15 @@ A STIG rule carrying a `DuplicateOf` pointing at another rule that already cover
 no task.
 _Avoid_: alias, redundant rule
 
+**Unparsed rule**:
+A STIG rule PowerStig could not read the fix text of, marked `dscresource="None"` while sitting
+in a rule type PowerStig automates elsewhere. It carries no parsed fields, only `RawString`, so
+no generator can build a task from it. Distinct from the `Manual` and `Document` rule types,
+where DISA says a human must act; here PowerStig simply failed to parse. A rule can stop being
+unparsed when upstream improves — OracleLinux-8 went from 54 to none between revisions 2.3 and
+2.4.
+_Avoid_: unsupported rule, manual rule, None rule
+
 ### Organization values
 
 **Organization value**:
