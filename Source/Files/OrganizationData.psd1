@@ -85,6 +85,13 @@
             'Name' = @('logins')
         }
     }
+    'SqlScriptQuery' = @{
+        # No Name: the rule's Variable is a template (saAccountName={0}) rather than a property
+        # name, and stripping ={0} off it reads like a typo. Named after the org node attribute,
+        # the way RootCertificate and Service name theirs.
+        'Value' = 'VariableValue'
+        'Required' = @('VariableValue')
+    }
     'IisLogging' = @{
         'Value' = 'LogFlags'
         # LogCustomFieldEntry is deliberately absent: New-AnsibleIisLoggingTask already omits the

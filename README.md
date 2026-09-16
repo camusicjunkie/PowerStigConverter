@@ -29,6 +29,15 @@ PowerSTIGConverter without them.
 Install-Module -Name powershell-yaml, Plaster -Scope CurrentUser
 ```
 
+### On the hosts a generated role runs against
+
+The generated tasks call `ansible.windows.win_dsc`, so the DSC resource modules they name have to
+be installed on the target. A **SQL Server** role additionally needs
+[`SqlServerDsc`](https://www.powershellgallery.com/packages/SqlServerDsc) **17.0.0 or later**:
+`SqlScriptQuery`'s `Id` property is a Key from 17.x onward and does not exist on 15.x or 16.x, and
+`win_dsc` treats a Key as a required option — so an older module fails the task with *missing
+required arguments: Id*. PowerStig's own minimum is 15.1.1, which a host on 17.x also satisfies.
+
 ## Installation
 
 The module is laid out as source and assembled with
