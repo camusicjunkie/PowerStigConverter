@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Fixture organisational settings, answered. The conversion refuses to generate while any of
+    these is blank - see docs/adr/0001 - so a fixture meant to produce a role has to fill them in.
+
+    The Registry entry is what the 2016 STIG has no counterpart for: 2022 leaves the TLS registry
+    values to the organisation rather than stating them.
+-->
+<OrganizationalSettings fullversion="1.4">
+  <!-- Ensure -->
+  <OrganizationalSetting id="V-271310.a" ValueData="1" />
+  <!-- Ensure SQL authentication logins are populated from organizational settings.-->
+  <OrganizationalSetting id="V-271400" Ensure="" Name="sa,SqlSvcAppLogin" />
+</OrganizationalSettings>

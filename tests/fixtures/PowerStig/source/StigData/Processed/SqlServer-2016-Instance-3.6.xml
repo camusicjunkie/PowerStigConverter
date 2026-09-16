@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Fixture STIG for the SQL Server 2016 instance rule types, trimmed to a representative handful
+    of each from PowerStig's own SqlServer-2016-Instance-3.6 data. The 2016 STIG is the one that
+    carries all five Sql* rule types plus the Registry and SecurityOption types it shares with the
+    Windows STIGs, so this is where the shared instances list is proved to reach every one of them.
+
+    The rules are kept as upstream writes them - only the STIG prose and the legacy ids are
+    dropped. V-213969 is upstream's own duplicate of V-213968 and is kept as one: a duplicate
+    produces no task, which is only visible over a whole conversion.
+-->
+<DISASTIG version="3" classification="UNCLASSIFIED" customname="" stigid="MS_SQL_Server_2016_Instance_STIG" description="Fixture STIG." filename="U_MS_SQL_Server_2016_Instance_STIG_V3R6_Manual-xccdf.xml" releaseinfo="Release: 6 Benchmark Date: 05 Jan 2026 3.5.2 1.10.0" title="MS SQL Server 2016 Instance Security Technical Implementation Guide" notice="terms-of-use" source="STIG.DOD.MIL" fullversion="3.6" created="1/1/2026">
+  <RegistryRule dscresourcemodule="PSDscResources">
+    <Rule id="V-213967.a" severity="high" conversionstatus="pass" title="SRG-APP-000172-DB-000075" dscresource="Registry">
+      <Description>Fixture registry rule, a shape the Windows STIGs share. One of two sub-rules.</Description>
+      <DuplicateOf />
+      <Ensure>Present</Ensure>
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <Key>HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.0\Client</Key>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+      <ValueData>1</ValueData>
+      <ValueName>DisabledByDefault</ValueName>
+      <ValueType>Dword</ValueType>
+    </Rule>
+    <Rule id="V-213967.i" severity="high" conversionstatus="pass" title="SRG-APP-000172-DB-000075" dscresource="Registry">
+      <Description>Fixture registry rule, a shape the Windows STIGs share. One of two sub-rules.</Description>
+      <DuplicateOf />
+      <Ensure>Present</Ensure>
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <Key>HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.0\Client</Key>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+      <ValueData>0</ValueData>
+      <ValueName>Enabled</ValueName>
+      <ValueType>Dword</ValueType>
+    </Rule>
+  </RegistryRule>
+  <SecurityOptionRule dscresourcemodule="SecurityPolicyDsc">
+    <Rule id="V-213968" severity="high" conversionstatus="pass" title="SRG-APP-000176-DB-000068" dscresource="SecurityOption">
+      <Description>Fixture security option rule, a shape the Windows STIGs share.</Description>
+      <DuplicateOf />
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <OptionName>System_cryptography_Use_FIPS_compliant_algorithms_for_encryption_hashing_and_signing</OptionName>
+      <OptionValue>enabled</OptionValue>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+    </Rule>
+    <Rule id="V-213969" severity="high" conversionstatus="pass" title="SRG-APP-000179-DB-000114" dscresource="None">
+      <Description>Fixture security option rule that duplicates the one above, as upstream has it.</Description>
+      <DuplicateOf>V-213968</DuplicateOf>
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <OptionName>System_cryptography_Use_FIPS_compliant_algorithms_for_encryption_hashing_and_signing</OptionName>
+      <OptionValue>enabled</OptionValue>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+    </Rule>
+  </SecurityOptionRule>
+  <SqlDatabaseRule dscresourcemodule="SqlServerDsc">
+    <Rule id="V-213954.a" severity="medium" conversionstatus="pass" title="SRG-APP-000141-DB-000090" dscresource="SqlDatabase">
+      <Description>Fixture database rule. One of four sub-rules naming a demonstration database.</Description>
+      <DuplicateOf />
+      <Ensure>Absent</Ensure>
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <Name>Pubs</Name>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+    </Rule>
+    <Rule id="V-213954.b" severity="medium" conversionstatus="pass" title="SRG-APP-000141-DB-000090" dscresource="SqlDatabase">
+      <Description>Fixture database rule. One of four sub-rules naming a demonstration database.</Description>
+      <DuplicateOf />
+      <Ensure>Absent</Ensure>
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <Name>Northwind</Name>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+    </Rule>
+    <Rule id="V-213954.c" severity="medium" conversionstatus="pass" title="SRG-APP-000141-DB-000090" dscresource="SqlDatabase">
+      <Description>Fixture database rule. One of four sub-rules naming a demonstration database.</Description>
+      <DuplicateOf />
+      <Ensure>Absent</Ensure>
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <Name>AdventureWorks</Name>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+    </Rule>
+  </SqlDatabaseRule>
+  <SqlLoginRule dscresourcemodule="SqlServerDsc">
+    <Rule id="V-213964" severity="high" conversionstatus="pass" title="SRG-APP-000164-DB-000401" dscresource="SqlLogin">
+      <Description>Fixture login rule. The logins it applies to are left to the organisation.</Description>
+      <DuplicateOf />
+      <Ensure />
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <LoginMustChangePassword>False</LoginMustChangePassword>
+      <LoginPasswordExpirationEnabled>True</LoginPasswordExpirationEnabled>
+      <LoginPasswordPolicyEnforced>True</LoginPasswordPolicyEnforced>
+      <LoginType>SqlLogin</LoginType>
+      <Name />
+      <OrganizationValueRequired>True</OrganizationValueRequired>
+      <OrganizationValueTestString>SQL authentication logins are populated from organizational settings.</OrganizationValueTestString>
+    </Rule>
+  </SqlLoginRule>
+  <SqlProtocolRule dscresourcemodule="SqlServerDsc">
+    <Rule id="V-213961" severity="medium" conversionstatus="pass" title="SRG-APP-000142-DB-000094" dscresource="SqlProtocol">
+      <Description>Fixture protocol rule. The flag arrives as the text False and must reach the task as a YAML boolean.</Description>
+      <DuplicateOf />
+      <Enabled>False</Enabled>
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+      <ProtocolName>NamedPipes</ProtocolName>
+    </Rule>
+  </SqlProtocolRule>
+  <SqlScriptQueryRule dscresourcemodule="SqlServerDsc">
+    <Rule id="V-214028" severity="high" conversionstatus="pass" title="SRG-APP-000033-DB-000084" dscresource="SqlScriptQuery">
+      <Description>Fixture script query rule carrying its own Get/Test/Set triad and no variable.</Description>
+      <DuplicateOf />
+      <GetScript>USE [master] SELECT name, is_disabled FROM sys.sql_logins WHERE principal_id = 1 AND is_disabled &lt;&gt; 1;</GetScript>
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+      <SetScript>USE [master] DECLARE @SysAdminAccountName varchar(50), @cmd NVARCHAR(100), @saDisabled int SET @SysAdminAccountName = (SELECT name FROM sys.sql_logins WHERE principal_id = 1) SELECT @cmd = N'ALTER LOGIN ['+@SysAdminAccountName+'] DISABLE;' SET @saDisabled = (SELECT is_disabled FROM sys.sql_logins WHERE principal_id = 1) IF @saDisabled &lt;&gt; 1 exec sp_executeSQL @cmd;</SetScript>
+      <TestScript>USE [master] SELECT name, is_disabled FROM sys.sql_logins WHERE principal_id = 1 AND is_disabled &lt;&gt; 1;</TestScript>
+      <Variable />
+      <VariableValue />
+    </Rule>
+    <Rule id="V-214029" severity="medium" conversionstatus="pass" title="SRG-APP-000141-DB-000092" dscresource="SqlScriptQuery">
+      <Description>Fixture script query rule whose scripting variable is a template the organisation fills in.</Description>
+      <DuplicateOf />
+      <GetScript>SELECT name FROM sys.server_principals WHERE TYPE = 'S' and name not like '%##%'</GetScript>
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <OrganizationValueRequired>True</OrganizationValueRequired>
+      <OrganizationValueTestString>{0} is populated with a non-default SA account name</OrganizationValueTestString>
+      <SetScript>alter login sa with name = [$(saAccountName)]</SetScript>
+      <TestScript>SELECT name FROM sys.server_principals WHERE TYPE = 'S' and name = 'sa'</TestScript>
+      <Variable>saAccountName={0}</Variable>
+      <VariableValue />
+    </Rule>
+  </SqlScriptQueryRule>
+  <SqlServerConfigurationRule dscresourcemodule="SqlServerDsc">
+    <Rule id="V-213957" severity="medium" conversionstatus="pass" title="SRG-APP-000141-DB-000093" dscresource="SqlServerConfiguration">
+      <Description>Fixture server configuration rule. The resource is named SqlConfiguration, not SqlServerConfiguration.</Description>
+      <DuplicateOf />
+      <Ensure />
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <OptionName>xp_cmdshell</OptionName>
+      <OptionValue>0</OptionValue>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+    </Rule>
+    <Rule id="V-213975" severity="medium" conversionstatus="pass" title="SRG-APP-000243-DB-000373" dscresource="SqlServerConfiguration">
+      <Description>Fixture server configuration rule turning an option on rather than off.</Description>
+      <DuplicateOf />
+      <Ensure />
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <OptionName>common criteria compliance enabled</OptionName>
+      <OptionValue>1</OptionValue>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+    </Rule>
+  </SqlServerConfigurationRule>
+</DISASTIG>

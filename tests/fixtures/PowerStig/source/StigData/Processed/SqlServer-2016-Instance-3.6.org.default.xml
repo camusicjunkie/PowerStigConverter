@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Fixture organisational settings, answered. The conversion refuses to generate while any of
+    these is blank - see docs/adr/0001 - so a fixture meant to produce a role has to fill them in.
+
+    Ensure is left blank the way PowerStig ships it: OrganizationData.psd1 requires only Name of a
+    SqlLogin rule, because the generated task never passes Ensure.
+-->
+<OrganizationalSettings fullversion="3.6">
+  <!-- Ensure SQL authentication logins are populated from organizational settings.-->
+  <OrganizationalSetting id="V-213964" Ensure="" Name="sa,SqlSvcAppLogin" />
+  <!-- Ensure 'V-214029' is populated with a non-default SA account name-->
+  <OrganizationalSetting id="V-214029" VariableValue="SqlSysAdmin" />
+</OrganizationalSettings>
