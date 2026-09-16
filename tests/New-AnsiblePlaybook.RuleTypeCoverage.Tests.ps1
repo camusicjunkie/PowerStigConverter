@@ -291,12 +291,15 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
             $sql2022.Tasks | Should-BeLikeString '*data: ''{{ stig_sqlserver_2022_instance_271310_a_disabledbydefault*}}''*'
         }
 
-        # [int] '4,1' is 41: Resolve-AnsibleOrganizationValue's cast reads the comma as a
-        # thousands separator, so a Registry Values security option reaches win_security_policy
-        # as a number rather than the type,value pair the INF format wants. No Windows fixture
-        # carries one, so a SQL rule is what first showed it.
-        It 'writes a registry-value security option as the type,value pair' -Tag 'KnownDefect' {
-            $sql2016.Tasks | Should-BeLikeString "*value: '4,1'*"
+        # The INF Registry Values section holds a type,value pair, not a number, and [int] '4,1'
+        # is 41 - the comma read as a thousands separator. No Windows fixture carries one, so a
+        # SQL rule is what first showed it. See #77.
+        # Unquoted, because 4,1 is already a plain scalar yaml resolves to a string - the 1.1 int
+        # pattern separates digits with _, never with a comma. Quoting it would be the one place
+        # the converter second-guessed the serializer.
+        It 'writes a registry-value security option as the type,value pair' {
+            $sql2016.Tasks | Should-BeLikeString '*value: 4,1*'
+            $sql2016.Tasks | Should-NotBeLikeString '*value: 41*'
         }
     }
 

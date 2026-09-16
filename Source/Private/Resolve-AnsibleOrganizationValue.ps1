@@ -128,9 +128,16 @@ function Resolve-AnsibleOrganizationValue {
 
         $option = $script:accountPolicyData + $script:securityOptionData
         $attributeName = $Rule.($data['Name']) -replace '/|\s', '_' -replace ':'
+        $entry = $option[$attributeName]
         # Keyed by the value asked for, not the property name - indexing by the name misses
         # every time and the cast then turns every rule into 0.
-        [int] $option[$attributeName]['Option'][$Rule.($data['Value'])]
+        $mapped = $entry['Option'][$Rule.($data['Value'])]
+
+        # An INF Registry Values option is a type,value pair - '4,1' is REG_DWORD 4 set to 1 -
+        # and must stay a string, since [int] reads the comma as a thousands separator and
+        # yields 41. Every other section holds a bare number, which yaml would read as text
+        # if it were quoted. The section is what tells the two apart.
+        if ($entry['Section'] -eq 'Registry Values') { $mapped } else { [int] $mapped }
     }
     elseif ($data['Empty'] -and $Rule.($data['Value']) -eq $data['Empty']) { @() }
     # Split here so both halves hand back the same shape; the comma keeps one element an array.
