@@ -16,14 +16,15 @@ instead of a DSC one.
 
 ## Requirements
 
-- Windows PowerShell 5.1 or PowerShell 7+
+- [PowerShell 7.0 or later](https://learn.microsoft.com/powershell/scripting/install/installing-powershell)
+  — Windows PowerShell 5.1 is **not** supported
 - [`git`](https://git-scm.com/) on `PATH` — used to fetch the PowerStig data files
 - [`powershell-yaml`](https://www.powershellgallery.com/packages/powershell-yaml) — provides the
   `ConvertTo-Yaml` command used to serialise tasks
 - [`Plaster`](https://www.powershellgallery.com/packages/Plaster) — scaffolds the role directories
 
-`powershell-yaml` and `Plaster` are declared in the module manifest, so `Import-Module` will not
-load PowerSTIGConverter without them.
+The version floor and both modules are declared in the module manifest, so `Import-Module` will
+not load PowerSTIGConverter on 5.1, or without them.
 
 ```powershell
 Install-Module -Name powershell-yaml, Plaster -Scope CurrentUser
