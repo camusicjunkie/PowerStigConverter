@@ -22,8 +22,8 @@ instead of a DSC one.
   `ConvertTo-Yaml` command used to serialise tasks
 - [`Plaster`](https://www.powershellgallery.com/packages/Plaster) — scaffolds the role directories
 
-Both are declared in the module manifest, so `Import-Module` will not load
-PowerSTIGConverter without them.
+`powershell-yaml` and `Plaster` are declared in the module manifest, so `Import-Module` will not
+load PowerSTIGConverter without them.
 
 ```powershell
 Install-Module -Name powershell-yaml, Plaster -Scope CurrentUser
@@ -202,13 +202,15 @@ Windows.
 
 Each PowerStig rule type is converted by its own task generator:
 
-| | | |
-| --- | --- | --- |
-| AccountPolicy | AuditPolicy | AuditSetting |
-| IisLogging | MimeType | Permission |
-| Registry | RootCertificate | SecurityOption |
-| Service | UserRight | WebConfigurationProperty |
-| WindowsFeature | | |
+|                          |                 |                        |
+| ------------------------ | --------------- | ---------------------- |
+| AccountPolicy            | AuditPolicy     | AuditSetting           |
+| IisLogging               | MimeType        | Permission             |
+| Registry                 | RootCertificate | SecurityOption         |
+| Service                  | SqlDatabase     | SqlLogin               |
+| SqlProtocol              | SqlScriptQuery  | SqlServerConfiguration |
+| SslSettings              | UserRight       | WebAppPool             |
+| WebConfigurationProperty | WindowsFeature  |                        |
 
 A rule type with no matching generator is skipped with a warning rather than failing the run, so
 adding support for a new type means adding one `Build-Ansible<Type>Task` adapter, which supplies
