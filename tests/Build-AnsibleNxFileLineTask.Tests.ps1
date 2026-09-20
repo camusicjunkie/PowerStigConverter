@@ -110,7 +110,9 @@ Describe 'Build-AnsibleNxFileLineTask' {
         }
 
         It 'skips a ContainsLine carrying a non-ASCII character' {
-            $rule = New-NxFileLineRule -ContainsLine "line with a non-breaking space`u{00A0}here"
+            # `u{...} is a PowerShell 7+ escape only - Windows PowerShell 5.1 leaves it as literal
+            # text instead of the character it names, which the CI matrix runs too. See #85.
+            $rule = New-NxFileLineRule -ContainsLine ('line with a non-breaking space{0}here' -f [char] 0x00A0)
 
             @(Get-NxFileLineItem -Rule $rule 3>$null).Count | Should-Be 0
         }
