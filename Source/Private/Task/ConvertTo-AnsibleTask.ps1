@@ -113,6 +113,9 @@ function ConvertTo-AnsibleTask {
 
                 $null = $items.Add(@{
                     GroupId = $baseId
+                    BaseId = $baseId
+                    Severity = $severity
+                    GroupDetail = $built.GroupDetail
                     Task = if ($first) { Add-AnsibleAssert -Task $task -Resolution $resolution } else { $task }
                     Output = @{ Rule = $rule; Task = $groupTask; Handler = $handlers; RoleVariable = $roleVariables }
                 })
@@ -121,7 +124,42 @@ function ConvertTo-AnsibleTask {
         }
     }
     end {
+        Set-AnsibleGroupTaskName -Item $items
         Group-AnsibleTask -InputObject $items.ToArray()
+    }
+}
+
+<#
+.SYNOPSIS
+    Widens a group's name to every distinct GroupDetail its sub-rules produced, not only the one
+    Group-AnsibleTask happens to keep.
+.DESCRIPTION
+    Every sub-rule builds its own $groupTask instance up front, all sharing one GroupId;
+    Group-AnsibleTask keeps only the first one it sees and appends the rest into its block. That
+    is the right behaviour for a rule type where every sub-rule's GroupDetail is already the
+    same string (every generator before nxFileLine), but nxFileLine's sub-rules can each touch a
+    different file - see ADR 0009. So this runs first, in id-appearance order, and rewrites every
+    surviving group task's name from the union - a no-op wherever the values already agreed.
+#>
+function Set-AnsibleGroupTaskName {
+    param ([System.Collections.ArrayList] $Item)
+
+    $detail = [ordered] @{}
+    foreach ($entry in $Item) {
+        if ([string]::IsNullOrEmpty($entry.GroupId)) { continue }
+
+        if (-not $detail.Contains($entry.GroupId)) {
+            $detail[$entry.GroupId] = [System.Collections.Generic.List[string]]::new()
+        }
+        if ($entry.GroupDetail -and -not $detail[$entry.GroupId].Contains($entry.GroupDetail)) {
+            $detail[$entry.GroupId].Add($entry.GroupDetail)
+        }
+    }
+
+    foreach ($entry in $Item) {
+        if ([string]::IsNullOrEmpty($entry.GroupId)) { continue }
+
+        $entry.Output.Task.name = '{0} | {1} | {2}' -f $entry.BaseId, $entry.Severity, ($detail[$entry.GroupId] -join ', ')
     }
 }
 
