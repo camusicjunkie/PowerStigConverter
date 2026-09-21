@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Fixture STIG for RHEL 9's nxFileLine rule type, trimmed to a representative handful from
+    PowerStig's own RHEL-9-2.8 data. This is the fixture carrying the organization-value rules,
+    an unparsed rule discarded by the existing duplicate skip, and V-257779, the one rule whose
+    ContainsLine is a multi-line banner that lineinfile cannot express (ADR 0009, #91).
+
+    The rules are kept as upstream writes them - only the STIG prose (VulnDiscussion, RawString
+    verification text) is trimmed where it added nothing a task or test reads. V-258039 is kept
+    as a real sub-rule group: .a is an ordinary rule, .b's FilePath is a directory PowerStig
+    manufactured from a shell glob in the check text (#81) - the generator's own contract test
+    fixture for exactly this shape.
+-->
+<DISASTIG version="2" classification="UNCLASSIFIED" customname="" stigid="RHEL_9_STIG" description="Fixture STIG." filename="U_RHEL_9_STIG_V2R8_Manual-xccdf.xml" releaseinfo="Release: 8 Benchmark Date: 01 Apr 2026 3.5.2 1.10.0" title="Red Hat Enterprise Linux 9 Security Technical Implementation Guide" notice="terms-of-use" source="STIG.DOD.MIL" fullversion="2.8" created="6/16/2026">
+  <nxFileLineRule dscresourcemodule="nx">
+    <Rule id="V-257779" severity="medium" conversionstatus="pass" title="SRG-OS-000023-GPOS-00006" dscresource="nxFileLine">
+      <ContainsLine>You are accessing a U.S. Government (USG) Information System (IS) that is provided for USG-authorized use only.
+
+By using this IS (which includes any device attached to this IS), you consent to the following conditions:
+
+-The USG routinely intercepts and monitors communications on this IS for purposes including, but not limited to, penetration testing, COMSEC monitoring, network operations and defense, personnel misconduct (PM), law enforcement (LE), and counterintelligence (CI) investigations.
+
+-At any time, the USG may inspect and seize data stored on this IS.
+
+-Communications using, or data stored on, this IS are not private, are subject to routine monitoring, interception, and search, and may be disclosed or used for any USG-authorized purpose.
+
+-This IS includes security measures (e.g., authentication and access controls) to protect USG interests--not for your personal benefit or privacy.
+
+-Notwithstanding the above, using this IS does not constitute consent to PM, LE or CI investigative searching or monitoring of the content of privileged communications, or work product, related to personal representation or services by attorneys, psychotherapists, or clergy, and their assistants. Such communications and work product are private and confidential. See User Agreement for details.</ContainsLine>
+      <Description>Fixture: the DoD login banner, the one rule whose ContainsLine is multi-line. See #91.</Description>
+      <DoesNotContainPattern>#\s*You\s*are\s*accessing\s*a\s*U.S.\s*Government\s*(USG)\s*Information\s*System\s*(IS)\s*that\s*is\s*provided\s*for\s*USG-authorized\s*use\s*only.</DoesNotContainPattern>
+      <DuplicateOf />
+      <FilePath>/etc/issue</FilePath>
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <LegacyId>
+      </LegacyId>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+      <RawString>Verify RHEL 9 displays the Standard Mandatory DOD Notice and Consent Banner before granting access to the operating system via a command line user logon.</RawString>
+    </Rule>
+    <Rule id="V-257792" severity="medium" conversionstatus="pass" title="SRG-OS-000480-GPOS-00227" dscresource="nxFileLine">
+      <ContainsLine>GRUB_CMDLINE_LINUX="vsyscall=none"</ContainsLine>
+      <Description>Fixture: an ordinary single rule, ContainsLine and its commented-out DoesNotContainPattern form.</Description>
+      <DoesNotContainPattern>#\s*GRUB_CMDLINE_LINUX\s*=\s*"vsyscall\s*=\s*none"</DoesNotContainPattern>
+      <DuplicateOf />
+      <FilePath>/etc/default/grub</FilePath>
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <LegacyId>
+      </LegacyId>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+      <RawString>Verify the current GRUB 2 configuration disables virtual system calls.</RawString>
+    </Rule>
+    <Rule id="V-257945.a" severity="medium" conversionstatus="pass" title="SRG-OS-000355-GPOS-00143" dscresource="nxFileLine">
+      <ContainsLine>
+      </ContainsLine>
+      <Description>Fixture: the organization-value half of a sub-rule group sharing a FilePath with .b below.</Description>
+      <DoesNotContainPattern>
+      </DoesNotContainPattern>
+      <DuplicateOf />
+      <FilePath>/etc/chrony.conf</FilePath>
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <LegacyId>
+      </LegacyId>
+      <OrganizationValueRequired>True</OrganizationValueRequired>
+      <OrganizationValueTestString>the following statement is true when leveraging the correct nxFileLine ContainsLine format: "If the "maxpoll" option is set to a number greater than 16 or the line is commented out, this is a finding." </OrganizationValueTestString>
+      <RawString>Verify RHEL 9 is securely comparing internal information system clocks at least every 24 hours with an NTP server.</RawString>
+    </Rule>
+    <Rule id="V-257945.b" severity="medium" conversionstatus="pass" title="SRG-OS-000355-GPOS-00143" dscresource="nxFileLine">
+      <ContainsLine>server 0.us.pool.ntp.mil</ContainsLine>
+      <Description>Fixture: the ordinary half of the same group, same FilePath as .a - one leaf, named once.</Description>
+      <DoesNotContainPattern>#\s*server\s*0.us.pool.ntp.mil</DoesNotContainPattern>
+      <DuplicateOf />
+      <FilePath>/etc/chrony.conf</FilePath>
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <LegacyId>
+      </LegacyId>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+      <RawString>Verify RHEL 9 is securely comparing internal information system clocks with an authoritative DOD time source.</RawString>
+    </Rule>
+    <Rule id="V-258039.a" severity="medium" conversionstatus="pass" title="SRG-OS-000095-GPOS-00049" dscresource="nxFileLine">
+      <ContainsLine>install bluetooth /bin/false</ContainsLine>
+      <Description>Fixture: the ordinary half of a mixed group - .b below is the directory-FilePath half.</Description>
+      <DoesNotContainPattern>#\s*install\s*bluetooth\s*/bin/false</DoesNotContainPattern>
+      <DuplicateOf />
+      <FilePath>/bin/false</FilePath>
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <LegacyId>
+      </LegacyId>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+      <RawString>Verify that RHEL 9 disables the ability to load the Bluetooth kernel module.</RawString>
+    </Rule>
+    <Rule id="V-258039.b" severity="medium" conversionstatus="pass" title="SRG-OS-000095-GPOS-00049" dscresource="nxFileLine">
+      <ContainsLine>blacklist bluetooth</ContainsLine>
+      <Description>Fixture: FilePath is a directory PowerStig manufactured from a shell glob in the check text
+      (/etc/modprobe.d/*) - a parse failure, not a real directory target. See #81.</Description>
+      <DoesNotContainPattern>#\s*blacklist\s*bluetooth</DoesNotContainPattern>
+      <DuplicateOf />
+      <FilePath>/etc/modprobe.d/</FilePath>
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <LegacyId>
+      </LegacyId>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+      <RawString>Verify that RHEL 9 disables the ability to load the Bluetooth kernel module.</RawString>
+    </Rule>
+    <Rule id="V-258139" severity="low" conversionstatus="pass" title="SRG-OS-000480-GPOS-00227" dscresource="None">
+      <ContainsLine>All= p+i+n+u+g+s+m+S+sha512+acl+xattrs+selinux</ContainsLine>
+      <Description>Fixture: an unparsed rule (dscresource="None") that duplicates V-258138, which this
+      trimmed fixture does not otherwise carry - the existing duplicate skip discards it before any
+      adapter runs, needing no rule type of its own. See ADR 0009.</Description>
+      <DoesNotContainPattern>#\s*All\s*=\s*p+i+n+u+g+s+m+S+sha512+acl+xattrs+selinux</DoesNotContainPattern>
+      <DuplicateOf>V-258138</DuplicateOf>
+      <FilePath>/etc/aide.conf</FilePath>
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <LegacyId>
+      </LegacyId>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString>
+      </OrganizationValueTestString>
+      <RawString>Verify that AIDE is configured to verify extended attributes.</RawString>
+    </Rule>
+  </nxFileLineRule>
+</DISASTIG>

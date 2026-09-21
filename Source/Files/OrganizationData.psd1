@@ -92,6 +92,15 @@
         'Value' = 'VariableValue'
         'Required' = @('VariableValue')
     }
+    'nxFileLine' = @{
+        # Both attributes are always blank together on these rows - PowerStig leaves the whole
+        # line, and its commented-out form, for the organization to supply. See ADR 0009.
+        'Required' = @('ContainsLine', 'DoesNotContainPattern')
+        'Shape' = @{
+            'line' = 'ContainsLine'
+            'regexp' = 'DoesNotContainPattern'
+        }
+    }
     'IisLogging' = @{
         'Value' = 'LogFlags'
         # LogCustomFieldEntry is deliberately absent: New-AnsibleIisLoggingTask already omits the

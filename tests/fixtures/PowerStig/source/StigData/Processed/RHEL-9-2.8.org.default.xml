@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Every organization value this fixture's rules require is answered here, per ADR-0001 - this
+    fixture is meant to produce a role, not exercise the unanswered-value path (already covered
+    by the Windows fixtures).
+-->
+<OrganizationalSettings fullversion="2.8">
+  <OrganizationalSetting id="V-257945.a" ContainsLine="server 0.us.pool.ntp.mil iburst maxpoll 16" DoesNotContainPattern="#\s*server\s*0.us.pool.ntp.mil\s*iburst\s*maxpoll\s*16" />
+</OrganizationalSettings>

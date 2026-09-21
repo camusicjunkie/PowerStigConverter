@@ -27,6 +27,9 @@ Describe 'Get-PowerStigFile' {
             $files.Name | Should-BeCollection @(
                     'IISServer-10.0.xml'
                     'IISSite-10.0.xml'
+                    'OracleLinux-8-2.4.xml'
+                    'OracleLinux-9-1.1.xml'
+                    'RHEL-9-2.8.xml'
                     'SqlServer-2016-Instance-3.6.xml'
                     'SqlServer-2022-Instance-1.4.xml'
                     'WindowsClient-11-1.0.xml'

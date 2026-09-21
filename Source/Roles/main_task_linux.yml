@@ -1,0 +1,27 @@
+---
+- name: Check OS family and major version
+  ansible.builtin.assert:
+    that:
+    - ansible_os_family == '<%= $PLASTER_PARAM_OsFamily %>'
+    - ansible_distribution | regex_search('(<%= $PLASTER_PARAM_OsPattern %>)')
+    - ansible_distribution_major_version == '<%= $PLASTER_PARAM_OsMajorVersion %>'
+    success_msg: "{{ ansible_distribution }} {{ ansible_distribution_major_version }} is the detected operating system."
+    fail_msg: |
+      This role can only be run against <%= $PLASTER_PARAM_OsDescription %>.
+      {{ ansible_distribution }} {{ ansible_distribution_major_version }} is not supported.
+  tags: always
+
+- name: Execute the CAT 1 tasks
+  ansible.builtin.import_tasks: cat1.yml
+  when: <%= $PLASTER_PARAM_VariablePrefix %>_cat1
+  tags: cat1
+
+- name: Execute the CAT 2 tasks
+  ansible.builtin.import_tasks: cat2.yml
+  when: <%= $PLASTER_PARAM_VariablePrefix %>_cat2
+  tags: cat2
+
+- name: Execute the CAT 3 tasks
+  ansible.builtin.import_tasks: cat3.yml
+  when: <%= $PLASTER_PARAM_VariablePrefix %>_cat3
+  tags: cat3

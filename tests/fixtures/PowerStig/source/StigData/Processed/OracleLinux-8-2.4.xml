@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Fixture STIG for Oracle Linux 8's nxService rule type, trimmed to a representative handful
+    from PowerStig's own OracleLinux-8-2.4 data. This is the only in-scope product carrying
+    nxService, so it is where both in-scope rules are proved end to end (ADR 0008). Also carries
+    an ordinary nxFileLine rule and V-248723.d, whose DoesNotContainPattern (`\s**`, templated
+    from an unescaped literal `*`) compiles in neither .NET nor Python re (#89).
+
+    The rules are kept as upstream writes them - only the STIG prose is trimmed.
+-->
+<DISASTIG version="2" classification="UNCLASSIFIED" customname="" stigid="Oracle_Linux_8_STIG" description="Fixture STIG." filename="U_OracleLinux_8_STIG_V2R4_Manual-xccdf.xml" releaseinfo="Release: 4 Benchmark Date: 02 Apr 2025 3.5 1.10.0" title="Oracle Linux 8 Security Technical Implementation Guide" notice="terms-of-use" source="STIG.DOD.MIL" fullversion="2.4" created="5/27/2025">
+  <nxFileLineRule dscresourcemodule="nx">
+    <Rule id="V-248524" severity="high" conversionstatus="pass" title="SRG-OS-000033-GPOS-00014" dscresource="nxFileLine">
+      <ContainsLine>1</ContainsLine>
+      <Description>Fixture: an ordinary nxFileLine rule, to prove OL8 reaches lineinfile too, not only RHEL-9.</Description>
+      <DoesNotContainPattern>#\s*1</DoesNotContainPattern>
+      <DuplicateOf />
+      <FilePath>/proc/sys/crypto/fips_enabled</FilePath>
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <LegacyId>
+      </LegacyId>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+      <RawString>Verify the operating system implements DOD-approved encryption to protect the confidentiality of remote access sessions.</RawString>
+    </Rule>
+    <Rule id="V-248723.d" severity="medium" conversionstatus="pass" title="SRG-OS-000480-GPOS-00227" dscresource="nxFileLine">
+      <ContainsLine>*.* /var/log/messages</ContainsLine>
+      <Description>Fixture: DoesNotContainPattern is `#\s**.*\s*/var/log/messages` - the `\s**` quantifier
+      compiles in neither .NET nor Python re, a PowerStig parse failure rather than a valid regex
+      PowerStig meant. See #89.</Description>
+      <DoesNotContainPattern>#\s**.*\s*/var/log/messages</DoesNotContainPattern>
+      <DuplicateOf />
+      <FilePath>/var/log/messages</FilePath>
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <LegacyId>
+      </LegacyId>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+      <RawString>Verify that rsyslog is configured to log cron events.</RawString>
+    </Rule>
+  </nxFileLineRule>
+  <nxServiceRule dscresourcemodule="nx">
+    <Rule id="V-248628" severity="medium" conversionstatus="pass" title="SRG-OS-000269-GPOS-00103" dscresource="nxService">
+      <Description>Fixture: kernel core dumps disabled - Enabled False, State left blank.</Description>
+      <DuplicateOf />
+      <Enabled>False</Enabled>
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <LegacyId>
+      </LegacyId>
+      <Name>kdump</Name>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+      <RawString>Verify that kernel core dumps are disabled unless needed.</RawString>
+      <State />
+    </Rule>
+    <Rule id="V-248836" severity="medium" conversionstatus="pass" title="SRG-OS-000114-GPOS-00059" dscresource="nxService">
+      <Description>Fixture: automount disabled - the second in-scope nxService rule.</Description>
+      <DuplicateOf />
+      <Enabled>False</Enabled>
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <LegacyId>
+      </LegacyId>
+      <Name>autofs</Name>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+      <RawString>Verify the operating system disables the ability to automount devices.</RawString>
+      <State />
+    </Rule>
+  </nxServiceRule>
+</DISASTIG>

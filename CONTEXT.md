@@ -29,6 +29,15 @@ A STIG rule carrying a `DuplicateOf` pointing at another rule that already cover
 no task.
 _Avoid_: alias, redundant rule
 
+**Unparsed rule**:
+A STIG rule PowerStig could not read the fix text of, marked `dscresource="None"` while sitting
+in a rule type PowerStig automates elsewhere. It carries no parsed fields, only `RawString`, so
+no generator can build a task from it. Distinct from the `Manual` and `Document` rule types,
+where DISA says a human must act; here PowerStig simply failed to parse. A rule can stop being
+unparsed when upstream improves — OracleLinux-8 went from 54 to none between revisions 2.3 and
+2.4.
+_Avoid_: unsupported rule, manual rule, None rule
+
 ### Organization values
 
 **Organization value**:
@@ -70,7 +79,11 @@ _Avoid_: gap
 The adapter that turns STIG rules of one rule type into Ansible tasks — `Build-Ansible*Task`.
 It supplies only what differs by type: the ansible module and the fields mapped into it.
 `ConvertTo-AnsibleTask` owns everything every type does the same way. One adapter per supported
-rule type; rule types without one produce nothing.
+rule type; rule types without one produce nothing. A rule type whose adapter exists but does not
+target the conversion's `OsFamily` also produces nothing — dispatch skips and warns rather than
+building a task for the wrong host, per `RuleTypeOsFamily.psd1` and ADR-0010. Distinct from
+"no adapter": one is a rule type this module has never supported, the other is a rule type this
+module supports on a host it isn't this one.
 _Avoid_: converter, handler, builder
 
 **Conditional toggle**:
