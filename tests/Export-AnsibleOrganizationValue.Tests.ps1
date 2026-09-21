@@ -121,6 +121,21 @@ Describe 'Export-AnsibleOrganizationValue' {
 
             $content | Should-NotBeLikeString '*V-110*'
         }
+
+        # Dispatch skips this rule type for the same reason - declaring a variable here would be
+        # one no generated task ever references. See docs/adr/0011.
+        It 'declares no variable for a rule type whose adapter targets a different OsFamily' {
+            $rule = [pscustomobject] @{
+                Id = 'V-100'; PolicyName = 'Account lockout duration'
+                DuplicateOf = ''; OrganizationValueRequired = $true
+            }
+            $orgSetting = New-TestOrgSetting '<OrganizationalSetting id="V-100" PolicyValue="15" />'
+
+            $content = (Export-OrgValues -Groups @(New-RuleGroup 'AccountPolicyRule' @($rule)) `
+                -OrganizationalSetting $orgSetting -StigName 'RHEL-9').main_default_org -join "`n"
+
+            $content | Should-NotBeLikeString '*account_lockout_duration*'
+        }
     }
 
     # No org settings attribute feeds the IIS log path, so it is a role variable the site fills in

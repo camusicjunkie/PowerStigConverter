@@ -40,8 +40,8 @@ function ConvertTo-AnsiblePlaybook {
 
         # A rule type missing from the table is not restricted to any OsFamily - the coverage
         # test keeps every adapter listed, not this check. See docs/adr/0010.
-        $adapterOsFamily = $script:ruleTypeOsFamily[$ruleName]
-        if ($adapterOsFamily -and $adapterOsFamily -ne $osFamily) {
+        $adapterOsFamily = Get-AnsibleRuleTypeOsFamilyMismatch -RuleType $ruleName -OsFamily $osFamily
+        if ($adapterOsFamily) {
             $ids = ($stigRule.Id) -join ', '
             Write-Warning ('{0}: Build-Ansible{1}Task targets {2}, not {3} - skipping. See docs/adr/0010.' -f $ids, $ruleName, $adapterOsFamily, $osFamily)
             return

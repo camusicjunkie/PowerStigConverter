@@ -43,9 +43,15 @@ function New-AnsiblePlaybook {
     # A value DISA leaves to the adopting organization is an outstanding decision, not a data
     # error. Refuse to write a role that would silently set an empty value, and do it before
     # New-AnsibleRoleScaffold puts anything on disk, so a refused conversion leaves no trace.
+    $osFamily = (Get-AnsibleOsAssertion -StigName $StigName).OsFamily
     $incomplete = @(foreach ($ruleGroup in $rules) {
         $ruleType = $ruleGroup.PowerStigRule -replace 'Rule'
         if (-not $script:organizationData.ContainsKey($ruleType)) { continue }
+
+        # A rule type that dispatch will skip for the wrong OsFamily has no task to leave an
+        # unanswered value in - refusing over it would abort a conversion nothing else ever
+        # touches. See docs/adr/0011.
+        if (Get-AnsibleRuleTypeOsFamilyMismatch -RuleType $ruleType -OsFamily $osFamily) { continue }
 
         foreach ($rule in $ruleGroup.StigRule) {
             (Resolve-AnsibleOrganizationValue -Rule $rule -RuleType $ruleType `

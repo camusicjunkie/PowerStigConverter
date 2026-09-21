@@ -344,6 +344,34 @@ Describe 'New-AnsiblePlaybook' {
         }
     }
 
+    # RuleTypeOsFamily.psd1 excludes a rule type from the completeness gate the same way it
+    # excludes it from dispatch - an unanswered value dispatch was always going to skip anyway
+    # must not refuse a conversion nothing else touches. See docs/adr/0011. AccountPolicy is
+    # Windows-only in the real table; this test overrides that fact rather than adding a fixture,
+    # since no real STIG mixes a Windows-only rule type into Linux data (or vice versa) today.
+    Context 'an organization value on a rule type the wrong OsFamily excludes' {
+
+        It 'does not refuse the conversion over V-202, unanswered though it is' {
+            $result = InModuleScope -ModuleName PowerStigConverter -Parameters @{
+                FixtureRoot = $fixtureRoot; OutputPath = (Join-Path $TestDrive 'os_excluded')
+            } {
+                param ($FixtureRoot, $OutputPath)
+                $saved = $script:ruleTypeOsFamily.AccountPolicy
+                $script:ruleTypeOsFamily.AccountPolicy = 'RedHat'
+                try {
+                    New-AnsiblePlaybook -StigName 'WindowsClient-11' -Path $FixtureRoot `
+                        -OutputPath $OutputPath -RoleName 'os_excluded_role' `
+                        -WarningAction SilentlyContinue 6>$null
+                }
+                finally {
+                    $script:ruleTypeOsFamily.AccountPolicy = $saved
+                }
+            }
+
+            $result.Path | Should -Exist
+        }
+    }
+
     # Generating over a part-filled org settings file must not produce a role that quietly sets
     # an empty value, so the unanswered ones are guarded on the host as well. See docs/adr/0003.
     Context 'what -AllowIncompleteOrganizationValue produces' {
