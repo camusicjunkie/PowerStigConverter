@@ -505,9 +505,10 @@ Describe 'New-AnsiblePlaybook for the Linux rule types' {
         }
     }
 
-    # OracleLinux-9-1.1's three unparsed Permission rules: no Linux Permission generator exists,
-    # and each has an empty AccessControlEntry, so the Windows generator's own foreach yields
-    # nothing even if the dispatcher ever routed a Linux rule to it. See the map's Notes.
+    # OracleLinux-9-1.1's three unparsed Permission rules: Permission targets Windows in
+    # RuleTypeOsFamily.psd1, so dispatch now skips the whole group before it ever reaches
+    # Build-AnsiblePermissionTask - see docs/adr/0010. (Their empty AccessControlEntry would
+    # have produced nothing from that adapter too, but the OsFamily check catches it first.)
     Context 'the three unparsed Permission rules OracleLinux-9 carries' {
 
         It 'produces no win_acl task and no task named for any of them' {
@@ -517,9 +518,10 @@ Describe 'New-AnsiblePlaybook for the Linux rule types' {
             $ol9.Tasks | Should-NotBeLikeString '*V-271830*'
         }
 
-        It 'warns about none of them, since duplicate and empty-entry rules are silent skips' {
-            ($ol9.Warnings -join "`n") | Should-NotBeLikeString '*V-2718*'
-            ($ol9.Warnings -join "`n") | Should-NotBeLikeString '*V-2717*'
+        It 'warns once for the group, naming every rule id it skipped' {
+            $message = ($ol9.Warnings -join "`n")
+            $message | Should-BeLikeString '*V-271778, V-271827, V-271830*'
+            $message | Should-BeLikeString '*Build-AnsiblePermissionTask targets Windows, not RedHat*'
         }
     }
 

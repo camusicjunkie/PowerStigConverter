@@ -32,10 +32,12 @@ BeforeDiscovery {
         }
 
     $organizationData = Import-PowerShellDataFile (Join-Path $sourceRoot 'Files/OrganizationData.psd1')
+    $osFamilyData = Import-PowerShellDataFile (Join-Path $sourceRoot 'Files/RuleTypeOsFamily.psd1')
     foreach ($generator in $script:generators) {
         $generator['ResolvesOrganizationValue'] = $organizationData.ContainsKey($generator.RuleType)
         $generator['HasListField'] = $null -ne $organizationData[$generator.RuleType] -and
             $organizationData[$generator.RuleType].ContainsKey('List')
+        $generator['HasOsFamily'] = $osFamilyData.ContainsKey($generator.RuleType)
     }
 }
 
@@ -66,6 +68,13 @@ Describe 'every task generator is tested' {
     # one declared but not referenced is the orphan #57 closed. Only the generator says which.
     It '<Name> pins the role variables it declares' -ForEach ($generators | Where-Object DeclaresRoleVariable) {
         $TestBody | Should-BeLikeString "*Context 'the role variables it declares'*"
+    }
+
+    # ConvertTo-AnsiblePlaybook reads this table to skip a rule for the wrong OsFamily rather
+    # than build it anyway - a generator missing from it is not restricted at all. See
+    # docs/adr/0010.
+    It '<Name> declares its OsFamily in RuleTypeOsFamily.psd1' -ForEach $generators {
+        $HasOsFamily | Should-BeTrue
     }
 }
 
