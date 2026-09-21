@@ -109,6 +109,37 @@ Describe 'New-AnsibleRoleScaffold' {
         }
     }
 
+    # ADR 0007: a Linux STIG gets the Linux templates instead, selected by Plaster's own
+    # condition attribute on OsFamily rather than a second TemplatePath.
+    Context 'a Linux STIG' {
+
+        BeforeAll {
+            $script:linuxRoot = Join-Path $TestDrive 'linux'
+            $null = New-Item -Path $linuxRoot -ItemType Directory -Force
+            $script:linux = New-Scaffold -Path $linuxRoot -RoleName 'linux_role' -StigName 'RHEL-9'
+        }
+
+        It 'asserts the RedHat family and major version instead of Windows' {
+            $main = Get-Content -Path (Join-Path $linux.Path 'tasks/main.yml') -Raw
+
+            $main | Should-BeLikeString "*ansible_os_family == 'RedHat'*"
+            $main | Should-BeLikeString "*ansible_distribution_major_version == '9'*"
+            $main | Should-NotBeLikeString '*Windows*'
+        }
+
+        It 'sets no Server Core fact, which does not exist on Linux' {
+            Get-Content -Path (Join-Path $linux.Path 'tasks/main.yml') -Raw |
+                Should-NotBeLikeString '*Server Core*'
+            Get-Content -Path (Join-Path $linux.Path 'defaults/main/main.yml') -Raw |
+                Should-NotBeLikeString '*server_core*'
+        }
+
+        It 'scaffolds no reboot handler, since no in-scope Linux rule notifies one' {
+            Get-Content -Path (Join-Path $linux.Path 'handlers/main.yml') -Raw |
+                Should-NotBeLikeString '*win_reboot*'
+        }
+    }
+
     # A role whose directories were partly removed, or one that predates the defaults/main
     # layout, still has to end up with somewhere to write the generated files.
     Context 'a role missing the generated directories' {

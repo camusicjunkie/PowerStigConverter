@@ -16,6 +16,8 @@
     <parameter name='VariablePrefix' type='text' prompt='Prefix for the role variables' default='stig'/>
     <parameter name='OsPattern' type='text' prompt='Product name the role asserts against ansible_distribution' default='Microsoft Windows'/>
     <parameter name='OsDescription' type='text' prompt='Human readable name of the supported OS' default='Windows'/>
+    <parameter name='OsFamily' type='text' prompt='ansible_os_family value the role asserts' default='Windows'/>
+    <parameter name='OsMajorVersion' type='text' prompt='ansible_distribution_major_version the Linux role asserts' default=''/>
   </parameters>
   <content>
     <file source='' destination='${PLASTER_PARAM_RoleName}/tasks'/>
@@ -23,9 +25,12 @@
     <file source='' destination='${PLASTER_PARAM_RoleName}/defaults/main'/>
     <file source='' destination='${PLASTER_PARAM_RoleName}/vars'/>
     <file source='' destination='${PLASTER_PARAM_RoleName}/handlers'/>
-    <templateFile source='main_task.yml' destination='${PLASTER_PARAM_RoleName}/tasks/main.yml'/>
-    <templateFile source='main_default.yml' destination='${PLASTER_PARAM_RoleName}/defaults/main/main.yml'/>
+    <templateFile source='main_task.yml' destination='${PLASTER_PARAM_RoleName}/tasks/main.yml' condition='$PLASTER_PARAM_OsFamily -eq "Windows"'/>
+    <templateFile source='main_task_linux.yml' destination='${PLASTER_PARAM_RoleName}/tasks/main.yml' condition='$PLASTER_PARAM_OsFamily -ne "Windows"'/>
+    <templateFile source='main_default.yml' destination='${PLASTER_PARAM_RoleName}/defaults/main/main.yml' condition='$PLASTER_PARAM_OsFamily -eq "Windows"'/>
+    <templateFile source='main_default_linux.yml' destination='${PLASTER_PARAM_RoleName}/defaults/main/main.yml' condition='$PLASTER_PARAM_OsFamily -ne "Windows"'/>
     <file source='main_var.yml' destination='${PLASTER_PARAM_RoleName}/vars/main.yml'/>
-    <file source='main_handler.yml' destination='${PLASTER_PARAM_RoleName}/handlers/main.yml'/>
+    <file source='main_handler.yml' destination='${PLASTER_PARAM_RoleName}/handlers/main.yml' condition='$PLASTER_PARAM_OsFamily -eq "Windows"'/>
+    <file source='main_handler_linux.yml' destination='${PLASTER_PARAM_RoleName}/handlers/main.yml' condition='$PLASTER_PARAM_OsFamily -ne "Windows"'/>
   </content>
 </plasterManifest>

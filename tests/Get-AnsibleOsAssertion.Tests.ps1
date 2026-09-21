@@ -75,6 +75,27 @@ Describe 'Get-AnsibleOsAssertion' {
         }
     }
 
+    # RHEL and OracleLinux share ansible_os_family ('RedHat'), so OsMajorVersion is what tells
+    # them apart - ansible_distribution alone cannot. See ADR 0007.
+    Context 'Linux STIGs' {
+
+        It 'asserts <Pattern> for <StigName>, from the RedHat family' -ForEach @(
+            @{ StigName = 'RHEL-9'; Pattern = 'RedHat'; Description = 'RHEL 9'; MajorVersion = '9' }
+            @{ StigName = 'OracleLinux-8'; Pattern = 'OracleLinux'; Description = 'Oracle Linux 8'; MajorVersion = '8' }
+            @{ StigName = 'OracleLinux-9'; Pattern = 'OracleLinux'; Description = 'Oracle Linux 9'; MajorVersion = '9' }
+        ) {
+            $assertion = InModuleScope -ModuleName PowerStigConverter -Parameters @{ Name = $StigName } {
+                param ($Name)
+                Get-AnsibleOsAssertion -StigName $Name
+            }
+
+            $assertion.Pattern | Should-Be $Pattern
+            $assertion.Description | Should-Be $Description
+            $assertion.OsFamily | Should-Be 'RedHat'
+            $assertion.OsMajorVersion | Should-Be $MajorVersion
+        }
+    }
+
     Context 'the shape the scaffolding consumes' {
 
         It 'returns a Pattern that is the Description prefixed with the vendor' {
@@ -83,6 +104,15 @@ Describe 'Get-AnsibleOsAssertion' {
             }
 
             $assertion.Pattern | Should-Be ('Microsoft {0}' -f $assertion.Description)
+        }
+
+        It 'reports the Windows family with no major version, for the Linux template condition to key on' {
+            $assertion = InModuleScope -ModuleName PowerStigConverter {
+                Get-AnsibleOsAssertion -StigName 'WindowsServer-2025-MS'
+            }
+
+            $assertion.OsFamily | Should-Be 'Windows'
+            $assertion.OsMajorVersion | Should-BeNull
         }
     }
 }

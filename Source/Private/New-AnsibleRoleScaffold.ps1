@@ -30,6 +30,8 @@ function New-AnsibleRoleScaffold {
             VariablePrefix = Get-AnsibleVariablePrefix -StigName $StigName
             OsPattern = $osAssertion.Pattern
             OsDescription = $osAssertion.Description
+            OsFamily = $osAssertion.OsFamily
+            OsMajorVersion = if ($osAssertion.OsMajorVersion) { $osAssertion.OsMajorVersion } else { '' }
             NoLogo = $true
             Force = $true
         }
