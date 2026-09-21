@@ -64,6 +64,11 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
         $script:rhel = Get-RoleContent -StigName 'RHEL-9' -RoleName 'rhel_cover_role'
         $script:ol8 = Get-RoleContent -StigName 'OracleLinux-8' -RoleName 'ol8_cover_role'
         $script:ol9 = Get-RoleContent -StigName 'OracleLinux-9' -RoleName 'ol9_cover_role'
+        # WindowsServer-2025-DC/-MS-1.1: real trimmed data, surveyed against 2022's shape for
+        # #95's map. Both fixtures carry a real rule of every one of the eleven rule types the
+        # product has.
+        $script:dc2025 = Get-RoleContent -StigName 'WindowsServer-2025-DC' -RoleName 'dc2025_role'
+        $script:ms2025 = Get-RoleContent -StigName 'WindowsServer-2025-MS' -RoleName 'ms2025_role'
     }
 
     It 'converts an <RuleType> rule into <Module>' -ForEach @(
@@ -84,8 +89,59 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
         @{ RuleType = 'SqlScriptQuery'; Module = 'resource_name: SqlScriptQuery'; Role = 'sql2022' }
         @{ RuleType = 'SqlServerConfiguration'; Module = 'resource_name: SqlConfiguration'; Role = 'sql2022' }
         @{ RuleType = 'Registry'; Module = 'ansible.windows.win_regedit'; Role = 'sql2022' }
+        # WindowsServer-2025-DC/-MS: every one of the eleven rule types the product carries,
+        # dispatched from real data. See #95 and #96.
+        @{ RuleType = 'AccountPolicy'; Module = 'community.windows.win_security_policy'; Role = 'dc2025' }
+        @{ RuleType = 'AuditPolicy'; Module = 'community.windows.win_audit_policy_system'; Role = 'dc2025' }
+        @{ RuleType = 'AuditSetting'; Module = 'AuditSetting'; Role = 'dc2025' }
+        @{ RuleType = 'Permission'; Module = 'ansible.windows.win_acl'; Role = 'dc2025' }
+        @{ RuleType = 'Registry'; Module = 'ansible.windows.win_regedit'; Role = 'dc2025' }
+        @{ RuleType = 'RootCertificate'; Module = 'community.windows.win_certificate_info'; Role = 'dc2025' }
+        @{ RuleType = 'SecurityOption'; Module = 'community.windows.win_security_policy'; Role = 'dc2025' }
+        @{ RuleType = 'UserRight'; Module = 'ansible.windows.win_user_right'; Role = 'dc2025' }
+        @{ RuleType = 'WindowsFeature'; Module = 'ansible.windows.win_feature'; Role = 'dc2025' }
+        @{ RuleType = 'AccountPolicy'; Module = 'community.windows.win_security_policy'; Role = 'ms2025' }
+        @{ RuleType = 'AuditPolicy'; Module = 'community.windows.win_audit_policy_system'; Role = 'ms2025' }
+        @{ RuleType = 'AuditSetting'; Module = 'AuditSetting'; Role = 'ms2025' }
+        @{ RuleType = 'Permission'; Module = 'ansible.windows.win_acl'; Role = 'ms2025' }
+        @{ RuleType = 'Registry'; Module = 'ansible.windows.win_regedit'; Role = 'ms2025' }
+        @{ RuleType = 'RootCertificate'; Module = 'community.windows.win_certificate_info'; Role = 'ms2025' }
+        @{ RuleType = 'SecurityOption'; Module = 'community.windows.win_security_policy'; Role = 'ms2025' }
+        @{ RuleType = 'UserRight'; Module = 'ansible.windows.win_user_right'; Role = 'ms2025' }
+        @{ RuleType = 'WindowsFeature'; Module = 'ansible.windows.win_feature'; Role = 'ms2025' }
     ) {
         (Get-Variable -Name $Role -ValueOnly).Tasks | Should-BeLikeString "*$Module*"
+    }
+
+    # Document and Manual produce nothing for every product; the fixture's own rule ids proving
+    # that for WindowsServer-2025 too.
+    It '<Role> produces no task for its Document or Manual rule' -ForEach @(
+        @{ Role = 'dc2025' }
+        @{ Role = 'ms2025' }
+    ) {
+        $tasks = (Get-Variable -Name $Role -ValueOnly).Tasks
+        $tasks | Should-NotBeLikeString '*V-277982*'
+        $tasks | Should-NotBeLikeString '*V-277985*'
+    }
+
+    # #95's map asked whether the real 2025 data agrees with 2022's shape field for field. It
+    # does: every rule type dispatches the same way, and these two shapes - a registry sub-rule
+    # pair where only the second half is an organisation value, and a user right whose Force and
+    # Identity are both blank upstream - convert the same way 2022's equivalents do.
+    Context 'shapes the WindowsServer-2025 survey confirmed against 2022' {
+
+        It 'puts both halves of the registry sub-rule pair in one block, only one an organisation value' {
+            $dc2025.Tasks | Should-BeLikeString '*V-278090 | MEDIUM | DeviceGuard*'
+            $dc2025.Tasks | Should-BeLikeString '*V-278090.a | MEDIUM | Set EnableVirtualizationBasedSecurity*'
+            $dc2025.Tasks | Should-BeLikeString '*data: 1*'
+            $dc2025.Tasks | Should-BeLikeString '*{{ stig_server_2025_278090_b_requireplatformsecurityfeatures }}*'
+            $dc2025.Defaults | Should-BeLikeString '*stig_server_2025_278090_b_requireplatformsecurityfeatures: 1*'
+        }
+
+        It 'interpolates the organisation''s answer for a user right whose Force and Identity are both blank upstream' {
+            $ms2025.Defaults | Should-BeLikeString '*stig_server_2025_278184_deny_access_to_this_computer_from_the_network:*Enterprise Admins*'
+            $ms2025.Tasks | Should-BeLikeString '*{{ stig_server_2025_278184_deny_access_to_this_computer_from_the_network }}*'
+        }
     }
 
     # A rule that reaches the role but has no toggle cannot be switched off by an operator.

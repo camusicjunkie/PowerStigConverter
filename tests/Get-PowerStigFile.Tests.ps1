@@ -35,6 +35,8 @@ Describe 'Get-PowerStigFile' {
                     'WindowsClient-11-1.0.xml'
                     'WindowsServer-2022-DC-1.0.xml'
                     'WindowsServer-2022-MS-2.7.xml'
+                    'WindowsServer-2025-DC-1.1.xml'
+                    'WindowsServer-2025-MS-1.1.xml'
                 )
         }
 
