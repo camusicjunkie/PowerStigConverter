@@ -19,12 +19,17 @@ function Export-AnsibleOrganizationValue {
 
     begin {
         $organization = [System.Collections.SortedList]::new()
+        $osFamily = (Get-AnsibleOsAssertion -StigName $StigName).OsFamily
     }
     process {
         $ruleType = $Rule.PowerStigRule -replace 'Rule'
         $hasOrganizationValue = $script:organizationData.ContainsKey($ruleType)
         $hasRoleVariable = $script:roleVariableData.ContainsKey($ruleType)
         if (-not $hasOrganizationValue -and -not $hasRoleVariable) { return }
+
+        # Dispatch already skipped this rule type for the wrong OsFamily - declaring a variable
+        # here would be one no generated task ever references. See docs/adr/0011.
+        if (Get-AnsibleRuleTypeOsFamilyMismatch -RuleType $ruleType -OsFamily $osFamily) { return }
 
         foreach ($rule in $Rule.StigRule) {
             # A duplicate produces no task, so a variable for it would guard nothing.
