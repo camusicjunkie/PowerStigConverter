@@ -1,0 +1,16 @@
+---
+# Generated once by the scaffold and never overwritten - New-AnsibleRoleScaffold only runs
+# the template when the role does not already exist. Edit galaxy_info or collections here if
+# the role's needs change.
+galaxy_info:
+  role_name: <%= $PLASTER_PARAM_RoleName %>
+  description: STIG hardening role for <%= $PLASTER_PARAM_OsDescription %>
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Windows
+
+# Every Windows task generator targets ansible.windows or community.windows, so both are
+# declared unconditionally rather than tracked per rule type converted.
+collections:
+  - ansible.windows
+  - community.windows

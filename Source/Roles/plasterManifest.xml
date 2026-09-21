@@ -25,6 +25,7 @@
     <file source='' destination='${PLASTER_PARAM_RoleName}/defaults/main'/>
     <file source='' destination='${PLASTER_PARAM_RoleName}/vars'/>
     <file source='' destination='${PLASTER_PARAM_RoleName}/handlers'/>
+    <file source='' destination='${PLASTER_PARAM_RoleName}/meta'/>
     <templateFile source='main_task.yml' destination='${PLASTER_PARAM_RoleName}/tasks/main.yml' condition='$PLASTER_PARAM_OsFamily -eq "Windows"'/>
     <templateFile source='main_task_linux.yml' destination='${PLASTER_PARAM_RoleName}/tasks/main.yml' condition='$PLASTER_PARAM_OsFamily -ne "Windows"'/>
     <templateFile source='main_default.yml' destination='${PLASTER_PARAM_RoleName}/defaults/main/main.yml' condition='$PLASTER_PARAM_OsFamily -eq "Windows"'/>
@@ -32,5 +33,7 @@
     <file source='main_var.yml' destination='${PLASTER_PARAM_RoleName}/vars/main.yml'/>
     <file source='main_handler.yml' destination='${PLASTER_PARAM_RoleName}/handlers/main.yml' condition='$PLASTER_PARAM_OsFamily -eq "Windows"'/>
     <file source='main_handler_linux.yml' destination='${PLASTER_PARAM_RoleName}/handlers/main.yml' condition='$PLASTER_PARAM_OsFamily -ne "Windows"'/>
+    <templateFile source='main_meta.yml' destination='${PLASTER_PARAM_RoleName}/meta/main.yml' condition='$PLASTER_PARAM_OsFamily -eq "Windows"'/>
+    <templateFile source='main_meta_linux.yml' destination='${PLASTER_PARAM_RoleName}/meta/main.yml' condition='$PLASTER_PARAM_OsFamily -ne "Windows"'/>
   </content>
 </plasterManifest>

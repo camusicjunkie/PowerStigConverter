@@ -41,8 +41,18 @@ Describe 'New-AnsibleRoleScaffold' {
             @{ RelativePath = 'defaults/main/main.yml' }
             @{ RelativePath = 'vars/main.yml' }
             @{ RelativePath = 'handlers/main.yml' }
+            @{ RelativePath = 'meta/main.yml' }
         ) {
             Join-Path $scaffold.Path $RelativePath | Should -Exist
+        }
+
+        It 'declares the collections every Windows task generator targets' {
+            $meta = Get-Content -Path (Join-Path $scaffold.Path 'meta/main.yml') -Raw
+
+            $meta | Should-BeLikeString '*platforms:*'
+            $meta | Should-BeLikeString '*name: Windows*'
+            $meta | Should-BeLikeString '*ansible.windows*'
+            $meta | Should-BeLikeString '*community.windows*'
         }
 
         It 'creates the directories the generated files are written into' {
@@ -137,6 +147,14 @@ Describe 'New-AnsibleRoleScaffold' {
         It 'scaffolds no reboot handler, since no in-scope Linux rule notifies one' {
             Get-Content -Path (Join-Path $linux.Path 'handlers/main.yml') -Raw |
                 Should-NotBeLikeString '*win_reboot*'
+        }
+
+        It 'declares the EL platform by major version and no collections, since every Linux task generator targets ansible.builtin only' {
+            $meta = Get-Content -Path (Join-Path $linux.Path 'meta/main.yml') -Raw
+
+            $meta | Should-BeLikeString '*name: EL*'
+            $meta | Should-BeLikeString '*- "9"*'
+            $meta | Should-NotBeLikeString '*collections:*'
         }
     }
 
