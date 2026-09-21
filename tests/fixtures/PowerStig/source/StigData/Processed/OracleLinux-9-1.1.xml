@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Fixture STIG for Oracle Linux 9's nxFileLine and Permission rule types, trimmed to a
+    representative handful from PowerStig's own OracleLinux-9-1.1 data. Carries V-271572, whose
+    ContainsLine's word-separators are U+00A0 (non-breaking space) rather than an ordinary space
+    - a non-ASCII skip-and-warn case (#90) - and the three unparsed dscresource="None" rules in
+    PermissionRule, which convert to nothing: no Linux Permission generator exists, and each has
+    an empty AccessControlEntry so Build-AnsiblePermissionTask's own foreach yields zero tasks
+    regardless (see the map's Notes).
+
+    The rules are kept as upstream writes them - only the STIG prose is trimmed. V-271572's
+    ContainsLine keeps its real non-breaking spaces verbatim; do not "fix" them to plain spaces.
+-->
+<DISASTIG version="1" classification="UNCLASSIFIED" customname="" stigid="Oracle_Linux_9_STIG" description="Fixture STIG." filename="U_OracleLinux_9_STIG_V1R1_Manual-xccdf.xml" releaseinfo="Release: 1 Benchmark Date: 25 Mar 2025 3.5 1.10.0" title="Oracle Linux 9 Security Technical Implementation Guide" notice="terms-of-use" source="STIG.DOD.MIL" fullversion="1.1" created="5/27/2025">
+  <nxFileLineRule dscresourcemodule="nx">
+    <Rule id="V-271498" severity="medium" conversionstatus="pass" title="SRG-OS-000480-GPOS-00227" dscresource="nxFileLine">
+      <ContainsLine>All=p+i+n+u+g+s+m+S+sha512+acl+xattrs+selinux</ContainsLine>
+      <Description>Fixture: an ordinary rule, so this STIG does not convert to nothing at all -
+      the point being pinned is that the three Permission rules below convert to nothing, not
+      that the whole role is empty.</Description>
+      <DoesNotContainPattern>#\s*All\s*=\s*p+i+n+u+g+s+m+S+sha512+acl+xattrs+selinux</DoesNotContainPattern>
+      <DuplicateOf />
+      <FilePath>/etc/aide.conf</FilePath>
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <LegacyId>
+      </LegacyId>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+      <RawString>Verify that OL 9 uses a file integrity tool configured with FIPS 140-3-approved cryptographic hashes.</RawString>
+    </Rule>
+    <Rule id="V-271572" severity="medium" conversionstatus="pass" title="SRG-OS-000392-GPOS-00172" dscresource="nxFileLine">
+      <ContainsLine>-w /var/log/tallylog -p wa -k logins</ContainsLine>
+      <Description>Fixture: ContainsLine's word-separators are U+00A0, not an ordinary space - the
+      only hit across all in-scope nxFileLine rules' ContainsLine fields. See #90.</Description>
+      <DoesNotContainPattern>#\s*-w\s*/var/log/tallylog\s*-p\s*wa\s*-k\s*logins</DoesNotContainPattern>
+      <DuplicateOf />
+      <FilePath>/etc/audit/rules.d/audit.rules</FilePath>
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <LegacyId>
+      </LegacyId>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+      <RawString>Verify that OL 9 generates audit records for all account creations, modifications, disabling, and termination events that affect /var/log/tallylog.</RawString>
+    </Rule>
+  </nxFileLineRule>
+  <PermissionRule dscresourcemodule="AccessControlDsc">
+    <Rule id="V-271778" severity="medium" conversionstatus="pass" title="SRG-OS-000480-GPOS-00227" dscresource="None">
+      <AccessControlEntry />
+      <Description>Fixture: an unparsed Permission rule with no AccessControlEntry - converts to
+      nothing, since there is no Linux Permission generator and the Windows one's own foreach over
+      AccessControlEntry.Entry yields zero tasks regardless.</Description>
+      <DuplicateOf />
+      <Force>True</Force>
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <LegacyId>
+      </LegacyId>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+      <Path />
+      <RawString>Verify that OL 9 configures permissions of the "/etc/ssh/sshd_config" file.</RawString>
+    </Rule>
+    <Rule id="V-271827" severity="medium" conversionstatus="pass" title="SRG-OS-000480-GPOS-00227" dscresource="None">
+      <AccessControlEntry />
+      <Description>Fixture: a second unparsed Permission rule, marked a duplicate of V-271778.</Description>
+      <DuplicateOf>V-271778</DuplicateOf>
+      <Force>True</Force>
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <LegacyId>
+      </LegacyId>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+      <Path />
+      <RawString>Verify that OL 9 configures permissions of the cron directories.</RawString>
+    </Rule>
+    <Rule id="V-271830" severity="medium" conversionstatus="pass" title="SRG-OS-000480-GPOS-00227" dscresource="None">
+      <AccessControlEntry />
+      <Description>Fixture: a third unparsed Permission rule, also marked a duplicate of V-271778.</Description>
+      <DuplicateOf>V-271778</DuplicateOf>
+      <Force>True</Force>
+      <IsNullOrEmpty>False</IsNullOrEmpty>
+      <LegacyId>
+      </LegacyId>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+      <Path />
+      <RawString>Verify that OL 9 configures permissions of /etc/crontab.</RawString>
+    </Rule>
+  </PermissionRule>
+</DISASTIG>

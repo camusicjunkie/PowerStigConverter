@@ -32,6 +32,9 @@ BeforeAll {
             # Kept apart as well as joined: the role-variable assert is repeated per severity file,
             # so a case has to be able to look inside one rather than at all three at once.
             TaskFile = $taskFile
+            # The hand-editable scaffold file itself, for the two cases only a real conversion can
+            # show: which OS assertion Plaster picked, and that no Server Core fact was set.
+            TaskMain = Get-Content (Join-Path $role.TaskPath 'main.yml') -Raw
             Defaults = (Get-ChildItem $role.DefaultPath -Filter '*.yml' | Get-Content -Raw) -join "`n"
             # SslSettings is the one rule type whose work lands outside tasks/, so this reads the
             # handler files too.
@@ -55,6 +58,12 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
         # their value to the organisation.
         $script:sql2016 = Get-RoleContent -StigName 'SqlServer-2016-Instance' -RoleName 'sql_2016_cover_role'
         $script:sql2022 = Get-RoleContent -StigName 'SqlServer-2022-Instance' -RoleName 'sql_2022_cover_role'
+        # Three Linux fixtures: RHEL-9 carries the organization-value and unparsed nxFileLine
+        # rules plus V-257779's banner; OracleLinux-8 is the only in-scope product carrying
+        # nxService; OracleLinux-9 adds the 3 unparsed Permission rules. See #86.
+        $script:rhel = Get-RoleContent -StigName 'RHEL-9' -RoleName 'rhel_cover_role'
+        $script:ol8 = Get-RoleContent -StigName 'OracleLinux-8' -RoleName 'ol8_cover_role'
+        $script:ol9 = Get-RoleContent -StigName 'OracleLinux-9' -RoleName 'ol9_cover_role'
     }
 
     It 'converts an <RuleType> rule into <Module>' -ForEach @(
@@ -395,6 +404,156 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
 
         It 'warns about nothing in the 2016 STIG, whose scripting variable is bound' {
             @($sql2016.Warnings).Count | Should-Be 0
+        }
+    }
+}
+
+# RHEL-9-2.8, OracleLinux-8-2.4 and OracleLinux-9-1.1 - the first fixtures targeting a Linux host
+# rather than a Windows one. See map #78 and #86.
+Describe 'New-AnsiblePlaybook for the Linux rule types' {
+
+    Context 'nxFileLine, reaching lineinfile for an ordinary rule' {
+
+        It 'ports ContainsLine and DoesNotContainPattern to line and regexp' {
+            $rhel.Tasks | Should-BeLikeString '*ansible.builtin.lineinfile*'
+            $rhel.Tasks | Should-BeLikeString '*path: /etc/default/grub*'
+            $rhel.Tasks | Should-BeLikeString '*line: GRUB_CMDLINE_LINUX="vsyscall=none"*'
+        }
+
+        It 'reaches lineinfile from OracleLinux-8 too, not only RHEL-9' {
+            $ol8.Tasks | Should-BeLikeString '*ansible.builtin.lineinfile*'
+            $ol8.Tasks | Should-BeLikeString '*path: /proc/sys/crypto/fips_enabled*'
+        }
+    }
+
+    # V-257779's DoD banner: lineinfile cannot express a multi-line value. See #91.
+    Context 'nxFileLine, reaching copy for the one rule whose ContainsLine is multi-line' {
+
+        It 'writes the whole banner through copy, not lineinfile' {
+            $rhel.TaskFile.cat2 | Should-BeLikeString '*ansible.builtin.copy*'
+            $rhel.TaskFile.cat2 | Should-BeLikeString '*dest: /etc/issue*'
+            $rhel.TaskFile.cat2 | Should-MatchString '(?m)^\s*content: \|-'
+        }
+
+        It 'gives it generic wording rather than inlining the banner' {
+            $rhel.Tasks | Should-BeLikeString '*V-257779 | MEDIUM | Ensure issue contains the required banner text*'
+        }
+    }
+
+    # OracleLinux-8-2.4 is the only in-scope product carrying nxService. See ADR 0008.
+    Context 'nxService, reaching systemd_service' {
+
+        It 'ports Name and the boolean Enabled, omitting the blank State' {
+            $ol8.Tasks | Should-BeLikeString '*ansible.builtin.systemd_service*'
+            $ol8.Tasks | Should-BeLikeString '*name: kdump*'
+            $ol8.Tasks | Should-BeLikeString '*enabled: false*'
+        }
+
+        It 'converts the second in-scope rule too' {
+            $ol8.Tasks | Should-BeLikeString '*name: autofs*'
+        }
+    }
+
+    # V-257945.a is the organization-value half of a sub-rule group; .b is ordinary and shares its
+    # FilePath, so both land in one block named for the one leaf. See ADR 0009.
+    Context 'a value the organization decides' {
+
+        It 'interpolates a defaults/ variable rather than inlining a literal' {
+            $rhel.Defaults | Should-BeLikeString '*stig_rhel_9_257945_a_containsline: server 0.us.pool.ntp.mil iburst maxpoll 16*'
+            $rhel.Tasks | Should-BeLikeString '*{{ stig_rhel_9_257945_a_containsline }}*'
+            $rhel.Tasks | Should-BeLikeString '*{{ stig_rhel_9_257945_a_doesnotcontainpattern }}*'
+        }
+
+        It 'guards nothing, because the fixture''s org settings answer the value' {
+            $rhel.Tasks | Should-NotBeLikeString '*Assert the organization values*'
+        }
+
+        It 'puts both sub-rules in one block named for the shared file' {
+            $rhel.Tasks | Should-BeLikeString '*V-257945 | MEDIUM | chrony.conf*'
+        }
+    }
+
+    # ADR 0009's skip-and-warn guard - each of the four conditions, seen through a real
+    # conversion rather than the generator's own direct test.
+    Context 'rules PowerStig could not have meant as a line to write' {
+
+        It 'skips the sub-rule whose FilePath is a directory and warns why' {
+            $rhel.Tasks | Should-NotBeLikeString '*V-258039.b*'
+            ($rhel.Warnings -join "`n") | Should-BeLikeString '*V-258039.b*directory*'
+        }
+
+        It 'still converts the ordinary sub-rule sharing that group' {
+            $rhel.Tasks | Should-BeLikeString '*V-258039.a*'
+        }
+
+        It 'discards the unparsed duplicate rule through the existing duplicate skip, without a task or a warning of its own' {
+            $rhel.Tasks | Should-NotBeLikeString '*V-258139*'
+        }
+
+        It 'skips a DoesNotContainPattern that compiles in no regex engine and warns why' {
+            $ol8.Tasks | Should-NotBeLikeString '*V-248723.d*'
+            ($ol8.Warnings -join "`n") | Should-BeLikeString '*V-248723.d*regular expression*'
+        }
+
+        It 'skips a ContainsLine carrying a non-ASCII character and warns why' {
+            $ol9.Tasks | Should-NotBeLikeString '*V-271572*'
+            ($ol9.Warnings -join "`n") | Should-BeLikeString '*V-271572*non-ASCII*'
+        }
+
+        It 'still converts the ordinary rule alongside it, so the STIG does not convert to nothing' {
+            $ol9.Tasks | Should-BeLikeString '*V-271498*'
+        }
+    }
+
+    # OracleLinux-9-1.1's three unparsed Permission rules: no Linux Permission generator exists,
+    # and each has an empty AccessControlEntry, so the Windows generator's own foreach yields
+    # nothing even if the dispatcher ever routed a Linux rule to it. See the map's Notes.
+    Context 'the three unparsed Permission rules OracleLinux-9 carries' {
+
+        It 'produces no win_acl task and no task named for any of them' {
+            $ol9.Tasks | Should-NotBeLikeString '*win_acl*'
+            $ol9.Tasks | Should-NotBeLikeString '*V-271778*'
+            $ol9.Tasks | Should-NotBeLikeString '*V-271827*'
+            $ol9.Tasks | Should-NotBeLikeString '*V-271830*'
+        }
+
+        It 'warns about none of them, since duplicate and empty-entry rules are silent skips' {
+            ($ol9.Warnings -join "`n") | Should-NotBeLikeString '*V-2718*'
+            ($ol9.Warnings -join "`n") | Should-NotBeLikeString '*V-2717*'
+        }
+    }
+
+    # ADR 0006/0007: every Linux task escalates, and it is set inside the adapter's own Body.
+    Context 'become, set by the adapter rather than a role-level default' {
+
+        It 'escalates every nxFileLine and nxService task' {
+            $rhel.Tasks | Should-MatchString '(?m)^\s*become: true'
+            $ol8.Tasks | Should-MatchString '(?m)^\s*become: true'
+        }
+    }
+
+    # ADR 0007: the Linux role gets its own scaffolding - a different OS assertion, no Server
+    # Core fact, no reboot handler.
+    Context 'the Linux role scaffolding' {
+
+        It 'asserts the RedHat family and the STIG''s own major version, not Windows' {
+            $rhel.TaskMain | Should-BeLikeString "*ansible_os_family == 'RedHat'*"
+            $rhel.TaskMain | Should-BeLikeString "*ansible_distribution_major_version == '9'*"
+            $rhel.TaskMain | Should-NotBeLikeString '*Windows*'
+        }
+
+        It 'tells RHEL and OracleLinux apart by major version, not distribution name alone' {
+            $ol8.TaskMain | Should-BeLikeString "*ansible_distribution_major_version == '8'*"
+            $ol9.TaskMain | Should-BeLikeString "*ansible_distribution_major_version == '9'*"
+        }
+
+        It 'sets no Server Core fact, which does not exist on Linux' {
+            $rhel.TaskMain | Should-NotBeLikeString '*Server Core*'
+            $rhel.Defaults | Should-NotBeLikeString '*server_core*'
+        }
+
+        It 'scaffolds no reboot handler, since no in-scope Linux rule notifies one' {
+            $rhel.HandlerMain | Should-NotBeLikeString '*win_reboot*'
         }
     }
 }

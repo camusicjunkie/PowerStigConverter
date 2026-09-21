@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    This fixture's rules all carry their own values, so there is nothing here for the
+    organisation to decide. The file still exists because PowerStig ships a name/org pair for
+    every STIG.
+-->
+<OrganizationalSettings fullversion="2.4">
+</OrganizationalSettings>
