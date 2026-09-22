@@ -25,6 +25,7 @@ Describe 'Get-PowerStigFile' {
             $files = Get-StigFile -Type Name -Path $fixtureRoot
 
             $files.Name | Should-BeCollection @(
+                    'Google-Chrome-2.11.xml'
                     'IISServer-10.0.xml'
                     'IISSite-10.0.xml'
                     'OracleLinux-8-2.4.xml'

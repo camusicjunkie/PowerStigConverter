@@ -75,6 +75,10 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
         # defects rather than merely-unproven shapes, split out as #100 and #101 and now fixed.
         $script:client10 = Get-RoleContent -StigName 'WindowsClient-10' -RoleName 'client10_role'
         $script:client11 = Get-RoleContent -StigName 'WindowsClient-11' -RoleName 'client11_role'
+        # Google-Chrome-2.11: real trimmed data, surveyed for #103's map. Chrome carries only the
+        # two rule types every prior Windows map has already proven; this fixture is what shows
+        # dispatch actually reaches both from Chrome's own real data.
+        $script:chrome = Get-RoleContent -StigName 'Google-Chrome' -RoleName 'chrome_role'
     }
 
     It 'converts an <RuleType> rule into <Module>' -ForEach @(
@@ -137,17 +141,20 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
         @{ RuleType = 'Service'; Module = 'ansible.windows.win_service_info'; Role = 'client11' }
         @{ RuleType = 'UserRight'; Module = 'ansible.windows.win_user_right'; Role = 'client11' }
         @{ RuleType = 'WindowsFeature'; Module = 'ansible.windows.win_feature'; Role = 'client11' }
+        # Google-Chrome: both rule types the product carries, dispatched from real data. See #103.
+        @{ RuleType = 'Registry'; Module = 'ansible.windows.win_regedit'; Role = 'chrome' }
     ) {
         (Get-Variable -Name $Role -ValueOnly).Tasks | Should-BeLikeString "*$Module*"
     }
 
     # Document and Manual produce nothing for every product; the fixture's own rule ids proving
-    # that for WindowsServer-2025 and WindowsClient-10/-11 too.
+    # that for WindowsServer-2025, WindowsClient-10/-11 and Google-Chrome too.
     It '<Role> produces no task for its Document or Manual rule' -ForEach @(
         @{ Role = 'dc2025' }
         @{ Role = 'ms2025' }
         @{ Role = 'client10' }
         @{ Role = 'client11' }
+        @{ Role = 'chrome' }
     ) {
         $tasks = (Get-Variable -Name $Role -ValueOnly).Tasks
         switch ($Role) {
@@ -159,10 +166,28 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
                 $tasks | Should-NotBeLikeString '*V-253268*'
                 $tasks | Should-NotBeLikeString '*V-253254*'
             }
+            'chrome' {
+                $tasks | Should-NotBeLikeString '*V-221584*'
+            }
             default {
                 $tasks | Should-NotBeLikeString '*V-277982*'
                 $tasks | Should-NotBeLikeString '*V-277985*'
             }
+        }
+    }
+
+    # #103's map asked whether the real Chrome data agrees with the Registry generator's shape
+    # field for field. It does, including the one field WindowsClient's registry fixture never
+    # exercised: a real Registry rule whose value the organisation decides.
+    Context 'Google-Chrome, whose survey found nothing disagreeing with the existing Registry generator' {
+
+        It 'references the organisation''s answer for the one registry rule that leaves its value unset' {
+            $chrome.Defaults | Should-BeLikeString '*stig_google_chrome_221563_1: oiigbmnaadbkfbmpbfijlflahbdbdgdf*'
+            $chrome.Tasks | Should-BeLikeString '*{{ stig_google_chrome_221563_1 }}*'
+        }
+
+        It 'dispatches the real Registry dscresource variant, not only RegistryPolicyFile' {
+            $chrome.Tasks | Should-BeLikeString '*URLBlocklist*'
         }
     }
 

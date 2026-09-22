@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Fixture organisational settings, answering the one rule in the sibling fixture whose
+    OrganizationValueRequired is True.
+-->
+<OrganizationalSettings fullversion="2.11">
+  <OrganizationalSetting id="V-221563" ValueData="oiigbmnaadbkfbmpbfijlflahbdbdgdf" />
+</OrganizationalSettings>
