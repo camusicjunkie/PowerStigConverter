@@ -81,6 +81,16 @@ Describe 'Build-AnsibleServiceTask' {
 
             $task.block[1].'ansible.builtin.assert'.that | Should-BeLikeString '*is stopped'
         }
+
+        # Missing/unrecognized ServiceState must not silently fall back to 'started' - that is
+        # the exact wrong-direction failure #100 fixed. See docs/research/0100-servicerule-state-survey.md.
+        It 'throws rather than guessing a direction when ServiceState is missing' {
+            { Get-ServiceTask -Rule (New-ServiceRule -ServiceState $null) } | Should-Throw
+        }
+
+        It 'throws rather than guessing a direction for an unrecognized ServiceState' {
+            { Get-ServiceTask -Rule (New-ServiceRule -ServiceState 'Paused') } | Should-Throw
+        }
     }
 
     # Service is one of two rule types whose task needs more than one field, so both the name and

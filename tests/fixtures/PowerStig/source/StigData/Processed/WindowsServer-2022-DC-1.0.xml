@@ -70,6 +70,7 @@
       <OrganizationValueRequired>True</OrganizationValueRequired>
       <OrganizationValueTestString />
       <ServiceName />
+      <ServiceState>Running</ServiceState>
       <StartupType />
     </Rule>
   </ServiceRule>

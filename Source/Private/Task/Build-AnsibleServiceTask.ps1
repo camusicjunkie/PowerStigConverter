@@ -14,7 +14,11 @@ function Build-AnsibleServiceTask {
     # unlike ServiceName/StartupType it carries no Required entry in OrganizationData.psd1, so it
     # is read straight off the rule rather than through $Resolution. win_service_info reports
     # 'started', not PowerStig's 'Running'. See #100.
-    $state = if ($Rule.ServiceState -eq 'Stopped') { 'stopped' } else { 'started' }
+    $state = switch ($Rule.ServiceState) {
+        'Running' { 'started' }
+        'Stopped' { 'stopped' }
+        default { throw "$($Rule.Id): unrecognized ServiceState '$($Rule.ServiceState)'" }
+    }
 
     @{
         Task = @(
