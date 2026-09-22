@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Fixture organisational settings, answering the two rules in the sibling fixture whose
+    OrganizationValueRequired is True.
+-->
+<OrganizationalSettings fullversion="3.6">
+  <OrganizationalSetting id="V-220739" PolicyValue="15" />
+  <OrganizationalSetting id="V-220903.a" Location="Cert:\LocalMachine\Root" />
+</OrganizationalSettings>

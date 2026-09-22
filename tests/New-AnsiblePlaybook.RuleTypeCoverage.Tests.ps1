@@ -69,6 +69,12 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
         # product has.
         $script:dc2025 = Get-RoleContent -StigName 'WindowsServer-2025-DC' -RoleName 'dc2025_role'
         $script:ms2025 = Get-RoleContent -StigName 'WindowsServer-2025-MS' -RoleName 'ms2025_role'
+        # WindowsClient-10-3.6/WindowsClient-11-2.7: real trimmed data, surveyed against the
+        # WindowsServer generators' shape for #99's map (#98). Both fixtures carry a real rule of
+        # every one of the twelve rule types the product has; the survey found two real generator
+        # defects rather than merely-unproven shapes, split out as #100 and #101 and now fixed.
+        $script:client10 = Get-RoleContent -StigName 'WindowsClient-10' -RoleName 'client10_role'
+        $script:client11 = Get-RoleContent -StigName 'WindowsClient-11' -RoleName 'client11_role'
     }
 
     It 'converts an <RuleType> rule into <Module>' -ForEach @(
@@ -109,19 +115,79 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
         @{ RuleType = 'SecurityOption'; Module = 'community.windows.win_security_policy'; Role = 'ms2025' }
         @{ RuleType = 'UserRight'; Module = 'ansible.windows.win_user_right'; Role = 'ms2025' }
         @{ RuleType = 'WindowsFeature'; Module = 'ansible.windows.win_feature'; Role = 'ms2025' }
+        # WindowsClient-10/-11: every one of the twelve rule types the products carry, dispatched
+        # from real data. See #98 and #99.
+        @{ RuleType = 'AccountPolicy'; Module = 'community.windows.win_security_policy'; Role = 'client10' }
+        @{ RuleType = 'AuditPolicy'; Module = 'community.windows.win_audit_policy_system'; Role = 'client10' }
+        @{ RuleType = 'AuditSetting'; Module = 'AuditSetting'; Role = 'client10' }
+        @{ RuleType = 'Permission'; Module = 'ansible.windows.win_acl'; Role = 'client10' }
+        @{ RuleType = 'Registry'; Module = 'ansible.windows.win_regedit'; Role = 'client10' }
+        @{ RuleType = 'RootCertificate'; Module = 'community.windows.win_certificate_info'; Role = 'client10' }
+        @{ RuleType = 'SecurityOption'; Module = 'community.windows.win_security_policy'; Role = 'client10' }
+        @{ RuleType = 'Service'; Module = 'ansible.windows.win_service_info'; Role = 'client10' }
+        @{ RuleType = 'UserRight'; Module = 'ansible.windows.win_user_right'; Role = 'client10' }
+        @{ RuleType = 'WindowsFeature'; Module = 'ansible.windows.win_feature'; Role = 'client10' }
+        @{ RuleType = 'AccountPolicy'; Module = 'community.windows.win_security_policy'; Role = 'client11' }
+        @{ RuleType = 'AuditPolicy'; Module = 'community.windows.win_audit_policy_system'; Role = 'client11' }
+        @{ RuleType = 'AuditSetting'; Module = 'AuditSetting'; Role = 'client11' }
+        @{ RuleType = 'Permission'; Module = 'ansible.windows.win_acl'; Role = 'client11' }
+        @{ RuleType = 'Registry'; Module = 'ansible.windows.win_regedit'; Role = 'client11' }
+        @{ RuleType = 'RootCertificate'; Module = 'community.windows.win_certificate_info'; Role = 'client11' }
+        @{ RuleType = 'SecurityOption'; Module = 'community.windows.win_security_policy'; Role = 'client11' }
+        @{ RuleType = 'Service'; Module = 'ansible.windows.win_service_info'; Role = 'client11' }
+        @{ RuleType = 'UserRight'; Module = 'ansible.windows.win_user_right'; Role = 'client11' }
+        @{ RuleType = 'WindowsFeature'; Module = 'ansible.windows.win_feature'; Role = 'client11' }
     ) {
         (Get-Variable -Name $Role -ValueOnly).Tasks | Should-BeLikeString "*$Module*"
     }
 
     # Document and Manual produce nothing for every product; the fixture's own rule ids proving
-    # that for WindowsServer-2025 too.
+    # that for WindowsServer-2025 and WindowsClient-10/-11 too.
     It '<Role> produces no task for its Document or Manual rule' -ForEach @(
         @{ Role = 'dc2025' }
         @{ Role = 'ms2025' }
+        @{ Role = 'client10' }
+        @{ Role = 'client11' }
     ) {
         $tasks = (Get-Variable -Name $Role -ValueOnly).Tasks
-        $tasks | Should-NotBeLikeString '*V-277982*'
-        $tasks | Should-NotBeLikeString '*V-277985*'
+        switch ($Role) {
+            'client10' {
+                $tasks | Should-NotBeLikeString '*V-220701*'
+                $tasks | Should-NotBeLikeString '*V-220697*'
+            }
+            'client11' {
+                $tasks | Should-NotBeLikeString '*V-253268*'
+                $tasks | Should-NotBeLikeString '*V-253254*'
+            }
+            default {
+                $tasks | Should-NotBeLikeString '*V-277982*'
+                $tasks | Should-NotBeLikeString '*V-277985*'
+            }
+        }
+    }
+
+    # #99's map asked whether the real WindowsClient-10/-11 data agrees with the existing
+    # generators' shape field for field. Ten of the twelve rule types did; Service and UserRight
+    # did not, and #100/#101 fixed both. These two shapes are what a real conversion proves that
+    # the generators' own direct tests cannot: the rule as PowerStig actually ships it, reaching
+    # the role through dispatch rather than a hand-built test double.
+    Context 'the two shapes the WindowsClient-10/-11 survey found disagreeing with the existing generators' {
+
+        It 'asserts <Role>''s service in its real Stopped state, not a hardcoded "started"' -ForEach @(
+            @{ Role = 'client10' }
+            @{ Role = 'client11' }
+        ) {
+            (Get-Variable -Name $Role -ValueOnly).Tasks | Should-BeLikeString '*services.state is stopped*'
+        }
+
+        It 'recognises <Role>''s blank Identity as "nobody holds this right"' -ForEach @(
+            @{ Role = 'client10' }
+            @{ Role = 'client11' }
+        ) {
+            $tasks = (Get-Variable -Name $Role -ValueOnly).Tasks
+            $tasks | Should-BeLikeString '*Access Credential Manager as a trusted caller*'
+            $tasks | Should-MatchString '(?m)^\s*users:\s*$'
+        }
     }
 
     # #95's map asked whether the real 2025 data agrees with 2022's shape field for field. It

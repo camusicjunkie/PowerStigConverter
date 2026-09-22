@@ -160,18 +160,18 @@ Describe 'Resolve-AnsibleOrganizationValue: the value the task consumes' {
     Context 'a value the organization decides' {
 
         It 'renders a reference to the role variable rather than a literal' {
-            # Matches V-201 in the WindowsClient-11 fixture, whose org settings set it to 15.
+            # Matches V-201 in the WindowsClient-8 fixture, whose org settings set it to 15.
             $rule = [pscustomobject] @{
                 Id = 'V-201'
                 PolicyName = 'Account lockout duration'
                 PolicyValue = ''
                 OrganizationValueRequired = $true
             }
-            $orgSetting = Get-OrgSetting -StigName 'WindowsClient-11' -Path $fixtureRoot
+            $orgSetting = Get-OrgSetting -StigName 'WindowsClient-8' -Path $fixtureRoot
 
-            (Resolve-OrgValue -Rule $rule -RuleType AccountPolicy -StigName 'WindowsClient-11' `
+            (Resolve-OrgValue -Rule $rule -RuleType AccountPolicy -StigName 'WindowsClient-8' `
                 -OrganizationalSetting $orgSetting).Value |
-                Should-Be '{{ stig_client_11_201_account_lockout_duration }}'
+                Should-Be '{{ stig_client_8_201_account_lockout_duration }}'
         }
     }
 
@@ -191,11 +191,11 @@ Describe 'Resolve-AnsibleOrganizationValue: the value the task consumes' {
                 PolicyValue = ''
                 OrganizationValueRequired = $true
             }
-            $orgSetting = Get-OrgSetting -StigName 'WindowsClient-11' -Path $fixtureRoot
+            $orgSetting = Get-OrgSetting -StigName 'WindowsClient-8' -Path $fixtureRoot
 
-            (Resolve-OrgValue -Rule $rule -RuleType AccountPolicy -StigName 'WindowsClient-11' `
+            (Resolve-OrgValue -Rule $rule -RuleType AccountPolicy -StigName 'WindowsClient-8' `
                 -OrganizationalSetting $orgSetting).Value |
-                Should-Be '{{ stig_client_11_202_account_lockout_threshold }}'
+                Should-Be '{{ stig_client_8_202_account_lockout_threshold }}'
         }
 
         It 'references the variable even when the org settings file has no entry at all' {
@@ -205,11 +205,11 @@ Describe 'Resolve-AnsibleOrganizationValue: the value the task consumes' {
                 PolicyValue = ''
                 OrganizationValueRequired = $true
             }
-            $orgSetting = Get-OrgSetting -StigName 'WindowsClient-11' -Path $fixtureRoot
+            $orgSetting = Get-OrgSetting -StigName 'WindowsClient-8' -Path $fixtureRoot
 
-            (Resolve-OrgValue -Rule $rule -RuleType AccountPolicy -StigName 'WindowsClient-11' `
+            (Resolve-OrgValue -Rule $rule -RuleType AccountPolicy -StigName 'WindowsClient-8' `
                 -OrganizationalSetting $orgSetting).Value |
-                Should-Be '{{ stig_client_11_999_account_lockout_threshold }}'
+                Should-Be '{{ stig_client_8_999_account_lockout_threshold }}'
         }
     }
 

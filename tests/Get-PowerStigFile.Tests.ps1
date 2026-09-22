@@ -32,7 +32,9 @@ Describe 'Get-PowerStigFile' {
                     'RHEL-9-2.8.xml'
                     'SqlServer-2016-Instance-3.6.xml'
                     'SqlServer-2022-Instance-1.4.xml'
-                    'WindowsClient-11-1.0.xml'
+                    'WindowsClient-10-3.6.xml'
+                    'WindowsClient-11-2.7.xml'
+                    'WindowsClient-8-1.0.xml'
                     'WindowsServer-2022-DC-1.0.xml'
                     'WindowsServer-2022-MS-2.7.xml'
                     'WindowsServer-2025-DC-1.1.xml'
@@ -98,7 +100,7 @@ Describe 'Get-PowerStigFile' {
         It 'falls back to the only release there is when asked for the previous one' {
             $files = Get-StigFile -Type Name -Path $fixtureRoot -Previous
 
-            $files.Name | Should-ContainCollection @('WindowsClient-11-1.0.xml')
+            $files.Name | Should-ContainCollection @('WindowsClient-8-1.0.xml')
         }
     }
 

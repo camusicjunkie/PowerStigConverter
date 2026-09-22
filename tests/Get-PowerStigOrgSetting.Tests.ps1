@@ -23,14 +23,14 @@ Describe 'Get-PowerStigOrgSetting' {
     Context 'loading a STIG org settings file' {
 
         It 'keys the settings by rule id' {
-            $settings = Get-OrgSetting -StigName 'WindowsClient-11' -Path $fixtureRoot
+            $settings = Get-OrgSetting -StigName 'WindowsClient-8' -Path $fixtureRoot
 
             $settings.Keys | Should-ContainCollection 'V-201'
             $settings.Keys | Should-ContainCollection 'V-202'
         }
 
         It 'keeps the node so a caller can read whichever attributes its rule type needs' {
-            $settings = Get-OrgSetting -StigName 'WindowsClient-11' -Path $fixtureRoot
+            $settings = Get-OrgSetting -StigName 'WindowsClient-8' -Path $fixtureRoot
 
             $settings['V-201'].PolicyValue | Should-Be '15'
         }
@@ -39,14 +39,14 @@ Describe 'Get-PowerStigOrgSetting' {
         # absence - the entry is there, and the distinction is what lets an unanswered setting
         # be reported differently from a missing one.
         It 'keeps an entry whose value is blank' {
-            $settings = Get-OrgSetting -StigName 'WindowsClient-11' -Path $fixtureRoot
+            $settings = Get-OrgSetting -StigName 'WindowsClient-8' -Path $fixtureRoot
 
             $settings.ContainsKey('V-202') | Should-BeTrue
             $settings['V-202'].PolicyValue | Should-Be ''
         }
 
         It 'has no entry for a rule the file does not cover' {
-            $settings = Get-OrgSetting -StigName 'WindowsClient-11' -Path $fixtureRoot
+            $settings = Get-OrgSetting -StigName 'WindowsClient-8' -Path $fixtureRoot
 
             $settings.ContainsKey('V-999') | Should-BeFalse
         }

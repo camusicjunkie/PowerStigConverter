@@ -266,10 +266,10 @@ Describe 'New-AnsiblePlaybook' {
     Context 'values the implementing site has to decide' {
 
         BeforeAll {
-            # The WindowsClient-11 fixture needs an organisation value for V-201, which its org
+            # The WindowsClient-8 fixture needs an organisation value for V-201, which its org
             # settings file sets to 15. It also leaves V-202 unanswered on purpose, so the
             # command refuses to generate without the opt-out.
-            $script:orgRole = New-AnsiblePlaybook -StigName 'WindowsClient-11' -Path $fixtureRoot `
+            $script:orgRole = New-AnsiblePlaybook -StigName 'WindowsClient-8' -Path $fixtureRoot `
                 -OutputPath (Join-Path $TestDrive 'org') -RoleName 'org_role' `
                 -AllowIncompleteOrganizationValue `
                 -WarningAction SilentlyContinue 6>$null
@@ -277,12 +277,12 @@ Describe 'New-AnsiblePlaybook' {
 
         It 'has the task reference the role variable rather than a literal value' {
             Get-Content -Path (Join-Path $orgRole.TaskPath 'cat2.yml') -Raw |
-                Should-BeLikeString '*stig_client_11_201_account_lockout_duration*'
+                Should-BeLikeString '*stig_client_8_201_account_lockout_duration*'
         }
 
         It 'defaults that variable to the value from the org settings at the given path' {
             Get-Content -Path (Join-Path $orgRole.DefaultPath 'main_default_org.yml') -Raw |
-                Should-BeLikeString '*stig_client_11_201_account_lockout_duration: 15*'
+                Should-BeLikeString '*stig_client_8_201_account_lockout_duration: 15*'
         }
     }
 
@@ -294,9 +294,9 @@ Describe 'New-AnsiblePlaybook' {
         BeforeAll {
             $script:refusedOutput = Join-Path $TestDrive 'refused'
 
-            # V-202 in the WindowsClient-11 fixture is deliberately blank.
+            # V-202 in the WindowsClient-8 fixture is deliberately blank.
             $script:refusal = try {
-                New-AnsiblePlaybook -StigName 'WindowsClient-11' -Path $fixtureRoot `
+                New-AnsiblePlaybook -StigName 'WindowsClient-8' -Path $fixtureRoot `
                     -OutputPath $refusedOutput -RoleName 'refused_role' `
                     -WarningAction SilentlyContinue 6>$null
                 $null
@@ -334,7 +334,7 @@ Describe 'New-AnsiblePlaybook' {
         }
 
         It 'generates anyway, with a warning, when the caller allows it' {
-            $allowed = New-AnsiblePlaybook -StigName 'WindowsClient-11' -Path $fixtureRoot `
+            $allowed = New-AnsiblePlaybook -StigName 'WindowsClient-8' -Path $fixtureRoot `
                 -OutputPath (Join-Path $TestDrive 'allowed') -RoleName 'allowed_role' `
                 -AllowIncompleteOrganizationValue `
                 -WarningVariable warning -WarningAction SilentlyContinue 6>$null
@@ -359,7 +359,7 @@ Describe 'New-AnsiblePlaybook' {
                 $saved = $script:ruleTypeOsFamily.AccountPolicy
                 $script:ruleTypeOsFamily.AccountPolicy = 'RedHat'
                 try {
-                    New-AnsiblePlaybook -StigName 'WindowsClient-11' -Path $FixtureRoot `
+                    New-AnsiblePlaybook -StigName 'WindowsClient-8' -Path $FixtureRoot `
                         -OutputPath $OutputPath -RoleName 'os_excluded_role' `
                         -WarningAction SilentlyContinue 6>$null
                 }
@@ -377,7 +377,7 @@ Describe 'New-AnsiblePlaybook' {
     Context 'what -AllowIncompleteOrganizationValue produces' {
 
         BeforeAll {
-            $script:incomplete = New-AnsiblePlaybook -StigName 'WindowsClient-11' -Path $fixtureRoot `
+            $script:incomplete = New-AnsiblePlaybook -StigName 'WindowsClient-8' -Path $fixtureRoot `
                 -OutputPath (Join-Path $TestDrive 'incomplete') -RoleName 'incomplete_role' `
                 -AllowIncompleteOrganizationValue `
                 -WarningAction SilentlyContinue 6>$null
@@ -387,20 +387,20 @@ Describe 'New-AnsiblePlaybook' {
         }
 
         It 'declares the unanswered variable blank for the operator to fill in' {
-            $incompleteOrg | Should-BeLikeString '*stig_client_11_202_account_lockout_threshold:*'
+            $incompleteOrg | Should-BeLikeString '*stig_client_8_202_account_lockout_threshold:*'
         }
 
         It 'has the task reference it, so filling defaults/ in finishes the role' {
             # Declaring a variable that no task reads is what made filling it in do nothing.
-            $incompleteTasks | Should-BeLikeString '*{{ stig_client_11_202_account_lockout_threshold }}*'
+            $incompleteTasks | Should-BeLikeString '*{{ stig_client_8_202_account_lockout_threshold }}*'
         }
 
         It 'guards it with an assert, so an unfilled value fails the play rather than setting nothing' {
-            $incompleteTasks | Should-BeLikeString '*stig_client_11_202_account_lockout_threshold | default("", true) | length > 0*'
+            $incompleteTasks | Should-BeLikeString '*stig_client_8_202_account_lockout_threshold | default("", true) | length > 0*'
         }
 
         It 'does not guard the value that was answered' {
-            $incompleteTasks | Should-NotBeLikeString '*stig_client_11_201_account_lockout_duration | default*'
+            $incompleteTasks | Should-NotBeLikeString '*stig_client_8_201_account_lockout_duration | default*'
         }
     }
 
