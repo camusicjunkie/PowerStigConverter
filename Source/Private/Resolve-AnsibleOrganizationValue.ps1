@@ -141,7 +141,10 @@ function Resolve-AnsibleOrganizationValue {
         # if it were quoted. The section is what tells the two apart.
         if ($entry['Section'] -eq 'Registry Values') { $mapped } else { [int] $mapped }
     }
-    elseif ($data['Empty'] -and $Rule.($data['Value']) -eq $data['Empty']) { @() }
+    # PowerStig spells "nobody holds this right" two ways across revisions: the literal string
+    # this rule type's 'Empty' names (e.g. UserRight's 'NULL', an already-superseded convention -
+    # see #101), or, in every currently-shipped revision, a blank Identity outright.
+    elseif ($data['Empty'] -and ($Rule.($data['Value']) -eq $data['Empty'] -or [string]::IsNullOrEmpty($Rule.($data['Value'])))) { @() }
     # Split here so both halves hand back the same shape; the comma keeps one element an array.
     elseif ($data['List'] -contains $data['Value']) {
         , ($Rule.($data['Value']) -split ',')

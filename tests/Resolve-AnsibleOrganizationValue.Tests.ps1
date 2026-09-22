@@ -262,6 +262,35 @@ Describe 'Resolve-AnsibleOrganizationValue: the value the task consumes' {
             $logging.LogTarget -is [array] | Should-BeTrue
         }
 
+        # PowerStig spells "nobody holds this right" two ways across revisions - the archived
+        # literal 'NULL' (WindowsServer-2016-DC/-MS-2.9 only) and, in every currently-shipped
+        # revision, a blank Identity. See #101.
+        It 'resolves an empty list for the archived NULL "nobody" convention' {
+            $rule = [pscustomobject] @{
+                Id = 'V-104'
+                DisplayName = 'Access this computer from the network'
+                Identity = 'NULL'
+                OrganizationValueRequired = $false
+            }
+
+            $identity = (Resolve-OrgValue -Rule $rule -RuleType UserRight).Value
+
+            @($identity).Count | Should-Be 0
+        }
+
+        It 'resolves an empty list for a blank Identity meaning "nobody"' {
+            $rule = [pscustomobject] @{
+                Id = 'V-104'
+                DisplayName = 'Access this computer from the network'
+                Identity = ''
+                OrganizationValueRequired = $false
+            }
+
+            $identity = (Resolve-OrgValue -Rule $rule -RuleType UserRight).Value
+
+            @($identity).Count | Should-Be 0
+        }
+
         It 'hands back one reference for an identity list the organization decides' {
             $rule = [pscustomobject] @{
                 Id = 'V-104'
