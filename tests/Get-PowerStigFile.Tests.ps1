@@ -28,6 +28,7 @@ Describe 'Get-PowerStigFile' {
                     'Google-Chrome-2.11.xml'
                     'IISServer-10.0.xml'
                     'IISSite-10.0.xml'
+                    'MS-Edge-2.5.xml'
                     'OracleLinux-8-2.4.xml'
                     'OracleLinux-9-1.1.xml'
                     'RHEL-9-2.8.xml'

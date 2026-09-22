@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Fixture organisational settings, answering the one rule in the sibling fixture whose
+    OrganizationValueRequired is True. Unlike Chrome's fixture, this value is copied verbatim
+    from the real PowerStig org.default.xml rather than invented - the upstream file already
+    ships an answer for V-235766.
+-->
+<OrganizationalSettings fullversion="2.5">
+  <OrganizationalSetting id="V-235766" ValueData="3" />
+</OrganizationalSettings>

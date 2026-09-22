@@ -79,6 +79,9 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
         # two rule types every prior Windows map has already proven; this fixture is what shows
         # dispatch actually reaches both from Chrome's own real data.
         $script:chrome = Get-RoleContent -StigName 'Google-Chrome' -RoleName 'chrome_role'
+        # MS-Edge-2.5: real trimmed data, surveyed for #103's map (#105). Edge carries a third
+        # rule type, Document, alongside the Registry and Manual shapes Chrome already proved.
+        $script:edge = Get-RoleContent -StigName 'MS-Edge' -RoleName 'edge_role'
     }
 
     It 'converts an <RuleType> rule into <Module>' -ForEach @(
@@ -143,18 +146,21 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
         @{ RuleType = 'WindowsFeature'; Module = 'ansible.windows.win_feature'; Role = 'client11' }
         # Google-Chrome: both rule types the product carries, dispatched from real data. See #103.
         @{ RuleType = 'Registry'; Module = 'ansible.windows.win_regedit'; Role = 'chrome' }
+        # MS-Edge: its Registry rule type, dispatched from real data. See #103 and #105.
+        @{ RuleType = 'Registry'; Module = 'ansible.windows.win_regedit'; Role = 'edge' }
     ) {
         (Get-Variable -Name $Role -ValueOnly).Tasks | Should-BeLikeString "*$Module*"
     }
 
     # Document and Manual produce nothing for every product; the fixture's own rule ids proving
-    # that for WindowsServer-2025, WindowsClient-10/-11 and Google-Chrome too.
+    # that for WindowsServer-2025, WindowsClient-10/-11, Google-Chrome and MS-Edge too.
     It '<Role> produces no task for its Document or Manual rule' -ForEach @(
         @{ Role = 'dc2025' }
         @{ Role = 'ms2025' }
         @{ Role = 'client10' }
         @{ Role = 'client11' }
         @{ Role = 'chrome' }
+        @{ Role = 'edge' }
     ) {
         $tasks = (Get-Variable -Name $Role -ValueOnly).Tasks
         switch ($Role) {
@@ -169,10 +175,33 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
             'chrome' {
                 $tasks | Should-NotBeLikeString '*V-221584*'
             }
+            'edge' {
+                $tasks | Should-NotBeLikeString '*V-235722*'
+                $tasks | Should-NotBeLikeString '*V-235753*'
+                $tasks | Should-NotBeLikeString '*V-235755*'
+                $tasks | Should-NotBeLikeString '*V-235758*'
+                $tasks | Should-NotBeLikeString '*V-251694*'
+            }
             default {
                 $tasks | Should-NotBeLikeString '*V-277982*'
                 $tasks | Should-NotBeLikeString '*V-277985*'
             }
+        }
+    }
+
+    # #103's map (#105) asked whether the real Edge data agrees with the existing generators'
+    # shape field for field. It does, including the org-value case Chrome's fixture also proved -
+    # here from a rule where the real org.default.xml already answers it, rather than shipping
+    # blank the way Chrome's upstream data does.
+    Context 'MS-Edge, whose survey found nothing disagreeing with the existing Registry generator' {
+
+        It 'references the organisation''s answer for the one registry rule that leaves its value unset' {
+            $edge.Defaults | Should-BeLikeString '*stig_ms_edge_235766_trackingprevention: 3*'
+            $edge.Tasks | Should-BeLikeString '*{{ stig_ms_edge_235766_trackingprevention }}*'
+        }
+
+        It 'dispatches the real Registry dscresource variant, not only RegistryPolicyFile' {
+            $edge.Tasks | Should-BeLikeString '*ComposeInlineEnabled*'
         }
     }
 
