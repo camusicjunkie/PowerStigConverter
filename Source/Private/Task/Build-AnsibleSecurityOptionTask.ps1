@@ -5,8 +5,7 @@ function Build-AnsibleSecurityOptionTask {
     #>
     param ($Rule, $StigName, $StigId, $Resolution)
 
-    # The section and key live in SecurityOptionData.psd1, not on the rule.
-    $optionName = $Rule.OptionName -replace '/|\s', '_' -replace ':'
+    $infOption = Resolve-AnsibleInfOption -OptionName $Rule.OptionName
 
     @{
         Task = @(
@@ -14,8 +13,8 @@ function Build-AnsibleSecurityOptionTask {
                 Detail = $Rule.OptionName
                 Body = [ordered] @{
                     'community.windows.win_security_policy' = [ordered] @{
-                        'section' = $script:securityOptionData[$optionName].Section
-                        'key' = $script:securityOptionData[$optionName].Value
+                        'section' = $infOption.Section
+                        'key' = $infOption.Key
                         'value' = $Resolution.Value
                     }
                 }

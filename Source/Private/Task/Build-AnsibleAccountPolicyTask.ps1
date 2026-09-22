@@ -5,8 +5,7 @@ function Build-AnsibleAccountPolicyTask {
     #>
     param ($Rule, $StigName, $StigId, $Resolution)
 
-    # The section and key live in AccountPolicyData.psd1, not on the rule.
-    $policyName = $Rule.PolicyName -replace '/|\s', '_' -replace ':'
+    $infOption = Resolve-AnsibleInfOption -OptionName $Rule.PolicyName
     $policyValue = $Resolution.Value
     $parsedPolicyValue = if ([int32]::TryParse($policyValue, [ref] $null)) { [int] $policyValue } else { $policyValue }
 
@@ -16,8 +15,8 @@ function Build-AnsibleAccountPolicyTask {
                 Detail = $Rule.PolicyName
                 Body = [ordered] @{
                     'community.windows.win_security_policy' = [ordered] @{
-                        'section' = $script:accountPolicyData[$policyName].Section
-                        'key' = $script:accountPolicyData[$policyName].Value
+                        'section' = $infOption.Section
+                        'key' = $infOption.Key
                         'value' = $parsedPolicyValue
                     }
                 }
