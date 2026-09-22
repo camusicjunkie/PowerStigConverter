@@ -7,7 +7,7 @@ BeforeAll {
     . $PSScriptRoot/GeneratorContract.ps1
 
     function New-ServiceRule {
-        param ($Id = 'V-160', $OrganizationValueRequired = $false)
+        param ($Id = 'V-160', $OrganizationValueRequired = $false, $ServiceState = 'Running')
 
         [pscustomobject] @{
             Id = $Id
@@ -15,6 +15,7 @@ BeforeAll {
             DuplicateOf = ''
             ServiceName = 'WinDefend'
             StartupType = 'Automatic'
+            ServiceState = $ServiceState
             OrganizationValueRequired = $OrganizationValueRequired
         }
     }
@@ -62,6 +63,23 @@ Describe 'Build-AnsibleServiceTask' {
             $task = Get-ServiceTask -Rule (New-ServiceRule)
 
             $task.name | Should-Be 'V-160 | MEDIUM | Assert WinDefend service is set to Automatic'
+        }
+    }
+
+    # ServiceState is the STIG's own fixed answer (never an organization value) for which
+    # direction the assert should check. See #100.
+    Context 'ServiceState' {
+
+        It 'asserts started when the rule wants the service running' {
+            $task = Get-ServiceTask -Rule (New-ServiceRule -ServiceState 'Running')
+
+            $task.block[1].'ansible.builtin.assert'.that | Should-BeLikeString '*is started'
+        }
+
+        It 'asserts stopped when the rule wants the service stopped' {
+            $task = Get-ServiceTask -Rule (New-ServiceRule -ServiceState 'Stopped')
+
+            $task.block[1].'ansible.builtin.assert'.that | Should-BeLikeString '*is stopped'
         }
     }
 
