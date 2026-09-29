@@ -35,7 +35,8 @@ function Build-AnsibleRegistryTask {
     }
 
     @{
-        # Sub-rules of one requirement share a key, so the block is named for it.
+        # The key leaf names the block. Sub-rule halves need not share a key to share a leaf, and
+        # where even the leaf differs the name this returns is not the whole of it - see #119.
         GroupDetail = if (Test-PowerStigSubRuleId -Id $Rule.Id) { $keyLeaf } else { $Rule.ValueName }
         Task = @(
             @{

@@ -86,6 +86,10 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
         # only Registry, but it is the first product whose real data reaches the role with rules
         # the STIG says must not be present, and the first to exercise the '-All' variable prefix.
         $script:defender = Get-RoleContent -StigName 'WindowsDefender-All' -RoleName 'defender_role'
+        # WindowsFirewall-All-2.2: real trimmed data, surveyed for #110's map (#114). Firewall is
+        # the first product whose sub-rule halves write different keys rather than differing only
+        # in value, and the first whose halves are each an organisation value in their own right.
+        $script:firewall = Get-RoleContent -StigName 'WindowsFirewall-All' -RoleName 'firewall_role'
     }
 
     It 'converts an <RuleType> rule into <Module>' -ForEach @(
@@ -155,6 +159,9 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
         # WindowsDefender-All: the one rule type the product carries, dispatched from real
         # data. See #110 and #113.
         @{ RuleType = 'Registry'; Module = 'ansible.windows.win_regedit'; Role = 'defender' }
+        # WindowsFirewall-All: the one rule type the product automates, dispatched from real
+        # data. See #110 and #114.
+        @{ RuleType = 'Registry'; Module = 'ansible.windows.win_regedit'; Role = 'firewall' }
     ) {
         (Get-Variable -Name $Role -ValueOnly).Tasks | Should-BeLikeString "*$Module*"
     }
@@ -168,6 +175,7 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
         @{ Role = 'client11' }
         @{ Role = 'chrome' }
         @{ Role = 'edge' }
+        @{ Role = 'firewall' }
     ) {
         $tasks = (Get-Variable -Name $Role -ValueOnly).Tasks
         switch ($Role) {
@@ -189,6 +197,9 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
                 $tasks | Should-NotBeLikeString '*V-235758*'
                 $tasks | Should-NotBeLikeString '*V-251694*'
             }
+            'firewall' {
+                $tasks | Should-NotBeLikeString '*V-242009*'
+            }
             default {
                 $tasks | Should-NotBeLikeString '*V-277982*'
                 $tasks | Should-NotBeLikeString '*V-277985*'
@@ -196,15 +207,68 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
         }
     }
 
+    # Both products #110 mapped are '-All' ones, so the prefix ADR 0013 settled is pinned here to
+    # a converted role rather than to Get-AnsibleVariablePrefix's own test.
+    It '<Role> names every variable for the product alone, the "-All" scope contributing nothing' -ForEach @(
+        @{ Role = 'defender'; Prefix = 'stig_defender'; Unwanted = 'stig_windowsdefender_all' }
+        @{ Role = 'firewall'; Prefix = 'stig_firewall'; Unwanted = 'stig_windowsfirewall_all' }
+    ) {
+        $defaults = (Get-Variable -Name $Role -ValueOnly).Defaults
+        $defaults | Should-BeLikeString "*$($Prefix)_cat1: true*"
+        $defaults | Should-NotBeLikeString "*$Unwanted*"
+    }
+
+    # #110's map asked the same of the real Firewall data. It agrees field for field on every
+    # shape but one: the survey found a pair whose halves share no key leaf, which the map had
+    # said could not happen, and that is split out as #119 rather than settled here.
+    Context 'WindowsFirewall-All, whose survey found one shape the Registry generator had not been asked for' {
+
+        It 'collapses a sub-rule pair writing two different keys into one block, each half keeping its own path' {
+            # One block named from the key leaf the two halves share, holding both halves in
+            # order, each with the path its own half names - not the block's.
+            $firewall.Tasks | Should-MatchString (
+                # \r? before every $: the role files are written with CRLF, and .NET's multiline
+                # $ matches before the \n, not before the \r.
+                '(?ms)^- name: V-241989 \| MEDIUM \| DomainProfile\r?$.+?' +
+                'V-241989\.a \| MEDIUM \| Set EnableFirewall.+?' +
+                'path: HKEY_LOCAL_MACHINE\\SOFTWARE\\Policies\\Microsoft\\WindowsFirewall\\DomainProfile\r?$.+?' +
+                'V-241989\.b \| MEDIUM \| Set EnableFirewall.+?' +
+                'path: HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services\\SharedAccess\\Parameters\\FirewallPolicy\\DomainProfile\r?$'
+            )
+        }
+
+        # V-241990's halves do not even share a key leaf - the service key spells the private
+        # profile StandardProfile - so what its block should be called is an open question, split
+        # out as #119. Only the collapsing is asserted here; the name deliberately is not.
+        It 'collapses a pair whose halves share no key leaf into one block all the same' {
+            $firewall.Tasks | Should-MatchString (
+                '(?ms)^- name: V-241990 \| MEDIUM \|.+?' +
+                'path: HKEY_LOCAL_MACHINE\\SOFTWARE\\Policies\\Microsoft\\WindowsFirewall\\PrivateProfile\r?$.+?' +
+                'path: HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services\\SharedAccess\\Parameters\\FirewallPolicy\\StandardProfile\r?$'
+            )
+        }
+
+        It 'gives each half of an organisation-value pair its own variable, both referenced' {
+            $firewall.Defaults | Should-BeLikeString '*stig_firewall_241994_a_logfilesize: 16384*'
+            $firewall.Defaults | Should-BeLikeString '*stig_firewall_241994_b_logfilesize: 16384*'
+            $firewall.Tasks | Should-BeLikeString '*{{ stig_firewall_241994_a_logfilesize }}*'
+            $firewall.Tasks | Should-BeLikeString '*{{ stig_firewall_241994_b_logfilesize }}*'
+        }
+
+        It 'builds a plain task rather than a block for the rule that is not a sub-rule' {
+            $firewall.TaskFile['cat2'] | Should-MatchString '(?m)^- name: V-242004 \| MEDIUM \| Set AllowLocalPolicyMerge\r?$'
+        }
+
+        It 'lands its low-severity rule in cat3 and its high-severity one in cat1' {
+            $firewall.TaskFile['cat3'] | Should-BeLikeString '*V-241994*'
+            $firewall.TaskFile['cat1'] | Should-BeLikeString '*V-241992*'
+        }
+    }
+
     # #110's map asked whether the real Defender data agrees with the existing Registry
     # generator's shape field for field. It does - on the two shapes the map left to be decided
     # first (ADR 0014's Ensure=Absent, ADR 0013's '-All' prefix) as much as on the ordinary ones.
     Context 'WindowsDefender-All, whose survey found nothing disagreeing with the existing Registry generator' {
-
-        It 'names every variable for the product alone, the "-All" scope contributing nothing' {
-            $defender.Defaults | Should-BeLikeString '*stig_defender_cat1: true*'
-            $defender.Defaults | Should-NotBeLikeString '*stig_windowsdefender_all*'
-        }
 
         It 'removes the three values the STIG says must not be present, rather than writing them' {
             foreach ($id in 'V-213428', 'V-213429', 'V-213430') {

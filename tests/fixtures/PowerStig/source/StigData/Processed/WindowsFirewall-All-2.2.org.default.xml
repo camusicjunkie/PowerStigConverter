@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Fixture organisational settings, answering the one sub-rule pair in the sibling fixture whose
+    OrganizationValueRequired is True. Each half is answered in its own right, which is how the
+    real PowerStig org.default.xml ships them - it answers all six of Firewall's organisation
+    values, and both values here are copied from it verbatim.
+-->
+<OrganizationalSettings fullversion="2.2">
+  <OrganizationalSetting id="V-241994.a" ValueData="16384" />
+  <OrganizationalSetting id="V-241994.b" ValueData="16384" />
+</OrganizationalSettings>
