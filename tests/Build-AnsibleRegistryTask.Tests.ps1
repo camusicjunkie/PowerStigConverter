@@ -11,10 +11,11 @@ BeforeAll {
             $Id = 'V-170',
             $ValueData = '1',
             $ValueType = 'DWORD',
-            $OrganizationValueRequired = $false
+            $OrganizationValueRequired = $false,
+            $Ensure
         )
 
-        [pscustomobject] @{
+        $rule = [pscustomobject] @{
             Id = $Id
             Severity = 'medium'
             DuplicateOf = ''
@@ -24,6 +25,14 @@ BeforeAll {
             ValueData = $ValueData
             OrganizationValueRequired = $OrganizationValueRequired
         }
+
+        # Only when asked for, so the default rule carries no Ensure at all and the cases below
+        # can tell 'Present' from 'the field is not there'.
+        if ($PSBoundParameters.ContainsKey('Ensure')) {
+            $rule | Add-Member -NotePropertyName 'Ensure' -NotePropertyValue $Ensure
+        }
+
+        $rule
     }
 
     function Get-RegistryTask {
@@ -67,6 +76,64 @@ Describe 'Build-AnsibleRegistryTask' {
             $regedit = (Get-RegistryTask -Rule (New-RegistryRule -ValueData 'ProductName' -ValueType 'String')).'ansible.windows.win_regedit'
 
             $regedit.data | Should-Be 'ProductName'
+        }
+    }
+
+    # ADR-0014: Ensure picks the module's state key, and nothing else in the rule gets a say.
+    Context 'a value the STIG says must not be present' {
+
+        It 'removes the value rather than writing one' {
+            $rule = New-RegistryRule -Ensure 'Absent' -ValueData '' -ValueType 'None'
+
+            $regedit = (Get-RegistryTask -Rule $rule).'ansible.windows.win_regedit'
+
+            $regedit.state | Should-Be 'absent'
+            $regedit.path | Should-Be 'HKEY_LOCAL_MACHINE\Software\Policies\Microsoft\Windows\System'
+            $regedit.name | Should-Be 'EnableSmartScreen'
+        }
+
+        # An empty data/type pair is what win_regedit reads as 'write a REG_NONE value', the exact
+        # opposite of what the rule asks for, so the keys have to be gone rather than blank.
+        It 'omits data and type entirely' {
+            $rule = New-RegistryRule -Ensure 'Absent' -ValueData '' -ValueType 'None'
+
+            $regedit = (Get-RegistryTask -Rule $rule).'ansible.windows.win_regedit'
+
+            @($regedit.Keys) | Should-BeCollection @('path', 'name', 'state')
+        }
+
+        # 'Set DisableAntiSpyware' on a task that deletes it reads as the opposite of what it does.
+        It 'names the task for the removal' {
+            $rule = New-RegistryRule -Ensure 'Absent' -ValueData '' -ValueType 'None'
+
+            (Get-RegistryTask -Rule $rule).name | Should-Be 'V-170 | MEDIUM | Remove EnableSmartScreen'
+        }
+
+        # Ensure changes the state key and nothing else: the toggle and the severity file a rule
+        # lands in are not its business.
+        It 'still guards the task with the toggle for the rule' {
+            $rule = New-RegistryRule -Ensure 'Absent' -ValueData '' -ValueType 'None'
+
+            (Get-RegistryTask -Rule $rule).when | Should-Be 'stig_server_2022_170_when'
+        }
+
+        # ValueType None is Defender's spelling of 'nothing to type'; Chrome leaves ValueType
+        # empty for the same intent. Neither may be read as the removal signal.
+        It 'writes the value when only the value type spells nothing' {
+            $rule = New-RegistryRule -Ensure 'Present' -ValueData '0' -ValueType 'None'
+
+            $regedit = (Get-RegistryTask -Rule $rule).'ansible.windows.win_regedit'
+
+            $regedit.state | Should-BeNull
+            $regedit.data | Should-Be 0
+            $regedit.type | Should-Be 'none'
+        }
+
+        It 'writes the value when the rule carries no Ensure at all' {
+            $regedit = (Get-RegistryTask -Rule (New-RegistryRule)).'ansible.windows.win_regedit'
+
+            $regedit.state | Should-BeNull
+            $regedit.data | Should-Be 1
         }
     }
 

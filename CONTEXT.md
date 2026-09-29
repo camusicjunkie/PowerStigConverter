@@ -19,6 +19,12 @@ The family a STIG rule belongs to — `Registry`, `SecurityOption`, `UserRight`,
 handles it and which organization value fields it needs.
 _Avoid_: resource, category, DSC type
 
+**Ensure**:
+Whether the thing a STIG rule names must exist or must not — `Present` or `Absent`. It is the
+rule's direction, not its data: an `Absent` rule has nothing to write, only something to remove.
+Most rule types carry it; a rule may omit it, which reads as `Present`.
+_Avoid_: state, exists, presence flag
+
 **Sub-rule**:
 A STIG rule whose id carries a letter suffix (`V-254343.b`) because one requirement needs
 several tasks. Sub-rules are collapsed into a single block task guarded by the base id.
