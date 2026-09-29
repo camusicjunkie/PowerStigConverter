@@ -119,6 +119,8 @@ is replaced every run.
 _Avoid_: hook, callback. (A task generator is not a handler — see the term above.)
 
 **Variable prefix**:
-The role-wide identifier stem derived from the STIG name (`server_2022_ms`), which every
-generated variable name is built on.
+The role-wide identifier stem derived from the STIG name (`stig_server_2022`), which every
+generated variable name is built on. It names the product and, where sibling releases would
+otherwise collide, the release — nothing else, so a STIG covering every release of its product
+contributes no release to it.
 _Avoid_: namespace, role prefix

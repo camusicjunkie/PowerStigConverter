@@ -15,11 +15,30 @@ Describe 'Get-AnsibleVariablePrefix' {
             @{ StigName = 'WindowsServer-2022-MS'; Expected = 'stig_server_2022' }
             @{ StigName = 'WindowsServer-2012R2-DC'; Expected = 'stig_server_2012r2' }
             @{ StigName = 'WindowsClient-11'; Expected = 'stig_client_11' }
+            @{ StigName = 'WindowsDefender-All'; Expected = 'stig_defender' }
+            @{ StigName = 'WindowsFirewall-All'; Expected = 'stig_firewall' }
         ) {
             InModuleScope -ModuleName PowerStigConverter -Parameters @{ Name = $StigName } {
                 param ($Name)
                 Get-AnsibleVariablePrefix -StigName $Name
             } | Should-Be $Expected
+        }
+
+        # 'All' is a STIG's scope, not a release of it, so it is dropped rather than kept the way
+        # 2012R2 is - and dropped for every product, Windows component or application, not only
+        # where a redundant 'Windows' is dropped alongside it. See docs/adr/0013.
+        It 'never leaves All in a prefix, for <StigName>' -ForEach @(
+            @{ StigName = 'WindowsDefender-All' }
+            @{ StigName = 'WindowsFirewall-All' }
+            @{ StigName = 'FireFox-All' }
+        ) {
+            $prefix = InModuleScope -ModuleName PowerStigConverter -Parameters @{ Name = $StigName } {
+                param ($Name)
+                Get-AnsibleVariablePrefix -StigName $Name
+            }
+
+            # '*_all*', not '*all*': stig_firewall legitimately contains those three letters.
+            $prefix | Should-NotBeLikeString '*_all*'
         }
 
         It 'keeps the release suffix so 2012 and 2012R2 do not collapse together' {
@@ -38,7 +57,9 @@ Describe 'Get-AnsibleVariablePrefix' {
             @{ StigName = 'IISServer-10.0'; Expected = 'stig_iisserver_10_0' }
             @{ StigName = 'DotNetFramework-4'; Expected = 'stig_dotnetframework_4' }
             @{ StigName = 'SqlServer-2016-Instance'; Expected = 'stig_sqlserver_2016_instance' }
-            @{ StigName = 'WindowsDefender-All'; Expected = 'stig_windowsdefender_all' }
+            # An All that is not a Windows component's: nothing here is redundant except All
+            # itself, which goes the same way it does for a Windows component. See docs/adr/0013.
+            @{ StigName = 'FireFox-All'; Expected = 'stig_firefox' }
         ) {
             InModuleScope -ModuleName PowerStigConverter -Parameters @{ Name = $StigName } {
                 param ($Name)

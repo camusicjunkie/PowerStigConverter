@@ -183,9 +183,12 @@ into them. `main_task.yml` becomes `tasks/main.yml`: it asserts the target OS, s
 fact, and imports each severity file behind its own `cat1`/`cat2`/`cat3` tag.
 
 Every variable in the role is named from a prefix derived from the STIG — `WindowsServer-2022-MS`
-gives `stig_server_2022`, `WindowsClient-11` gives `stig_client_11`. The scaffolding takes that
-prefix as the `VariablePrefix` plaster parameter, so the generated files and the hand-written
-scaffolding always agree on the names.
+gives `stig_server_2022`, `WindowsClient-11` gives `stig_client_11`. An application STIG keeps its
+whole sanitised name — `IISServer-10.0` gives `stig_iisserver_10_0`. A STIG covering every release
+of its product contributes no release at all, so the `All` in its name is dropped:
+`WindowsDefender-All` gives `stig_defender` and `FireFox-All` gives `stig_firefox`.
+The scaffolding takes that prefix as the `VariablePrefix` plaster parameter, so the generated files
+and the hand-written scaffolding always agree on the names.
 
 The OS assertion in `tasks/main.yml` is derived the same way, matched against
 `ansible_distribution`:
