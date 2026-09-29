@@ -82,6 +82,10 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
         # MS-Edge-2.5: real trimmed data, surveyed for #103's map (#105). Edge carries a third
         # rule type, Document, alongside the Registry and Manual shapes Chrome already proved.
         $script:edge = Get-RoleContent -StigName 'MS-Edge' -RoleName 'edge_role'
+        # WindowsDefender-All-2.8: real trimmed data, surveyed for #110's map. Defender carries
+        # only Registry, but it is the first product whose real data reaches the role with rules
+        # the STIG says must not be present, and the first to exercise the '-All' variable prefix.
+        $script:defender = Get-RoleContent -StigName 'WindowsDefender-All' -RoleName 'defender_role'
     }
 
     It 'converts an <RuleType> rule into <Module>' -ForEach @(
@@ -148,6 +152,9 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
         @{ RuleType = 'Registry'; Module = 'ansible.windows.win_regedit'; Role = 'chrome' }
         # MS-Edge: its Registry rule type, dispatched from real data. See #103 and #105.
         @{ RuleType = 'Registry'; Module = 'ansible.windows.win_regedit'; Role = 'edge' }
+        # WindowsDefender-All: the one rule type the product carries, dispatched from real
+        # data. See #110 and #113.
+        @{ RuleType = 'Registry'; Module = 'ansible.windows.win_regedit'; Role = 'defender' }
     ) {
         (Get-Variable -Name $Role -ValueOnly).Tasks | Should-BeLikeString "*$Module*"
     }
@@ -186,6 +193,41 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
                 $tasks | Should-NotBeLikeString '*V-277982*'
                 $tasks | Should-NotBeLikeString '*V-277985*'
             }
+        }
+    }
+
+    # #110's map asked whether the real Defender data agrees with the existing Registry
+    # generator's shape field for field. It does - on the two shapes the map left to be decided
+    # first (ADR 0014's Ensure=Absent, ADR 0013's '-All' prefix) as much as on the ordinary ones.
+    Context 'WindowsDefender-All, whose survey found nothing disagreeing with the existing Registry generator' {
+
+        It 'names every variable for the product alone, the "-All" scope contributing nothing' {
+            $defender.Defaults | Should-BeLikeString '*stig_defender_cat1: true*'
+            $defender.Defaults | Should-NotBeLikeString '*stig_windowsdefender_all*'
+        }
+
+        It 'removes the three values the STIG says must not be present, rather than writing them' {
+            foreach ($id in 'V-213428', 'V-213429', 'V-213430') {
+                $defender.Tasks | Should-MatchString ("(?ms)name: $id \| \w+ \| Remove .+?state: absent")
+            }
+            # ValueType None and an empty ValueData are how PowerStig spells "nothing" here;
+            # neither may reach win_regedit as a value to write. See docs/adr/0014.
+            $defender.Tasks | Should-NotBeLikeString '*type: none*'
+        }
+
+        It 'references the organisation''s answer for both registry rules that leave their value unset' {
+            $defender.Defaults | Should-BeLikeString '*stig_defender_213450_scheduleday: 0*'
+            $defender.Tasks | Should-BeLikeString '*{{ stig_defender_213450_scheduleday }}*'
+            # A ValueName that is a bare digit still names its own variable, and win_regedit is
+            # handed it quoted so YAML does not read the name as a number.
+            $defender.Defaults | Should-BeLikeString '*stig_defender_213455_5: 2*'
+            $defender.Tasks | Should-BeLikeString '*{{ stig_defender_213455_5 }}*'
+            $defender.Tasks | Should-BeLikeString '*name: "5"*'
+        }
+
+        It 'carries an ASR rule''s GUID ValueName and its spaced key through untouched' {
+            $defender.Tasks | Should-BeLikeString '*name: BE9BA2D9-53EA-4CDC-84E5-9B1EEEE46550*'
+            $defender.Tasks | Should-BeLikeString '*path: HKEY_LOCAL_MACHINE\Software\Policies\Microsoft\Windows Defender\Windows Defender Exploit Guard\ASR\Rules*'
         }
     }
 

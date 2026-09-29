@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Fixture organisational settings, answering the two rules in the sibling fixture whose
+    OrganizationValueRequired is True. Both values are copied verbatim from the real PowerStig
+    org.default.xml, which ships an answer for every one of Defender's seven organisation values.
+-->
+<OrganizationalSettings fullversion="2.8">
+  <OrganizationalSetting id="V-213450" ValueData="0" />
+  <OrganizationalSetting id="V-213455" ValueData="2" />
+</OrganizationalSettings>
