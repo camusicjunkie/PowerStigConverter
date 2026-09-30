@@ -54,14 +54,25 @@ Describe 'Export-AnsibleTaskBySeverity' {
         }
     }
 
-    # tasks/main.yml imports all three unconditionally, so a file with nothing in it still has to
-    # be named - Save-AnsibleRoleFile is what decides not to write an empty one.
+    # tasks/main.yml imports all three statically: ansible resolves an import_tasks when the play
+    # is parsed, before any when: is evaluated, so a severity the STIG carries no rules at still
+    # needs a file on disk. See #118.
     Context 'a severity with no rules' {
 
-        It 'still names the file' {
-            $files = Export-Tasks -Items @(New-TaskItem -Id 'V-1' -Severity 'high')
+        BeforeAll {
+            $script:noLowRules = Export-Tasks -Items @(New-TaskItem -Id 'V-1' -Severity 'high')
+        }
 
-            $files.Keys | Should-ContainCollection @('cat3')
+        It 'still names the file' {
+            $noLowRules.Keys | Should-ContainCollection @('cat3')
+        }
+
+        It 'gives it a valid, empty task list rather than nothing to write' {
+            $noLowRules.cat3 | Should-ContainCollection @('[]')
+        }
+
+        It 'says in the file which severity the STIG has no rules at' {
+            $noLowRules.cat3 -join "`n" | Should-BeLikeString '*WindowsServer-2022-MS has no low severity rules*'
         }
     }
 
@@ -115,9 +126,9 @@ Describe 'Export-AnsibleTaskBySeverity' {
             $guarded.cat1[0] | Should-BeLikeString '*ansible.builtin.assert*'
         }
 
-        # Save-AnsibleRoleFile skips an empty file; a guard with no tasks behind it would make one.
-        It 'leaves a severity with no tasks empty' {
-            $guarded.cat3 | Should-BeFalsy
+        # A guard with no tasks behind it asserts a list nothing in the file reads.
+        It 'leaves the guard out of a severity file with no tasks' {
+            $guarded.cat3 -join "`n" | Should-NotBeLikeString '*ansible.builtin.assert*'
         }
 
         It 'guards nothing when no task references a list' {

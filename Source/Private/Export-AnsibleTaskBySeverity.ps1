@@ -34,10 +34,12 @@ function Export-AnsibleTaskBySeverity {
             ConvertTo-Yaml (New-AnsibleRoleVariableAssert -TaskName $name -StigName $StigName) -KeepArray
         })
 
+        $common = @{ Assert = $asserts; StigName = $StigName }
+
         [ordered] @{
-            cat1 = Add-AnsibleRoleVariableAssert -Task ($bySeverity.high.Values) -Assert $asserts
-            cat2 = Add-AnsibleRoleVariableAssert -Task ($bySeverity.medium.Values) -Assert $asserts
-            cat3 = Add-AnsibleRoleVariableAssert -Task ($bySeverity.low.Values) -Assert $asserts
+            cat1 = Format-AnsibleSeverityFile -Task ($bySeverity.high.Values) -Severity 'high' @common
+            cat2 = Format-AnsibleSeverityFile -Task ($bySeverity.medium.Values) -Severity 'medium' @common
+            cat3 = Format-AnsibleSeverityFile -Task ($bySeverity.low.Values) -Severity 'low' @common
         }
     }
 }
@@ -46,16 +48,27 @@ function Export-AnsibleTaskBySeverity {
 .SYNOPSIS
     One severity file's yaml - the asserts first, then its tasks.
 .DESCRIPTION
-    Repeated in every non-empty severity file rather than written once somewhere central, because
-    tasks/main.yml imports each of the three behind its own tag: a run of --tags cat2 alone has to
-    assert too. An empty file gets nothing, since Save-AnsibleRoleFile would then write a file
-    holding only a guard for tasks that are not there.
+    The asserts are repeated in every severity file that has tasks rather than written once
+    somewhere central, because tasks/main.yml imports each of the three behind its own tag: a run
+    of --tags cat2 alone has to assert too. A severity with no tasks gets none of them - a guard
+    would assert a list nothing in the file reads.
+
+    A severity the STIG carries no rules at still gets a file, holding an empty task list and the
+    reason it is empty. tasks/main.yml imports all three statically, and ansible resolves an
+    import_tasks when the play is parsed, before any when: is evaluated - so a missing file fails
+    the whole role rather than skipping the category. See #118.
 #>
-function Add-AnsibleRoleVariableAssert {
-    param ($Task, [string[]] $Assert)
+function Format-AnsibleSeverityFile {
+    param ($Task, [string[]] $Assert, [string] $Severity, [string] $StigName)
 
     $tasks = @($Task | ForEach-Object { ConvertTo-Yaml $_ -KeepArray })
-    if ($tasks.Count -eq 0) { return $tasks }
+
+    if ($tasks.Count -eq 0) {
+        # A valid, empty task list rather than an empty file, for the same reason
+        # Export-AnsibleHandler writes one: yaml reads this as no tasks, where nothing at all is a
+        # parse the import cannot be relied on to survive.
+        return @(('# {0} has no {1} severity rules.' -f $StigName, $Severity), '[]')
+    }
 
     @($Assert) + $tasks
 }

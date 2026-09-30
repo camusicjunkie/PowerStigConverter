@@ -129,6 +129,10 @@ Tasks are split by rule severity, matching the DISA category system:
 | `cat2.yml` | medium | CAT II |
 | `cat3.yml` | low | CAT III |
 
+All three are always written. A STIG with no rules at one severity - Windows Defender has no low
+ones - gets a file holding an empty task list and the reason it is empty, because `tasks/main.yml`
+imports all three statically.
+
 Alongside these, the module emits the variables the tasks depend on: organisation-specific values
 that a STIG leaves for the implementing site to decide, and conditional values that vary by host.
 

@@ -92,6 +92,14 @@ building a task for the wrong host, per `RuleTypeOsFamily.psd1` and ADR-0010. Di
 module supports on a host it isn't this one.
 _Avoid_: converter, handler, builder
 
+**Severity file**:
+One of the role's three generated task files — `tasks/cat1.yml`, `cat2.yml` and `cat3.yml`,
+holding the high, medium and low severity rules respectively. The scaffolded `tasks/main.yml`
+imports all three statically, so all three are always written: a STIG with no rules at one
+severity gets a file holding an empty task list and the reason it is empty, the way
+`handlers/generated.yml` is written for a STIG whose rules notify no handler.
+_Avoid_: category file, cat file, CAT III file
+
 **Conditional toggle**:
 The `prefix_<id>_when` variable in the role's `defaults/` that lets an operator switch a single
 generated rule off. One per generated task group, derived from the tasks themselves so that
