@@ -35,9 +35,11 @@ function Build-AnsibleRegistryTask {
     }
 
     @{
-        # The key leaf names the block. Sub-rule halves need not share a key to share a leaf, and
-        # where even the leaf differs the name this returns is not the whole of it - see #119.
-        GroupDetail = if (Test-PowerStigSubRuleId -Id $Rule.Id) { $keyLeaf } else { $Rule.ValueName }
+        # Block detail, offered in preference order: the key leaf, which 117 of upstream's 133
+        # registry sub-rule groups share, then the ValueName, which names the requirement where
+        # the halves write one value into two differently-spelled locations. A lone rule has
+        # nothing to agree with, so it is named for its value outright. See docs/adr/0015.
+        GroupDetail = if (Test-PowerStigSubRuleId -Id $Rule.Id) { @($keyLeaf, $Rule.ValueName) } else { $Rule.ValueName }
         Task = @(
             @{
                 Detail = '{0} {1}' -f $(if ($absent) { 'Remove' } else { 'Set' }), $Rule.ValueName

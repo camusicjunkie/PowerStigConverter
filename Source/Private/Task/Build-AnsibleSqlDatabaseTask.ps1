@@ -14,8 +14,8 @@ function Build-AnsibleSqlDatabaseTask {
 
     @{
         RoleVariable = 'instances'
-        # Group-AnsibleTask keeps the first sub-rule's group name, so this is derived from Ensure
-        # alone - the only field .a-.d share.
+        # Ensure is the only field .a-.d share, which is what makes it the block detail: a
+        # candidate every sub-rule agrees on names the whole requirement. See ADR 0015.
         GroupDetail = 'Ensure the databases are {0}' -f $Rule.Ensure.ToLower()
         Task = @(
             @{

@@ -220,7 +220,7 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
 
     # #110's map asked the same of the real Firewall data. It agrees field for field on every
     # shape but one: the survey found a pair whose halves share no key leaf, which the map had
-    # said could not happen, and that is split out as #119 rather than settled here.
+    # said could not happen, and ADR 0015 settled what such a block is called.
     Context 'WindowsFirewall-All, whose survey found one shape the Registry generator had not been asked for' {
 
         It 'collapses a sub-rule pair writing two different keys into one block, each half keeping its own path' {
@@ -238,11 +238,11 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
         }
 
         # V-241990's halves do not even share a key leaf - the service key spells the private
-        # profile StandardProfile - so what its block should be called is an open question, split
-        # out as #119. Only the collapsing is asserted here; the name deliberately is not.
-        It 'collapses a pair whose halves share no key leaf into one block all the same' {
+        # profile StandardProfile - so per ADR 0015 the block is named from the ValueName they do
+        # share, rather than from a union reading as two profiles where the requirement covers one.
+        It 'names a pair whose halves share no key leaf from the value they do share' {
             $firewall.Tasks | Should-MatchString (
-                '(?ms)^- name: V-241990 \| MEDIUM \|.+?' +
+                '(?ms)^- name: V-241990 \| MEDIUM \| EnableFirewall\r?$.+?' +
                 'path: HKEY_LOCAL_MACHINE\\SOFTWARE\\Policies\\Microsoft\\WindowsFirewall\\PrivateProfile\r?$.+?' +
                 'path: HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services\\SharedAccess\\Parameters\\FirewallPolicy\\StandardProfile\r?$'
             )

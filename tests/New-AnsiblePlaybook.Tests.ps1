@@ -157,7 +157,9 @@ Describe 'New-AnsiblePlaybook' {
 
             $cat3 | Should-BeLikeString '*ansible.windows.win_feature*'
             $cat3 | Should-BeLikeString '*name: Fax*'
-            $cat3 | Should-BeLikeString '*state: Absent*'
+            # Lowercase, as win_feature's own choices are spelled. Should-BeLikeString ignores
+            # case, so the state is asserted case-sensitively to pin it. See #117.
+            $cat3 | Should-BeLikeString '*state: absent*' -CaseSensitive
         }
 
         It 'converts an account policy rule to win_security_policy with the mapped key' {

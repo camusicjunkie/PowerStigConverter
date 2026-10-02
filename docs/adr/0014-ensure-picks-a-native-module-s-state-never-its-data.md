@@ -53,8 +53,9 @@ from the broken one, and a role should not need that knowledge to be read.
 
 **Pass `Ensure` through verbatim to every module, DSC or native**, the way `WindowsFeature` does.
 Rejected: the capitalised `Present`/`Absent` is PowerStig's vocabulary, not Ansible's, and a native
-module documents its own lowercase choices. `Build-AnsibleWindowsFeatureTask` does exactly this
-today and is filed as [#117](https://github.com/camusicjunkie/PowerStigConverter/issues/117) for it.
+module documents its own lowercase choices. `Build-AnsibleWindowsFeatureTask` did exactly this, and
+was squared against this decision under
+[#117](https://github.com/camusicjunkie/PowerStigConverter/issues/117).
 
 **Treat an `Absent` rule as unconvertible and skip it**, the way a `ManualRule` produces nothing.
 Rejected: removing a registry value is something Ansible expresses directly and 206 rules ask for
