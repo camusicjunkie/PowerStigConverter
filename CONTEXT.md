@@ -100,6 +100,14 @@ severity gets a file holding an empty task list and the reason it is empty, the 
 `handlers/generated.yml` is written for a STIG whose rules notify no handler.
 _Avoid_: category file, cat file, CAT III file
 
+**Block detail**:
+What titles the block a requirement's several tasks share — the last segment of a generated
+block's name, after the base id and the severity. A rule type offers the candidates its sub-rules
+might agree on, strongest first, and the block is named from the strongest one they all do agree
+on; where they agree on none, the name is the union of what each sub-rule offered. See ADR-0015.
+The code calls it `GroupDetail`.
+_Avoid_: group name, task name, block title
+
 **Conditional toggle**:
 The `prefix_<id>_when` variable in the role's `defaults/` that lets an operator switch a single
 generated rule off. One per generated task group, derived from the tasks themselves so that

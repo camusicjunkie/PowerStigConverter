@@ -175,6 +175,64 @@ Describe 'Build-AnsibleRegistryTask' {
         }
     }
 
+    # ADR-0015: the block is named from the strongest candidate the halves agree on - the key
+    # leaf first, the ValueName second, the union of leaves only where they agree on neither.
+    # The leaf-sharing case above is 117 of upstream's 133 registry sub-rule groups; these are
+    # the other 16.
+    Context 'sub-rules that do not share a key leaf' {
+
+        BeforeAll {
+            function New-GroupedRegistryTask {
+                param ($Half)
+
+                InModuleScope -ModuleName PowerStigConverter -Parameters @{ Half = $Half } {
+                    param ($Half)
+
+                    @(foreach ($h in $Half) {
+                        [pscustomobject] @{
+                            Id = $h.Id; Severity = 'medium'; DuplicateOf = ''
+                            Key = $h.Key; ValueName = $h.ValueName
+                            ValueType = 'DWORD'; ValueData = '1'; OrganizationValueRequired = $false
+                        }
+                    }) | ConvertTo-AnsibleTask -RuleType 'Registry' -StigName 'WindowsFirewall-All'
+                }
+            }
+        }
+
+        # WindowsFirewall V-241990: the policy key calls the profile PrivateProfile and the live
+        # service key calls the same profile StandardProfile. The union read as two profiles.
+        It 'names the block for the ValueName the halves share when their leaves are two spellings of one place' {
+            $grouped = New-GroupedRegistryTask -Half @(
+                @{ Id = 'V-241990.a'; Key = 'HKLM\SOFTWARE\Policies\Microsoft\WindowsFirewall\PrivateProfile'; ValueName = 'EnableFirewall' }
+                @{ Id = 'V-241990.b'; Key = 'HKLM\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\StandardProfile'; ValueName = 'EnableFirewall' }
+            )
+
+            $grouped.Task.name | Should-Be 'V-241990 | MEDIUM | EnableFirewall'
+        }
+
+        # WindowsClient-10 V-220835 / -11 V-253394: the same shape parent key to child key rather
+        # than sibling to sibling, which shipped as 'Config, DeliveryOptimization'.
+        It 'names it for the shared ValueName when one leaf is the parent of the other' {
+            $grouped = New-GroupedRegistryTask -Half @(
+                @{ Id = 'V-220835.a'; Key = 'HKLM\SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization'; ValueName = 'DODownloadMode' }
+                @{ Id = 'V-220835.b'; Key = 'HKLM\SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization\Config'; ValueName = 'DODownloadMode' }
+            )
+
+            $grouped.Task.name | Should-Be 'V-220835 | MEDIUM | DODownloadMode'
+        }
+
+        # SqlServer-2016 V-213967: several protocol keys, several values, one requirement - here
+        # the union is what describes it, and it is the fallback rather than the default.
+        It 'falls back to the union of leaves when the halves agree on neither leaf nor ValueName' {
+            $grouped = New-GroupedRegistryTask -Half @(
+                @{ Id = 'V-213967.a'; Key = 'HKLM\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.0\Client'; ValueName = 'DisabledByDefault' }
+                @{ Id = 'V-213967.e'; Key = 'HKLM\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.0\Server'; ValueName = 'Enabled' }
+            )
+
+            $grouped.Task.name | Should-Be 'V-213967 | MEDIUM | Client, Server'
+        }
+    }
+
     Context 'a value the organization decides' {
 
         It 'interpolates the organization variable rather than inlining a value' {

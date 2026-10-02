@@ -131,36 +131,74 @@ function ConvertTo-AnsibleTask {
 
 <#
 .SYNOPSIS
-    Widens a group's name to every distinct GroupDetail its sub-rules produced, not only the one
-    Group-AnsibleTask happens to keep.
+    Names every surviving group task from the strongest thing its sub-rules agree on, not from
+    whichever one Group-AnsibleTask happens to keep.
 .DESCRIPTION
     Every sub-rule builds its own $groupTask instance up front, all sharing one GroupId;
-    Group-AnsibleTask keeps only the first one it sees and appends the rest into its block. That
-    is the right behaviour for a rule type where every sub-rule's GroupDetail is already the
-    same string (every generator before nxFileLine), but nxFileLine's sub-rules can each touch a
-    different file - see ADR 0009. So this runs first, in id-appearance order, and rewrites every
-    surviving group task's name from the union - a no-op wherever the values already agreed.
+    Group-AnsibleTask keeps only the first one it sees and appends the rest into its block, so
+    the name it keeps describes one half of a requirement rather than the whole of it. This runs
+    first, in id-appearance order, and rewrites the name.
+
+    A generator offers its GroupDetail as the candidates its sub-rules might agree on, strongest
+    first; Get-AnsibleBlockDetail picks the first one they all do agree on, and unions when they
+    agree on none. A generator with nothing to prefer offers a single candidate - a bare string -
+    and gets the union it always got. See ADR 0015.
 #>
 function Set-AnsibleGroupTaskName {
     param ([System.Collections.ArrayList] $Item)
 
+    $candidate = [ordered] @{}
+    foreach ($entry in $Item) {
+        if ([string]::IsNullOrEmpty($entry.GroupId)) { continue }
+
+        if (-not $candidate.Contains($entry.GroupId)) {
+            $candidate[$entry.GroupId] = [System.Collections.Generic.List[object]]::new()
+        }
+        $candidate[$entry.GroupId].Add(@($entry.GroupDetail))
+    }
+
     $detail = [ordered] @{}
-    foreach ($entry in $Item) {
-        if ([string]::IsNullOrEmpty($entry.GroupId)) { continue }
-
-        if (-not $detail.Contains($entry.GroupId)) {
-            $detail[$entry.GroupId] = [System.Collections.Generic.List[string]]::new()
-        }
-        if ($entry.GroupDetail -and -not $detail[$entry.GroupId].Contains($entry.GroupDetail)) {
-            $detail[$entry.GroupId].Add($entry.GroupDetail)
-        }
+    foreach ($groupId in $candidate.Keys) {
+        $detail[$groupId] = Get-AnsibleBlockDetail -Candidate $candidate[$groupId]
     }
 
     foreach ($entry in $Item) {
         if ([string]::IsNullOrEmpty($entry.GroupId)) { continue }
 
-        $entry.Output.Task.name = '{0} | {1} | {2}' -f $entry.BaseId, $entry.Severity, ($detail[$entry.GroupId] -join ', ')
+        $entry.Output.Task.name = '{0} | {1} | {2}' -f $entry.BaseId, $entry.Severity, $detail[$entry.GroupId]
     }
+}
+
+<#
+.SYNOPSIS
+    The block detail for one group: the strongest candidate its members agree on, else the union
+    of their strongest.
+.DESCRIPTION
+    One candidate list per member of the group, each ordered strongest first. A candidate counts
+    as agreed only when every member offers one at that rank and all of them are equal - a member
+    offering fewer candidates than another cannot agree at a rank it does not reach.
+
+    Falling through to the union is what a group whose members agree on nothing gets, and what a
+    rule type offering one candidate always gets: the distinct strongest candidates, in the order
+    the members appear. See ADR 0015.
+#>
+function Get-AnsibleBlockDetail {
+    param ([System.Collections.Generic.List[object]] $Candidate)
+
+    $rank = ($Candidate | ForEach-Object { $_.Count } | Measure-Object -Maximum).Maximum
+    for ($i = 0; $i -lt $rank; $i++) {
+        $atRank = @($Candidate | ForEach-Object { $_[$i] })
+        if (@($atRank | Where-Object { [string]::IsNullOrEmpty($_) }).Count -gt 0) { continue }
+        if (@($atRank | Sort-Object -Unique).Count -eq 1) { return $atRank[0] }
+    }
+
+    $union = [System.Collections.Generic.List[string]]::new()
+    foreach ($list in $Candidate) {
+        if ([string]::IsNullOrEmpty($list[0]) -or $union.Contains($list[0])) { continue }
+        $union.Add($list[0])
+    }
+
+    $union -join ', '
 }
 
 <#

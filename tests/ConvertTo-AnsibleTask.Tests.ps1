@@ -204,3 +204,79 @@ Describe 'ConvertTo-AnsibleTask handler channel' {
         @($item.Handler).Count | Should-Be 0
     }
 }
+
+# ADR-0015: a generator offers the candidates its sub-rules might agree on, strongest first, and
+# the block is named from the strongest they all agree on. Driven through a probe adapter rather
+# than through Registry, so what is under test is the naming and not that generator's candidates.
+Describe 'ConvertTo-AnsibleTask block naming' {
+
+    BeforeAll {
+        # One sub-rule per Detail given, in order: '.a' offers the first, '.b' the second. Each
+        # Detail is the candidates that sub-rule offers, strongest first, pipe-delimited - a
+        # nested array would flatten on its way through the array literal, and a single candidate
+        # is passed as the bare string a generator with nothing to prefer returns.
+        function Convert-NamingProbe {
+            param ([string[]] $Detail)
+
+            InModuleScope -ModuleName PowerStigConverter -Parameters @{ Detail = $Detail } {
+                param ($Detail)
+
+                $letter = 'a', 'b', 'c', 'd'
+                $rules = @(for ($i = 0; $i -lt $Detail.Count; $i++) {
+                    [pscustomobject] @{
+                        Id = 'V-400.{0}' -f $letter[$i]; Severity = 'medium'; DuplicateOf = ''
+                        # The candidates ride on the rule: a variable shared with the adapter does
+                        # not survive the module scope ConvertTo-AnsibleTask calls it in.
+                        Detail = if ($Detail[$i] -match '\|') { $Detail[$i] -split '\|' } else { $Detail[$i] }
+                    }
+                })
+
+                function Build-AnsibleNamingProbeTask {
+                    param ($Rule, $StigName, $StigId, $Resolution)
+
+                    @{
+                        GroupDetail = $Rule.Detail
+                        Task = @{ Detail = 'set it'; Body = @{ 'ansible.builtin.debug' = @{ msg = $Rule.Id } } }
+                    }
+                }
+
+                @($rules | ConvertTo-AnsibleTask -RuleType 'NamingProbe' -StigName 'WindowsServer-2022-MS')
+            }
+        }
+    }
+
+    It 'names the block from the strongest candidate every sub-rule agrees on' {
+        $item = @(Convert-NamingProbe -Detail 'Alpha|EnableThing', 'Beta|EnableThing')
+
+        $item[0].Task.name | Should-Be 'V-400 | MEDIUM | EnableThing'
+    }
+
+    It 'prefers the stronger candidate when the sub-rules agree on both' {
+        $item = @(Convert-NamingProbe -Detail 'Alpha|EnableThing', 'Alpha|EnableThing')
+
+        $item[0].Task.name | Should-Be 'V-400 | MEDIUM | Alpha'
+    }
+
+    It 'unions the strongest candidates when the sub-rules agree on none' {
+        $item = @(Convert-NamingProbe -Detail 'Alpha|One', 'Beta|Two')
+
+        $item[0].Task.name | Should-Be 'V-400 | MEDIUM | Alpha, Beta'
+    }
+
+    # Every generator but Registry offers one candidate, so the union is still what a rule type
+    # with nothing to prefer gets - nxFileLine's several files, RootCertificate's several
+    # certificates.
+    It 'unions a bare string, which is one candidate' {
+        $item = @(Convert-NamingProbe -Detail '/etc/ssh/sshd_config', '/etc/pam.d/system-auth')
+
+        $item[0].Task.name | Should-Be 'V-400 | MEDIUM | /etc/ssh/sshd_config, /etc/pam.d/system-auth'
+    }
+
+    # A sub-rule cannot agree at a rank it does not reach, so a shorter list ends the search
+    # rather than matching whatever happens to sit beside it.
+    It 'does not agree at a rank a sub-rule offers nothing for' {
+        $item = @(Convert-NamingProbe -Detail 'Alpha|EnableThing', 'Beta')
+
+        $item[0].Task.name | Should-Be 'V-400 | MEDIUM | Alpha, Beta'
+    }
+}
