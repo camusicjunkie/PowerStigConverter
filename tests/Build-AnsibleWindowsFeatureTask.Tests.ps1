@@ -33,21 +33,31 @@ Describe 'Build-AnsibleWindowsFeatureTask' {
 
             $feature = $task.'ansible.windows.win_feature'
             $feature.name | Should-Be 'TFTP-Client'
-            $feature.state | Should-Be 'Absent'
+            $feature.state | Should-Be 'absent'
         }
 
-        It 'carries Present through as well as Absent' {
+        # win_feature documents its state choices lowercase and validates them case-sensitively,
+        # so PowerStig's Present/Absent is translated rather than passed through. See ADR 0014
+        # and #117.
+        It 'spells Present the way the module does, as well as Absent' {
             $task = (Invoke-Generator -Generator 'Build-AnsibleWindowsFeatureTask' `
                 -Rule (New-WindowsFeatureRule -Ensure 'Present') -StigName 'WindowsServer-2022-MS').Task
 
-            $task.'ansible.windows.win_feature'.state | Should-Be 'Present'
+            $task.'ansible.windows.win_feature'.state | Should-Be 'present'
+        }
+
+        It 'takes the present path for a rule that states no Ensure at all' {
+            $task = (Invoke-Generator -Generator 'Build-AnsibleWindowsFeatureTask' `
+                -Rule (New-WindowsFeatureRule -Ensure '') -StigName 'WindowsServer-2022-MS').Task
+
+            $task.'ansible.windows.win_feature'.state | Should-Be 'present'
         }
 
         It 'names the task for the rule id, its severity and the change it makes' {
             $task = (Invoke-Generator -Generator 'Build-AnsibleWindowsFeatureTask' `
                 -Rule (New-WindowsFeatureRule) -StigName 'WindowsServer-2022-MS').Task
 
-            $task.name | Should-Be 'V-130 | HIGH | Set TFTP-Client to Absent'
+            $task.name | Should-Be 'V-130 | HIGH | Set TFTP-Client to absent'
         }
     }
 
