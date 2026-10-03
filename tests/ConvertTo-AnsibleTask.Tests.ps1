@@ -318,3 +318,73 @@ Describe 'ConvertTo-AnsibleTask carrying what a block''s sub-rules leave for def
         @($block[0].Incomplete.RuleId) | Should-BeCollection @('V-300.b')
     }
 }
+
+# A requirement's sub-rules collapse into one block wherever they sit in the STIG, carrying what
+# every one of them hands on. Driven through a probe adapter that reads its handler and role
+# variable off the rule, so what is under test is the collapse and not any one generator. See #125.
+Describe 'ConvertTo-AnsibleTask collapsing sub-rules into a block' {
+
+    BeforeAll {
+        function New-ProbeRule {
+            param ($Id, $Handler, $RoleVariable)
+
+            [pscustomobject] @{ Id = $Id; Severity = 'medium'; DuplicateOf = ''; Handler = $Handler; RoleVariable = $RoleVariable }
+        }
+
+        function Convert-CollapseProbe {
+            param ($Rules)
+
+            InModuleScope -ModuleName PowerStigConverter -Parameters @{ Rules = $Rules } {
+                param ($Rules)
+
+                function Build-AnsibleCollapseProbeTask {
+                    param ($Rule, $StigName, $StigId, $Resolution)
+
+                    @{
+                        GroupDetail = 'probe'
+                        Task = @{ Detail = 'set it'; Body = @{ 'ansible.builtin.debug' = @{ msg = $Rule.Id } } }
+                        Handler = if ($Rule.Handler) { @{ Name = $Rule.Handler; Body = @{ 'ansible.builtin.debug' = @{ msg = $Rule.Handler } } } }
+                        RoleVariable = $Rule.RoleVariable
+                    }
+                }
+
+                @($Rules | ConvertTo-AnsibleTask -RuleType 'CollapseProbe' -StigName 'WindowsServer-2022-MS')
+            }
+        }
+    }
+
+    It 'collapses sub-rules the STIG does not list together into one block' {
+        $result = @(Convert-CollapseProbe -Rules @(
+            (New-ProbeRule 'V-501.a'), (New-ProbeRule 'V-502'), (New-ProbeRule 'V-501.b')
+        ))
+
+        $block = $result | Where-Object { $_.Task.name -like 'V-501 |*' }
+        @($block).Count | Should-Be 1
+        $block.Task.block.'ansible.builtin.debug'.msg | Should-BeCollection @('V-501.a', 'V-501.b')
+    }
+
+    It 'emits in STIG order, a block where its first sub-rule sits' {
+        $result = @(Convert-CollapseProbe -Rules @(
+            (New-ProbeRule 'V-510'), (New-ProbeRule 'V-501.a'), (New-ProbeRule 'V-500'), (New-ProbeRule 'V-501.b')
+        ))
+
+        # Joined, because Should-BeCollection does not compare order. The ids are out of sequence
+        # so that sorting them could not pass this either.
+        ($result.Task.name | ForEach-Object { ($_ -split ' ')[0] }) -join ',' | Should-Be 'V-510,V-501,V-500'
+    }
+
+    It 'carries the handlers and role variables of every sub-rule, not only the first' {
+        $result = @(Convert-CollapseProbe -Rules @(
+            (New-ProbeRule 'V-600.a' -Handler 'apply_a' -RoleVariable 'websites')
+            (New-ProbeRule 'V-600.b' -Handler 'apply_b' -RoleVariable 'webapppools')
+        ))
+
+        @($result).Count | Should-Be 1
+        $result[0].Handler.name | Should-BeCollection @('apply_a', 'apply_b')
+        $result[0].RoleVariable | Should-BeCollection @('websites', 'webapppools')
+    }
+
+    It 'produces nothing for no rules' {
+        @(Convert-CollapseProbe -Rules @()).Count | Should-Be 0
+    }
+}

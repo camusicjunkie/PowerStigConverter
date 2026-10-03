@@ -25,9 +25,9 @@ it produced a task, so there is nothing left for the gate or the exporter to fil
 **Each converted item carries what its rule leaves for `defaults/`.** `ConvertTo-AnsibleTask` puts
 `Declaration` (the organization variables, plus the per-rule role variable `RoleVariableData.psd1`
 names) and `Incomplete` on the item beside the task, so the exporter no longer reads rule types,
-`OrganizationData.psd1` or `RoleVariableData.psd1`. `Group-AnsibleTask` combines these from every
-sub-rule of a block, and `Handler` and `RoleVariable` with them, because each sub-rule names its own
-variables from its own id, and keeping only the first sub-rule's would drop the rest.
+`OrganizationData.psd1` or `RoleVariableData.psd1`. A block combines these from every sub-rule, and
+`Handler` and `RoleVariable` with them, because each sub-rule names its own variables from its own
+id, and keeping only the first sub-rule's would drop the rest.
 
 **Dispatch is the only place the OsFamily check happens.** The helper ADR 0011 introduced is
 folded back into it, and its skip-and-warn behaviour from ADR 0010 is unchanged.
@@ -53,8 +53,8 @@ the declarations themselves, so the exporter no longer needs a rule type.
 - A rule its adapter skips no longer declares its organization variable or refuses the conversion.
   Neither does a rule type `OrganizationData.psd1` describes but no generator handles. None of the
   current fixtures carries either, and all of them generate byte-identical roles.
-- The refusal lists incomplete values in the order the tasks come out of dispatch, not the order
-  the rules sit in the STIG. Within a rule type, rules outside a block come before blocks.
+- The refusal lists incomplete values in the order dispatch emits them: the STIG's order, except
+  that a block's sub-rules are listed together where the first of them sits (#125).
 - Warnings dispatch raises now come before the gate's refusal rather than after it.
 - `Export-AnsibleOrganizationValue` still writes the three severity switches, which have nothing to
   do with organization values. Moving them is a separate change.

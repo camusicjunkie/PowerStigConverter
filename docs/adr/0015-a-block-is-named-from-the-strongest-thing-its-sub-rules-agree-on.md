@@ -93,7 +93,8 @@ is where a per-type judgement belongs.
   branches themselves are covered where the logic lives.
 - The union fallback has no end-to-end coverage: it is reachable only from Internet Explorer and
   SqlServer, and the SqlServer-2016 fixture's trim happens to have kept two halves sharing
-  `Client`. Unit tests on `Set-AnsibleGroupTaskName` cover it directly.
+  `Client`. Unit tests on `Set-AnsibleGroupTaskName` cover it directly. (Since #125 that naming
+  runs inside `Merge-AnsibleRequirement`, and the tests reach it through `ConvertTo-AnsibleTask`.)
 - A block name is descriptive only — a block's `when` comes from the base id, never from its name
   — so no generated role's behaviour changes, only what an operator reads.
 - `Get-AnsibleBlockDetail` is the one place a block is named. A rule type wanting different
