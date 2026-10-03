@@ -25,7 +25,12 @@ function Export-AnsibleConditionalValue {
     end {
         $files = [ordered] @{}
         $severityToggles = foreach ($category in (Group-AnsibleBySeverity -InputObject $items.ToArray()).GetEnumerator()) {
-            $files['main_default_{0}' -f $category.Key] = $category.Value.Item.Values
+            # Written even when empty, so a re-run cannot leave an earlier revision's toggles behind.
+            # An empty mapping, as main_default_org.yml is. See #131.
+            $toggles = $category.Value
+            $content = if ($toggles.Item.Count -gt 0) { @($toggles.Item.Values) }
+                else { @(('# {0} has no {1} severity rules.' -f $StigName, $toggles.Severity), '{}') }
+            $files['main_default_{0}' -f $category.Key] = $content
             # tasks/main.yml guards each severity file's import on one, so all three are declared
             # whatever the STIG carries. See #130.
             New-AnsibleSeverityToggleLine -Category $category.Key -StigName $StigName

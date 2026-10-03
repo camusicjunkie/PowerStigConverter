@@ -556,4 +556,26 @@ Describe 'New-AnsiblePlaybook for a STIG with IIS logging' {
             $iisOrg | Should-NotBeLikeString '*logflags*'
         }
     }
+
+    # This fixture has only medium rules. A role generated from an earlier revision that had high
+    # ones must not keep their toggles loading from defaults/main/. See #131.
+    Context 're-running over a role whose STIG has since lost its high severity rules' {
+
+        BeforeAll {
+            $staleOutput = Join-Path $TestDrive 'iis-rerun'
+            $staleRole = New-AnsiblePlaybook -StigName 'IISServer-10.0' -Path $fixtureRoot `
+                -OutputPath $staleOutput -RoleName 'iis_role' -WarningAction SilentlyContinue 6>$null
+
+            $script:staleCat1 = Join-Path $staleRole.DefaultPath 'main_default_cat1.yml'
+            Set-Content -Path $staleCat1 -Value 'stig_iisserver_10_0_999_when: true'
+
+            $null = New-AnsiblePlaybook -StigName 'IISServer-10.0' -Path $fixtureRoot `
+                -OutputPath $staleOutput -RoleName 'iis_role' -WarningAction SilentlyContinue 6>$null
+        }
+
+        It 'replaces the old toggles with an empty mapping' {
+            Get-Content -Path $staleCat1 |
+                Should-BeCollection @('# IISServer-10.0 has no high severity rules.', '{}')
+        }
+    }
 }

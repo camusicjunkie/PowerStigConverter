@@ -65,6 +65,20 @@ Describe 'Export-AnsibleConditionalValue' {
         }
     }
 
+    # Written even when empty, so a re-run cannot leave an earlier revision's toggles loading from
+    # defaults/main/. See #131.
+    Context 'a severity the STIG has no rules at' {
+
+        It 'writes an empty mapping and the reason, not nothing' {
+            $files = Export-Toggles -Items @(New-TaskItem -Id 'V-100')
+
+            $files.main_default_cat1 |
+                Should-BeCollection @('# WindowsServer-2022-MS has no high severity rules.', '{}')
+            $files.main_default_cat3 |
+                Should-BeCollection @('# WindowsServer-2022-MS has no low severity rules.', '{}')
+        }
+    }
+
     # tasks/main.yml guards each severity file's import on one of these, so all three are declared
     # whatever the STIG carries - in a file of their own, since they are toggles. See #130.
     Context 'the severity toggles tasks/main.yml imports on' {
