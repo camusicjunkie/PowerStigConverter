@@ -35,6 +35,14 @@ Describe 'New-AnsibleToggleLine' {
     }
 }
 
+Describe 'New-AnsibleSeverityToggleLine' {
+
+    It 'declares the severity toggle on, named for its category' {
+        Invoke-PrivateCommand -Command 'New-AnsibleSeverityToggleLine' -Splat @{ Category = 'cat2'; StigName = $stig } |
+            Should-Be "${prefix}_cat2: true"
+    }
+}
+
 Describe 'Get-AnsibleRegisterName' {
 
     Context 'the variable a gather task registers its result in' {

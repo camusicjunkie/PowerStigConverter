@@ -114,6 +114,12 @@ generated rule off. One per generated task group, derived from the tasks themsel
 `defaults/` and `tasks/` cannot disagree.
 _Avoid_: flag, switch, feature toggle
 
+**Severity toggle**:
+The `prefix_cat1`, `prefix_cat2` and `prefix_cat3` variables in the role's `defaults/` that let an
+operator turn off a whole severity file at once. All three are always declared, whatever
+severities the STIG carries.
+_Avoid_: severity switch, category flag
+
 **Organization variable**:
 The `prefix_<id>_<name>` variable in the role's `defaults/` holding an organization value, which
 the generated task references rather than inlining. The single place an operator edits to answer

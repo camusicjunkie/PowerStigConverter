@@ -58,7 +58,7 @@ the declarations themselves, so the exporter no longer needs a rule type.
 - The refusal lists incomplete values in the order dispatch emits them: the STIG's order, except
   that a block's sub-rules are listed together where the first of them sits (#125).
 - Warnings dispatch raises now come before the gate's refusal rather than after it.
-- `Export-AnsibleOrganizationValue` still writes the three severity switches, which have nothing to
-  do with organization values. Moving them is a separate change.
+- `Export-AnsibleOrganizationValue` still writes the three severity toggles, which have nothing to
+  do with organization values. Moving them is a separate change (done in #130).
 
 Decided in [#121](https://github.com/camusicjunkie/PowerStigConverter/issues/121).
