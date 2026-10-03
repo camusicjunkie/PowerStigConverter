@@ -22,7 +22,9 @@ BeforeAll {
             param ($Groups, $OrganizationalSetting, $StigName, $RoleVariable, $StigId)
             $tasks = @(
                 $Groups | ConvertTo-AnsiblePlaybook -StigName $StigName -StigId $StigId -OrganizationalSetting $OrganizationalSetting -WarningAction SilentlyContinue
-                if ($RoleVariable) { @{ RoleVariable = $RoleVariable } }
+                if ($RoleVariable) {
+                    @{ RoleVariable = @(foreach ($name in $RoleVariable) { Get-AnsibleRoleVariable -Name $name -StigName $StigName }) }
+                }
             )
             $tasks | Export-AnsibleOrganizationValue -StigName $StigName
         }

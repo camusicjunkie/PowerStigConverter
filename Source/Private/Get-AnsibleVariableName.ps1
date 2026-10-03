@@ -11,7 +11,8 @@
 
 <#
 .SYNOPSIS
-    The organization variable for one value of one rule - prefix_id_name.
+    The variable for one value of one rule - prefix_id_name. An organization variable, or a role
+    variable the site fills in per rule.
 #>
 function Get-AnsibleVariableName {
     [CmdletBinding()]
@@ -30,54 +31,78 @@ function Get-AnsibleVariableName {
 
 <#
 .SYNOPSIS
-    The role variable every rule of a type shares - prefix_name.
+    A role variable every rule of a type shares - prefix_name - as one record.
 .DESCRIPTION
-    Carries no rule id because it is declared once for the role rather than once per rule: the
-    list of IIS sites a STIG's rules configure is the same list whichever rule is reading it.
+    Name, Reference, Declaration and Assert together, so they cannot name different things; a
+    generator returns the record as its RoleVariable. See #127 and docs/adr/0004. Declared once
+    as an empty list every reading task loops over, and asserted non-empty because an empty list
+    configures nothing (#57).
 #>
-function Get-AnsibleRoleVariableName {
+function Get-AnsibleRoleVariable {
     [CmdletBinding()]
-    [OutputType([string])]
+    [OutputType([pscustomobject])]
     param (
-        [Parameter(Mandatory)] [string] $TaskName,
+        [Parameter(Mandatory)] [string] $Name,
         [Parameter(Mandatory)] [string] $StigName
     )
 
-    '{0}_{1}' -f (Get-AnsibleVariablePrefix -StigName $StigName), (Get-AnsibleVariableNameFragment -TaskName $TaskName)
+    $variable = '{0}_{1}' -f (Get-AnsibleVariablePrefix -StigName $StigName), (Get-AnsibleVariableNameFragment -TaskName $Name)
+
+    [pscustomobject] @{
+        Name = $variable
+        Reference = '{0} {1} {2}' -f '{{', $variable, '}}'
+        Declaration = '{0}: []' -f $variable
+        Assert = [ordered] @{
+            'name' = 'Assert {0} names something' -f $variable
+            'ansible.builtin.assert' = [ordered] @{
+                'that' = @('{0} | length > 0' -f $variable)
+                'fail_msg' = '{0} is empty, so this role would configure nothing. Set it in defaults/main/main.yml or group_vars.' -f $variable
+            }
+        }
+    }
 }
 
 <#
 .SYNOPSIS
-    The jinja reference a task interpolates in place of a role variable.
+    A role variable the site fills in per rule - prefix_id_name - as the same record.
+.DESCRIPTION
+    Declared blank and not asserted; whether it should be is #128.
 #>
-function Get-AnsibleRoleVariableReference {
+function Get-AnsibleRuleVariable {
     [CmdletBinding()]
-    [OutputType([string])]
+    [OutputType([pscustomobject])]
     param (
-        [Parameter(Mandatory)] [string] $TaskName,
+        [Parameter(Mandatory)] [string] $Name,
+        [Parameter(Mandatory)] [string] $TaskId,
         [Parameter(Mandatory)] [string] $StigName
     )
 
-    '{0} {1} {2}' -f '{{', (Get-AnsibleRoleVariableName @PSBoundParameters), '}}'
+    $splat = @{ TaskId = $TaskId; TaskName = $Name; StigName = $StigName }
+
+    [pscustomobject] @{
+        Name = Get-AnsibleVariableName @splat
+        Reference = Get-AnsibleVariableReference @splat
+        Declaration = New-AnsibleVariableLine @splat
+        Assert = $null
+    }
 }
 
 <#
 .SYNOPSIS
-    The defaults/ line declaring a role variable, as an empty list.
+    A fact the generated tasks build up at run time - prefix_name.
 .DESCRIPTION
-    Empty because nothing in the STIG answers it - the site names its own IIS sites and app
-    pools. A list because every task that reads one loops over it; a scalar role variable would
-    need RoleVariableData.psd1 to say so, and none exists yet.
+    Named like a role-scoped variable but never declared in defaults/: it is the tasks' own
+    running total, not a blank for the site to fill in.
 #>
-function New-AnsibleRoleVariableLine {
+function Get-AnsibleFactName {
     [CmdletBinding()]
     [OutputType([string])]
     param (
-        [Parameter(Mandatory)] [string] $TaskName,
+        [Parameter(Mandatory)] [string] $Name,
         [Parameter(Mandatory)] [string] $StigName
     )
 
-    '{0}: []' -f (Get-AnsibleRoleVariableName @PSBoundParameters)
+    '{0}_{1}' -f (Get-AnsibleVariablePrefix -StigName $StigName), (Get-AnsibleVariableNameFragment -TaskName $Name)
 }
 
 <#

@@ -94,9 +94,9 @@ Describe 'Build-AnsibleMimeTypeTask' {
         It 'declares the same list a site STIG''s task loops' {
             $item = Get-MimeTypeItem -Rule (New-MimeTypeRule) -StigId 'IIS_10-0_Site'
 
-            $item.RoleVariable | Should-Be 'websites'
-            Get-RoleVariableDeclaration -RoleVariable $item.RoleVariable -StigName 'IISServer-10.0' |
-                Should-ContainCollection @('stig_iisserver_10_0_websites: []')
+            @($item.RoleVariable).Count | Should-Be 1
+            $item.RoleVariable.Declaration | Should-Be 'stig_iisserver_10_0_websites: []'
+            $item.Task.loop | Should-Be $item.RoleVariable.Reference
         }
     }
 
