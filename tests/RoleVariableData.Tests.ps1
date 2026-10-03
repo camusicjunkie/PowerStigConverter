@@ -14,7 +14,8 @@ BeforeAll {
         } {
             param ($PowerStigRule, $Rules, $StigName)
             [pscustomobject] @{ PowerStigRule = $PowerStigRule; StigRule = $Rules } |
-                Export-AnsibleOrganizationValue -StigName $StigName
+                ConvertTo-AnsiblePlaybook -StigName $StigName -StigId 'IIS_10_Server' |
+                    Export-AnsibleOrganizationValue -StigName $StigName
         }
     }
 }
@@ -24,8 +25,8 @@ BeforeAll {
 # trusted not to drift the way LogPath and website once could have. See docs/adr/0004.
 #
 # The two scopes are pinned differently because they are sourced differently. A per-rule one is
-# named in RoleVariableData.psd1 and read by the exporter, so the psd1 and the generator have to
-# agree. A role-scoped one comes from the generator's own RoleVariable output key, so there is
+# named in RoleVariableData.psd1 and read by ConvertTo-AnsibleTask, so the psd1 and the generator
+# have to agree. A role-scoped one comes from the generator's own RoleVariable output key, so there is
 # nothing for the psd1 to disagree with - each generator's test file pins its own pair, and this
 # checks the psd1 no longer claims to know about them. See #57.
 Describe 'RoleVariableData' {

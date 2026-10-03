@@ -66,7 +66,8 @@ BeforeAll {
             param ($Rules, $OrganizationalSetting)
 
             [pscustomobject] @{ PowerStigRule = 'SqlLoginRule'; StigRule = $Rules } |
-                Export-AnsibleOrganizationValue -StigName 'SqlServer-2016-Instance' -OrganizationalSetting $OrganizationalSetting
+                ConvertTo-AnsiblePlaybook -StigName 'SqlServer-2016-Instance' -OrganizationalSetting $OrganizationalSetting |
+                    Export-AnsibleOrganizationValue -StigName 'SqlServer-2016-Instance'
         }
     }
 }

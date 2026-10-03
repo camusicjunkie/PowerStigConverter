@@ -40,24 +40,14 @@ function New-AnsiblePlaybook {
     # nowhere to judge the inputs complete before writing anything.
     $organizationalSetting = Get-PowerStigOrgSetting -StigName $StigName -Path $Path
 
+    # Convert first and feed the gate and every exporter from the same tasks, so only a rule that
+    # produced a task can refuse or declare anything. Converting writes nothing. See docs/adr/0016.
+    $tasks = @($rules | ConvertTo-AnsiblePlaybook -StigName $StigName -StigId $stigId -OrganizationalSetting $organizationalSetting)
+
     # A value DISA leaves to the adopting organization is an outstanding decision, not a data
     # error. Refuse to write a role that would silently set an empty value, and do it before
     # New-AnsibleRoleScaffold puts anything on disk, so a refused conversion leaves no trace.
-    $osFamily = (Get-AnsibleOsAssertion -StigName $StigName).OsFamily
-    $incomplete = @(foreach ($ruleGroup in $rules) {
-        $ruleType = $ruleGroup.PowerStigRule -replace 'Rule'
-        if (-not $script:organizationData.ContainsKey($ruleType)) { continue }
-
-        # A rule type that dispatch will skip for the wrong OsFamily has no task to leave an
-        # unanswered value in - refusing over it would abort a conversion nothing else ever
-        # touches. See docs/adr/0011.
-        if (Get-AnsibleRuleTypeOsFamilyMismatch -RuleType $ruleType -OsFamily $osFamily) { continue }
-
-        foreach ($rule in $ruleGroup.StigRule) {
-            (Resolve-AnsibleOrganizationValue -Rule $rule -RuleType $ruleType `
-                -StigName $StigName -OrganizationalSetting $organizationalSetting).Incomplete
-        }
-    })
+    $incomplete = @($tasks.Incomplete | Where-Object { $_ })
 
     if ($incomplete.Count -gt 0) {
         $message = Format-AnsibleIncompleteOrganizationValue -Variable $incomplete -StigName $StigName
@@ -78,28 +68,11 @@ function New-AnsiblePlaybook {
     $resolvedOutputPath = Resolve-AnsibleOutputPath -Path $OutputPath
     $role = New-AnsibleRoleScaffold -Path $resolvedOutputPath -RoleName $RoleName -StigName $StigName
 
-    # Convert once and feed both exporters from the same tasks. Deriving the conditional
-    # toggles from the generated tasks rather than from the rule list is what keeps the two in
-    # step: rules the generators skip - duplicates, and rule types with no generator - produce
-    # no task, and so can no longer leave a toggle behind in defaults/ that guards nothing.
-    $tasks = $rules | ConvertTo-AnsiblePlaybook -StigName $StigName -StigId $stigId -OrganizationalSetting $organizationalSetting
-
     # The exporters decide what the role declares; writing it is this function's job, so a test
     # can read their answer without a filesystem. See #19.
-    # The role-scoped lists the generated tasks loop over, named by the generators that reference
-    # them. Derived from the tasks for the same reason the toggles are: a rule type that produced
-    # no task - or a server STIG, whose IIS rules reference no website - declares none. See #57.
-    $roleVariable = @($tasks.RoleVariable | Where-Object { $_ } | Sort-Object -Unique)
-
     Save-AnsibleRoleFile -OutputPath $role.TaskPath -Content ($tasks | Export-AnsibleTaskBySeverity -StigName $StigName)
     Save-AnsibleRoleFile -OutputPath $role.DefaultPath -Content ($tasks | Export-AnsibleConditionalValue -StigName $StigName)
-
-    # Every rule type goes through the exporter now that all of them reach the role through a
-    # variable. It used to exclude RootCertificate and Service by name and filter the rest on
-    # OrganizationValueRequired, which is the filter the two write-backs existed to steer.
-    Save-AnsibleRoleFile -OutputPath $role.DefaultPath `
-        -Content ($rules | Export-AnsibleOrganizationValue -StigName $StigName `
-            -OrganizationalSetting $organizationalSetting -RoleVariable $roleVariable)
+    Save-AnsibleRoleFile -OutputPath $role.DefaultPath -Content ($tasks | Export-AnsibleOrganizationValue -StigName $StigName)
 
     Save-AnsibleRoleFile -OutputPath $role.HandlerPath -Content ($tasks | Export-AnsibleHandler)
 

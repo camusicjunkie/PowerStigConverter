@@ -346,9 +346,8 @@ Describe 'New-AnsiblePlaybook' {
         }
     }
 
-    # RuleTypeOsFamily.psd1 excludes a rule type from the completeness gate the same way it
-    # excludes it from dispatch - an unanswered value dispatch was always going to skip anyway
-    # must not refuse a conversion nothing else touches. See docs/adr/0011. AccountPolicy is
+    # A rule type dispatch skips for the wrong OsFamily produces no task, so its unanswered value
+    # must not refuse a conversion nothing else touches. See docs/adr/0016. AccountPolicy is
     # Windows-only in the real table; this test overrides that fact rather than adding a fixture,
     # since no real STIG mixes a Windows-only rule type into Linux data (or vice versa) today.
     Context 'an organization value on a rule type the wrong OsFamily excludes' {
@@ -371,6 +370,60 @@ Describe 'New-AnsiblePlaybook' {
             }
 
             $result.Path | Should -Exist
+        }
+    }
+
+    # A rule its generator skips produces no task, so nothing references its variable - the gate
+    # must not refuse over it and defaults/ must not declare it. See docs/adr/0016. No real
+    # fixture carries the shape, so a one-rule STIG is written here: V-900's FilePath is a
+    # directory, which Build-AnsibleNxFileLineTask skips (ADR 0009), and its value is unanswered.
+    Context 'an organization value on a rule its generator skips' {
+
+        BeforeAll {
+            $skipRoot = Join-Path $TestDrive 'skip_source'
+            $processed = Join-Path $skipRoot 'source/StigData/Processed'
+            $null = New-Item -ItemType Directory -Path $processed -Force
+
+            Set-Content -Path (Join-Path $processed 'RHEL-9-9.9.xml') -Value @'
+<?xml version="1.0" encoding="utf-8"?>
+<DISASTIG version="9" stigid="RHEL_9_STIG" title="Red Hat Enterprise Linux 9 Security Technical Implementation Guide" fullversion="9.9">
+  <nxFileLineRule dscresourcemodule="nx">
+    <Rule id="V-900" severity="medium" conversionstatus="pass" title="SRG" dscresource="nxFileLine">
+      <ContainsLine />
+      <DoesNotContainPattern />
+      <DuplicateOf />
+      <FilePath>/etc/skipped.d/</FilePath>
+      <OrganizationValueRequired>True</OrganizationValueRequired>
+    </Rule>
+    <Rule id="V-901" severity="medium" conversionstatus="pass" title="SRG" dscresource="nxFileLine">
+      <ContainsLine>kept line</ContainsLine>
+      <DoesNotContainPattern />
+      <DuplicateOf />
+      <FilePath>/etc/kept.conf</FilePath>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+    </Rule>
+  </nxFileLineRule>
+</DISASTIG>
+'@
+            Set-Content -Path (Join-Path $processed 'RHEL-9-9.9.org.default.xml') -Value @'
+<?xml version="1.0" encoding="utf-8"?>
+<OrganizationalSettings fullversion="9.9">
+  <OrganizationalSetting id="V-900" ContainsLine="" DoesNotContainPattern="" />
+</OrganizationalSettings>
+'@
+
+            $script:skipped = New-AnsiblePlaybook -StigName 'RHEL-9' -Path $skipRoot `
+                -OutputPath (Join-Path $TestDrive 'skipped') -RoleName 'skipped_role' `
+                -WarningAction SilentlyContinue 6>$null
+        }
+
+        It 'does not refuse the conversion over V-900, unanswered though it is' {
+            $skipped.Path | Should -Exist
+        }
+
+        It 'declares no variable for V-900' {
+            Get-Content -Path (Join-Path $skipped.DefaultPath 'main_default_org.yml') -Raw |
+                Should-NotBeLikeString '*_900_*'
         }
     }
 
