@@ -29,17 +29,14 @@ function Export-AnsibleTaskBySeverity {
         }
     }
     end {
-        $bySeverity = Group-AnsibleRuleBySeverity -InputObject $items.ToArray()
-
         $asserts = @(foreach ($assert in $roleVariables.Values) { ConvertTo-Yaml $assert -KeepArray })
 
-        $common = @{ Assert = $asserts; StigName = $StigName }
-
-        [ordered] @{
-            cat1 = Format-AnsibleSeverityFile -Task ($bySeverity.high.Values) -Severity 'high' @common
-            cat2 = Format-AnsibleSeverityFile -Task ($bySeverity.medium.Values) -Severity 'medium' @common
-            cat3 = Format-AnsibleSeverityFile -Task ($bySeverity.low.Values) -Severity 'low' @common
+        $files = [ordered] @{}
+        foreach ($category in (Group-AnsibleBySeverity -InputObject $items.ToArray()).GetEnumerator()) {
+            $files[$category.Key] = Format-AnsibleSeverityFile -Task $category.Value.Item.Values `
+                -Severity $category.Value.Severity -Assert $asserts -StigName $StigName
         }
+        $files
     }
 }
 

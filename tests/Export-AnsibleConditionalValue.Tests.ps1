@@ -61,7 +61,17 @@ Describe 'Export-AnsibleConditionalValue' {
         It 'names all three files, so tasks/main.yml can import them' {
             $files = Export-Toggles -Items @()
 
-            $files.Keys | Should-BeCollection @('main_default_cat1', 'main_default_cat2', 'main_default_cat3')
+            $files.Keys | Should-ContainCollection @('main_default_cat1', 'main_default_cat2', 'main_default_cat3')
+        }
+    }
+
+    # tasks/main.yml guards each severity file's import on one of these, so all three are declared
+    # whatever the STIG carries - in a file of their own, since they are toggles. See #130.
+    Context 'the severity toggles tasks/main.yml imports on' {
+
+        It 'declares all three, defaulted on, even with no tasks' {
+            (Export-Toggles -Items @()).main_default_severity |
+                Should-BeCollection @('stig_server_2022_cat1: true', 'stig_server_2022_cat2: true', 'stig_server_2022_cat3: true')
         }
     }
 }

@@ -47,6 +47,7 @@ Describe 'New-AnsiblePlaybook' {
             @{ RelativePath = 'defaults/main/main_default_cat2.yml' }
             @{ RelativePath = 'defaults/main/main_default_cat3.yml' }
             @{ RelativePath = 'defaults/main/main_default_org.yml' }
+            @{ RelativePath = 'defaults/main/main_default_severity.yml' }
             @{ RelativePath = 'vars/main.yml' }
             @{ RelativePath = 'handlers/main.yml' }
             @{ RelativePath = 'handlers/generated.yml' }
@@ -230,11 +231,11 @@ Describe 'New-AnsiblePlaybook' {
     Context 'the generated defaults' {
 
         It 'declares the three severity toggles tasks/main.yml imports on' {
-            $org = Get-RoleFile 'defaults/main/main_default_org.yml'
+            $severity = Get-RoleFile 'defaults/main/main_default_severity.yml'
 
-            $org | Should-BeLikeString "*${prefix}_cat1: true*"
-            $org | Should-BeLikeString "*${prefix}_cat2: true*"
-            $org | Should-BeLikeString "*${prefix}_cat3: true*"
+            $severity | Should-BeLikeString "*${prefix}_cat1: true*"
+            $severity | Should-BeLikeString "*${prefix}_cat2: true*"
+            $severity | Should-BeLikeString "*${prefix}_cat3: true*"
         }
 
         It 'declares a toggle, defaulted on, for each generated task' {

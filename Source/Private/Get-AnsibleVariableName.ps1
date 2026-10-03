@@ -201,6 +201,23 @@ function New-AnsibleToggleLine {
 
 <#
 .SYNOPSIS
+    The defaults/ line declaring a severity toggle, on - prefix_category.
+.DESCRIPTION
+    tasks/main.yml guards each severity file's import on one, by category (cat1, cat2, cat3).
+#>
+function New-AnsibleSeverityToggleLine {
+    [CmdletBinding()]
+    [OutputType([string])]
+    param (
+        [Parameter(Mandatory)] [string] $Category,
+        [Parameter(Mandatory)] [string] $StigName
+    )
+
+    '{0}_{1}: true' -f (Get-AnsibleVariablePrefix -StigName $StigName), $Category
+}
+
+<#
+.SYNOPSIS
     The rule id as an ansible variable name fragment.
 .DESCRIPTION
     Every name here is built from one, so the mangling lives in one place. A sub-rule id carries

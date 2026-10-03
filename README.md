@@ -103,19 +103,20 @@ New-AnsiblePlaybook -StigName WindowsServer-2022-MS -OutputPath .\roles -RoleNam
 ```
 <RoleName>/
   tasks/
-    main.yml                 asserts the OS, imports each severity file by tag
-    cat1.yml                 generated
-    cat2.yml                 generated
-    cat3.yml                 generated
+    main.yml                   asserts the OS, imports each severity file by tag
+    cat1.yml                   generated
+    cat2.yml                   generated
+    cat3.yml                   generated
   defaults/main/
-    main.yml                 hand-editable defaults
-    main_default_cat1.yml    generated
-    main_default_cat2.yml    generated
-    main_default_cat3.yml    generated
-    main_default_org.yml     generated
+    main.yml                   hand-editable defaults
+    main_default_cat1.yml      generated
+    main_default_cat2.yml      generated
+    main_default_cat3.yml      generated
+    main_default_org.yml       generated
+    main_default_severity.yml  generated
   vars/main.yml
-  handlers/main.yml         imports generated.yml
-  handlers/generated.yml    generated
+  handlers/main.yml            imports generated.yml
+  handlers/generated.yml       generated
 ```
 
 Re-running is safe. The generated files are replaced every run; the four scaffolding files are

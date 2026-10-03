@@ -23,12 +23,14 @@ function Export-AnsibleConditionalValue {
         })
     }
     end {
-        $bySeverity = Group-AnsibleRuleBySeverity -InputObject $items.ToArray()
-
-        [ordered] @{
-            main_default_cat1 = $bySeverity.high.Values
-            main_default_cat2 = $bySeverity.medium.Values
-            main_default_cat3 = $bySeverity.low.Values
+        $files = [ordered] @{}
+        $severityToggles = foreach ($category in (Group-AnsibleBySeverity -InputObject $items.ToArray()).GetEnumerator()) {
+            $files['main_default_{0}' -f $category.Key] = $category.Value.Item.Values
+            # tasks/main.yml guards each severity file's import on one, so all three are declared
+            # whatever the STIG carries. See #130.
+            New-AnsibleSeverityToggleLine -Category $category.Key -StigName $StigName
         }
+        $files['main_default_severity'] = @($severityToggles)
+        $files
     }
 }
