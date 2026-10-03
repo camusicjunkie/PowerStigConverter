@@ -162,43 +162,77 @@ Describe 'New-AnsibleVariableLine' {
     }
 }
 
-Describe 'Get-AnsibleRoleVariableName' {
+# One record per role variable, so its name, the reference a task interpolates, the defaults/
+# declaration and the assert cannot name different things. See #127 and docs/adr/0004.
+Describe 'Get-AnsibleRoleVariable' {
 
     Context 'a variable declared once for the whole role' {
 
+        BeforeAll {
+            $script:websites = Invoke-PrivateCommand -Command 'Get-AnsibleRoleVariable' -Splat @{ Name = 'websites'; StigName = $stig }
+        }
+
         # No rule id: every rule of the type reads the same list of IIS sites, so a per-rule name
         # would declare the same answer once per rule and let them drift apart.
-        It 'names it from the prefix and the task name alone' {
-            Invoke-PrivateCommand -Command 'Get-AnsibleRoleVariableName' -Splat @{ TaskName = 'websites'; StigName = $stig } |
-                Should-Be "${prefix}_websites"
+        It 'names it from the prefix and the name alone' {
+            $websites.Name | Should-Be "${prefix}_websites"
         }
 
         It 'strips punctuation so the variable name stays legal' {
-            Invoke-PrivateCommand -Command 'Get-AnsibleRoleVariableName' -Splat @{ TaskName = 'App Pools (IIS)'; StigName = $stig } |
+            (Invoke-PrivateCommand -Command 'Get-AnsibleRoleVariable' -Splat @{ Name = 'App Pools (IIS)'; StigName = $stig }).Name |
                 Should-Be "${prefix}_app_pools_iis"
+        }
+
+        It 'references the name it declares' {
+            $websites.Reference | Should-Be "{{ ${prefix}_websites }}"
+        }
+
+        # Nothing in the STIG answers it - the site names its own IIS sites - and the tasks that
+        # read one loop over it, so an empty list rather than a blank scalar.
+        It 'declares it as an empty list for the site to fill in' {
+            $websites.Declaration | Should-Be "${prefix}_websites: []"
+        }
+
+        # An empty list is a silent no-op in ansible, so the role fails instead. See #57.
+        It 'asserts the list names something' {
+            $websites.Assert.'ansible.builtin.assert'.that | Should-BeCollection @("${prefix}_websites | length > 0")
+        }
+    }
+
+}
+
+Describe 'Get-AnsibleRuleVariable' {
+
+    Context 'a role variable the site fills in per rule' {
+
+        BeforeAll {
+            $script:logPath = Invoke-PrivateCommand -Command 'Get-AnsibleRuleVariable' -Splat @{ Name = 'logpath'; TaskId = 'V-300.a'; StigName = $stig }
+        }
+
+        It 'names it from the prefix, the rule id and the name' {
+            $logPath.Name | Should-Be "${prefix}_300_a_logpath"
+        }
+
+        It 'references the name it declares' {
+            $logPath.Reference | Should-Be "{{ ${prefix}_300_a_logpath }}"
+        }
+
+        It 'declares it blank for the site to fill in' {
+            $logPath.Declaration | Should-Be "${prefix}_300_a_logpath: "
+        }
+
+        # Whether it should be is #128; until then the generated role is unchanged.
+        It 'carries no assert' {
+            $logPath.Assert | Should-BeNull
         }
     }
 }
 
-Describe 'Get-AnsibleRoleVariableReference' {
+# A running fact the tasks build up, named like a role variable but never declared. See #127.
+Describe 'Get-AnsibleFactName' {
 
-    It 'references exactly the name the declaration uses' {
-        $splat = @{ TaskName = 'websites'; StigName = $stig }
-
-        $name = Invoke-PrivateCommand -Command 'Get-AnsibleRoleVariableName' -Splat $splat
-        $declaration = Invoke-PrivateCommand -Command 'New-AnsibleRoleVariableLine' -Splat $splat
-
-        Invoke-PrivateCommand -Command 'Get-AnsibleRoleVariableReference' -Splat $splat | Should-Be "{{ $name }}"
-        $declaration | Should-Be "${name}: []"
-    }
-}
-
-Describe 'New-AnsibleRoleVariableLine' {
-
-    # Nothing in the STIG answers it - the site names its own IIS sites - and the tasks that read
-    # one loop over it, so an empty list rather than a blank scalar.
-    It 'declares it as an empty list for the site to fill in' {
-        Invoke-PrivateCommand -Command 'New-AnsibleRoleVariableLine' -Splat @{ TaskName = 'websites'; StigName = $stig } |
-            Should-Be "${prefix}_websites: []"
+    It 'names it from the prefix and the name' {
+        Invoke-PrivateCommand -Command 'Get-AnsibleFactName' -Splat @{ Name = 'sslflags'; StigName = $stig } |
+            Should-Be "${prefix}_sslflags"
     }
 }

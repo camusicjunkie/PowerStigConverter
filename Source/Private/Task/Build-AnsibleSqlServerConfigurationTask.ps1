@@ -16,7 +16,7 @@ function Build-AnsibleSqlServerConfigurationTask {
     #>
     param ($Rule, $StigName, $StigId, $Resolution)
 
-    $instances = Get-AnsibleRoleVariableReference -TaskName 'instances' -StigName $StigName
+    $instances = Get-AnsibleRoleVariable -Name 'instances' -StigName $StigName
 
     # PowerStig hands the value over as a string and powershell-yaml quotes that, so a
     # pass-through would emit OptionValue: "0". No fallback: the property is Required/SInt32, so a
@@ -24,7 +24,7 @@ function Build-AnsibleSqlServerConfigurationTask {
     $optionValue = [int] $Rule.OptionValue
 
     @{
-        RoleVariable = 'instances'
+        RoleVariable = $instances
         Task = @(
             @{
                 Detail = 'Set {0} to {1}' -f $Rule.OptionName, $optionValue
@@ -39,7 +39,7 @@ function Build-AnsibleSqlServerConfigurationTask {
                         # the instance non-compliant. It restarts only when Set changed a value.
                         'RestartService' = $true
                     }
-                    'loop' = $instances
+                    'loop' = $instances.Reference
                 }
             }
         )

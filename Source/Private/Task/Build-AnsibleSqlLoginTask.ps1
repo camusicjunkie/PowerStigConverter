@@ -16,11 +16,11 @@ function Build-AnsibleSqlLoginTask {
 
     # product() takes bare variable names, not {{ }} references, so neither list can come through
     # the reference the generators otherwise interpolate.
-    $instances = Get-AnsibleRoleVariableName -TaskName 'instances' -StigName $StigName
+    $instances = Get-AnsibleRoleVariable -Name 'instances' -StigName $StigName
     $logins = $Resolution.Variable.Name
 
     @{
-        RoleVariable = 'instances'
+        RoleVariable = $instances
         Task = @(
             @{
                 # Derived from the rule, so it stays true if a revision changes the login type.
@@ -37,7 +37,7 @@ function Build-AnsibleSqlLoginTask {
                         'LoginPasswordExpirationEnabled' = $Rule.LoginPasswordExpirationEnabled -eq 'True'
                         'LoginMustChangePassword' = $Rule.LoginMustChangePassword -eq 'True'
                     }
-                    'loop' = '{{{{ {0} | product({1}) | list }}}}' -f $instances, $logins
+                    'loop' = '{{{{ {0} | product({1}) | list }}}}' -f $instances.Name, $logins
                 }
             }
         )

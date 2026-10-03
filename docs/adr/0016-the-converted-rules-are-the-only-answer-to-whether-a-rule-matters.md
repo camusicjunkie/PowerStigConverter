@@ -27,7 +27,9 @@ it produced a task, so there is nothing left for the gate or the exporter to fil
 names) and `Incomplete` on the item beside the task, so the exporter no longer reads rule types,
 `OrganizationData.psd1` or `RoleVariableData.psd1`. A block combines these from every sub-rule, and
 `Handler` and `RoleVariable` with them, because each sub-rule names its own variables from its own
-id, and keeping only the first sub-rule's would drop the rest.
+id, and keeping only the first sub-rule's would drop the rest. (Since #127 the per-rule role
+variable is no longer in `Declaration`: its generator returns it as a `RoleVariable` record, and
+`RoleVariableData.psd1` is gone.)
 
 **Dispatch is the only place the OsFamily check happens.** The helper ADR 0011 introduced is
 folded back into it, and its skip-and-warn behaviour from ADR 0010 is unchanged.

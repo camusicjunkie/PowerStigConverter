@@ -197,17 +197,16 @@ Describe 'Build-AnsibleWebAppPoolTask' {
         }
     }
 
-    # The generator's RoleVariable is the single source for the reference above, the declaration
-    # defaults/ carries and the assert guarding it, so this pins the pair by feeding the
-    # generator's own answer to the exporter. See #57 and docs/adr/0004.
+    # The generator's RoleVariable is one record carrying the reference the task loops, the
+    # declaration defaults/ carries and the assert guarding it. See #127 and docs/adr/0004.
     Context 'the role variables it declares' {
 
         It 'declares the same list the tasks loop' {
             $item = Get-WebAppPoolItem -Rule (New-WebAppPoolRule)
 
-            $item.RoleVariable | Should-Be 'webapppools'
-            Get-RoleVariableDeclaration -RoleVariable $item.RoleVariable -StigName 'IISSite-10.0' |
-                Should-ContainCollection @('stig_iissite_10_0_webapppools: []')
+            @($item.RoleVariable).Count | Should-Be 1
+            $item.Task.loop | Should-Be $item.RoleVariable.Reference
+            $item.RoleVariable.Declaration | Should-Be 'stig_iissite_10_0_webapppools: []'
         }
     }
 }

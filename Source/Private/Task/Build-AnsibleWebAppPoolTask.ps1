@@ -13,7 +13,7 @@ function Build-AnsibleWebAppPoolTask {
     #>
     param ($Rule, $StigName, $StigId, $Resolution)
 
-    $pools = Get-AnsibleRoleVariableReference -TaskName 'webapppools' -StigName $StigName
+    $pools = Get-AnsibleRoleVariable -Name 'webapppools' -StigName $StigName
 
     # PowerStig writes a rule's own Value as PowerShell source for the resource block it builds as
     # a string, so a boolean arrives as the literal $true and rapidFailProtection is a [Boolean]
@@ -33,13 +33,13 @@ function Build-AnsibleWebAppPoolTask {
     $dsc[$Rule.Key] = $value
 
     @{
-        RoleVariable = 'webapppools'
+        RoleVariable = $pools
         Task = @(
             @{
                 Detail = 'Ensure {0}' -f $Rule.Key
                 Body = [ordered] @{
                     'ansible.windows.win_dsc' = $dsc
-                    'loop' = $pools
+                    'loop' = $pools.Reference
                 }
             }
         )

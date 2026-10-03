@@ -49,15 +49,7 @@ function ConvertTo-AnsibleTask {
 
             # What this rule declares in defaults/ and leaves unanswered - carried on its output, so
             # only a rule that produced a task can declare or refuse. See docs/adr/0016.
-            $declaration = @(@(
-                $resolution.Variable.Declaration
-                # The IIS log path: a per-rule role variable no resolution feeds.
-                if ($script:roleVariableData.ContainsKey($RuleType)) {
-                    foreach ($taskName in $script:roleVariableData[$RuleType].PerRule) {
-                        New-AnsibleVariableLine -TaskId $rule.Id -TaskName $taskName -StigName $StigName
-                    }
-                }
-            ) | Where-Object { $_ })
+            $declaration = @($resolution.Variable.Declaration | Where-Object { $_ })
             $incomplete = @($resolution.Incomplete | Where-Object { $_ })
 
             $baseId = Get-PowerStigBaseRuleId -Id $rule.Id
