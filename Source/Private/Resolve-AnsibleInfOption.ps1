@@ -12,7 +12,8 @@ function Resolve-AnsibleInfOption {
         A single object carrying Section, Key and Value. Value is the entry's Option mapped for
         whatever -Value was asked for - a Registry Values entry keeps it a string, since '4,1' cast
         to [int] reads the comma as a thousands separator and yields 41; every other section's
-        entry is [int]. Value is $null when -Value was not passed.
+        entry is [int]. Value is $null when -Value was not passed, or the entry holds no option
+        for it.
     #>
     [CmdletBinding()]
     param (
@@ -26,9 +27,9 @@ function Resolve-AnsibleInfOption {
     $key = $OptionName -replace '/|\s', '_' -replace ':'
     $entry = $option[$key]
 
-    # Keyed by the value asked for, not the property name - indexing by the name misses every
-    # time and the cast then turns every rule into 0.
-    $mappedValue = if ($PSBoundParameters.ContainsKey('Value')) {
+    # Keyed by the value asked for, not the property name. A value the entry has no option for
+    # stays $null rather than casting to 0, which is indistinguishable from a real Disabled.
+    $mappedValue = if ($PSBoundParameters.ContainsKey('Value') -and $entry -and $entry['Option'].ContainsKey($Value)) {
         $mapped = $entry['Option'][$Value]
         if ($entry['Section'] -eq 'Registry Values') { $mapped } else { [int] $mapped }
     }
