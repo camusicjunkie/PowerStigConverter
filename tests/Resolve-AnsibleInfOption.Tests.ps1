@@ -71,6 +71,16 @@ Describe 'Resolve-AnsibleInfOption' {
 
             $enabled.Value | Should-NotBe $disabled.Value
         }
+
+        # PowerStig spells it lowercase on some rules.
+        It 'matches the option regardless of case' {
+            (Resolve-InfOption -OptionName 'Accounts: Guest account status' -Value 'enabled').Value | Should-Be 1
+        }
+
+        # A miss cast to [int] would read 0, indistinguishable from a real Disabled. See #123.
+        It 'maps a value the entry holds no option for to nothing' {
+            (Resolve-InfOption -OptionName 'Accounts: Guest account status' -Value '60').Value | Should-BeNull
+        }
     }
 
     Context 'a type,value Option entry in Registry Values' {
