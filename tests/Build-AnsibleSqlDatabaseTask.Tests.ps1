@@ -93,8 +93,8 @@ Describe 'Build-AnsibleSqlDatabaseTask' {
         }
     }
 
-    # Group-AnsibleTask keeps the first sub-rule's group name, so a detail naming the database
-    # would label the whole block after Pubs. Derived from Ensure alone, it is true of all four.
+    # A detail naming the database would differ across the four sub-rules and name the block for
+    # all of them. Derived from Ensure alone, it is true of all four. See ADR 0015.
     Context 'the block the four sub-rules share' {
 
         It 'names the block from Ensure, so every sub-rule agrees on it' {

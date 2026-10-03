@@ -30,7 +30,7 @@ function ConvertTo-AnsibleTask {
 
     begin {
         $adapter = 'Build-Ansible{0}Task' -f $RuleType
-        $items = [System.Collections.ArrayList]::new()
+        $converted = [System.Collections.ArrayList]::new()
     }
     process {
         foreach ($rule in $InputObject) {
@@ -91,93 +91,82 @@ function ConvertTo-AnsibleTask {
                 $handler
             })
 
+            foreach ($task in $tasks) { Write-Verbose "  Task: $($task.name)" }
+
             # Sub-rules share a block so an operator switches the requirement off rather than one
             # of its halves; a rule that becomes several tasks needs one for the same reason.
             $group = $built.Group -or (Test-PowerStigSubRuleId -Id $rule.Id) -or $tasks.Count -gt 1
 
-            # What the rule hands on beside its task; Group-AnsibleTask combines these across a block.
-            $carried = @{ Handler = $handlers; RoleVariable = $roleVariables; Declaration = $declaration; Incomplete = $incomplete }
+            # A rule of its own is toggled on its task, before the assert wraps it and takes the
+            # toggle along. One assert per rule, on its first task - the one that consumes the value.
+            if (-not $group) { $tasks[0]['when'] = Get-AnsibleToggleName -TaskId $rule.Id -StigName $StigName }
+            if ($resolution) { $tasks[0] = Add-AnsibleOrganizationValueAssert -Task $tasks[0] -Resolution $resolution }
 
-            if (-not $group) {
-                $task = $tasks[0]
-                $task['when'] = Get-AnsibleToggleName -TaskId $rule.Id -StigName $StigName
-                Write-Verbose "  Task: $($task.name)"
-
-                $null = $items.Add(@{
-                    Output = $carried + @{ Rule = $rule; Task = Add-AnsibleAssert -Task $task -Resolution $resolution }
-                })
-                continue
-            }
-
-            $groupTask = [ordered] @{
-                'name' = '{0} | {1} | {2}' -f $baseId, $severity, $built.GroupDetail
-                'block' = [System.Collections.ArrayList]::new()
-                'when' = Get-AnsibleToggleName -TaskId $baseId -StigName $StigName
-            }
-
-            # One assert per rule, on the first task it produces - the one that consumes the value.
-            # A rule that becomes a single task, which is all of them bar RootCertificate, gets the
-            # same wrapping it would have got ungrouped. What the rule carries rides on that first
-            # task alone, so a rule's is never counted twice.
-            $first = $true
-            foreach ($task in $tasks) {
-                Write-Verbose "  Task: $($task.name)"
-
-                $null = $items.Add(@{
-                    GroupId = $baseId
-                    BaseId = $baseId
-                    Severity = $severity
-                    GroupDetail = $built.GroupDetail
-                    Task = if ($first) { Add-AnsibleAssert -Task $task -Resolution $resolution } else { $task }
-                    Output = if ($first) { $carried + @{ Rule = $rule; Task = $groupTask } } else { @{ Rule = $rule; Task = $groupTask } }
-                })
-                $first = $false
-            }
+            $null = $converted.Add([pscustomobject] @{
+                Rule = $rule
+                BaseId = $baseId
+                Severity = $severity
+                GroupDetail = $built.GroupDetail
+                Task = $tasks
+                Group = $group
+                # What the rule hands on beside its task, combined across a block.
+                Carried = @{ Handler = $handlers; RoleVariable = $roleVariables; Declaration = $declaration; Incomplete = $incomplete }
+            })
         }
     }
     end {
-        Set-AnsibleGroupTaskName -Item $items
-        Group-AnsibleTask -InputObject $items.ToArray()
+        Merge-AnsibleRequirement -Converted $converted -StigName $StigName
     }
 }
 
 <#
 .SYNOPSIS
-    Names every surviving group task from the strongest thing its sub-rules agree on, not from
-    whichever one Group-AnsibleTask happens to keep.
+    One output per requirement: a rule's own task, or one block for every sub-rule sharing a base
+    id, in the order the requirements first appear.
 .DESCRIPTION
-    Every sub-rule builds its own $groupTask instance up front, all sharing one GroupId;
-    Group-AnsibleTask keeps only the first one it sees and appends the rest into its block, so
-    the name it keeps describes one half of a requirement rather than the whole of it. This runs
-    first, in id-appearance order, and rewrites the name.
-
-    A generator offers its GroupDetail as the candidates its sub-rules might agree on, strongest
-    first; Get-AnsibleBlockDetail picks the first one they all do agree on, and unions when they
-    agree on none. A generator with nothing to prefer offers a single candidate - a bare string -
-    and gets the union it always got. See ADR 0015.
+    A block is named, filled, toggled and handed what every member carries in one place, so no
+    member's handlers, role variables, declarations or unanswered values are lost. A rule of its
+    own is the one-member case and passes through. See #125 and ADR 0015.
 #>
-function Set-AnsibleGroupTaskName {
-    param ([System.Collections.ArrayList] $Item)
+function Merge-AnsibleRequirement {
+    param ([System.Collections.ArrayList] $Converted, [string] $StigName)
 
-    $candidate = [ordered] @{}
-    foreach ($entry in $Item) {
-        if ([string]::IsNullOrEmpty($entry.GroupId)) { continue }
+    $requirements = [System.Collections.Generic.List[object]]::new()
+    $blocks = @{}
+    foreach ($record in $Converted) {
+        if (-not $record.Group) { $requirements.Add(@($record)); continue }
 
-        if (-not $candidate.Contains($entry.GroupId)) {
-            $candidate[$entry.GroupId] = [System.Collections.Generic.List[object]]::new()
+        if (-not $blocks.ContainsKey($record.BaseId)) {
+            $blocks[$record.BaseId] = [System.Collections.Generic.List[object]]::new()
+            $requirements.Add($blocks[$record.BaseId])
         }
-        $candidate[$entry.GroupId].Add(@($entry.GroupDetail))
+        $blocks[$record.BaseId].Add($record)
     }
 
-    $detail = [ordered] @{}
-    foreach ($groupId in $candidate.Keys) {
-        $detail[$groupId] = Get-AnsibleBlockDetail -Candidate $candidate[$groupId]
-    }
+    foreach ($members in $requirements) {
+        $first = $members[0]
+        $output = @{ Rule = $first.Rule }
+        # Flattened by hand: member enumeration over one member hands back its empty array whole.
+        foreach ($key in $first.Carried.Keys) {
+            $output[$key] = @(foreach ($member in $members) { foreach ($value in $member.Carried[$key]) { $value } })
+        }
 
-    foreach ($entry in $Item) {
-        if ([string]::IsNullOrEmpty($entry.GroupId)) { continue }
+        if (-not $first.Group) {
+            $output.Task = $first.Task[0]
+            $output
+            continue
+        }
 
-        $entry.Output.Task.name = '{0} | {1} | {2}' -f $entry.BaseId, $entry.Severity, $detail[$entry.GroupId]
+        $candidate = [System.Collections.Generic.List[object]]::new()
+        foreach ($member in $members) { $candidate.Add(@($member.GroupDetail)) }
+
+        $output.Task = [ordered] @{
+            'name' = '{0} | {1} | {2}' -f $first.BaseId, $first.Severity, (Get-AnsibleBlockDetail -Candidate $candidate)
+            'block' = @(foreach ($member in $members) { $member.Task })
+            'when' = Get-AnsibleToggleName -TaskId $first.BaseId -StigName $StigName
+        }
+        Write-Verbose "  TaskGroup: $($output.Task.name)"
+        $output
     }
 }
 
@@ -211,16 +200,4 @@ function Get-AnsibleBlockDetail {
     }
 
     $union -join ', '
-}
-
-<#
-.SYNOPSIS
-    Attaches the organization value assert, when there is a resolution and it has one.
-#>
-function Add-AnsibleAssert {
-    param ($Task, $Resolution)
-
-    if ($null -eq $Resolution) { return $Task }
-
-    Add-AnsibleOrganizationValueAssert -Task $Task -Resolution $Resolution
 }

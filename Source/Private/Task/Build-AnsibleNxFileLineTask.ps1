@@ -53,8 +53,8 @@ function Build-AnsibleNxFileLineTask {
     }
 
     @{
-        # Sub-rules of one requirement often touch more than one file - Group-AnsibleTask's
-        # caller joins every distinct leaf seen across the group, in the order they appear.
+        # Sub-rules of one requirement often touch more than one file - the block is named for
+        # every distinct leaf seen across them, in the order they appear. See ADR 0015.
         GroupDetail = $leaf
         Task = @(
             @{
