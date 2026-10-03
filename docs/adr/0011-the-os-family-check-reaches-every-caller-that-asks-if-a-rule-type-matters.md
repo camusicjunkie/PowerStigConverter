@@ -1,8 +1,12 @@
 ---
-status: accepted
+status: superseded by ADR-0016
 ---
 
 # The OsFamily check reaches every caller that asks whether a rule type matters
+
+> **Superseded by [ADR 0016](0016-the-converted-rules-are-the-only-answer-to-whether-a-rule-matters.md).**
+> The gate and the exporter now read the converted rules, so they never see a rule type dispatch
+> skipped, and `Get-AnsibleRuleTypeOsFamilyMismatch` is folded back into dispatch.
 
 ADR 0010 taught `ConvertTo-AnsiblePlaybook` (dispatch) to consult `RuleTypeOsFamily.psd1` before
 building a task for a rule type whose name collides across `OsFamily` values. Two more callers

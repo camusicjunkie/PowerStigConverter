@@ -293,9 +293,9 @@ function Get-RoleVariableDeclaration {
     } {
         param ($RoleVariable, $StigName)
 
-        # Piped empty rather than passed: the rules decide the organization values, and this is
-        # asking only what the role variables declare.
-        (@() | Export-AnsibleOrganizationValue -StigName $StigName -RoleVariable $RoleVariable).main_default_org
+        # A task carrying only the generator's RoleVariable: this is asking what the role
+        # variables declare, not the organization values.
+        (@{ RoleVariable = $RoleVariable } | Export-AnsibleOrganizationValue -StigName $StigName).main_default_org
     }
 }
 

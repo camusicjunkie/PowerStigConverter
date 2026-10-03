@@ -47,6 +47,19 @@ function ConvertTo-AnsibleTask {
             $built = & $adapter -Rule $rule -StigName $StigName -StigId $StigId -Resolution $resolution
             if ($null -eq $built) { continue }
 
+            # What this rule declares in defaults/ and leaves unanswered - carried on its output, so
+            # only a rule that produced a task can declare or refuse. See docs/adr/0016.
+            $declaration = @(@(
+                $resolution.Variable.Declaration
+                # The IIS log path: a per-rule role variable no resolution feeds.
+                if ($script:roleVariableData.ContainsKey($RuleType)) {
+                    foreach ($taskName in $script:roleVariableData[$RuleType].PerRule) {
+                        New-AnsibleVariableLine -TaskId $rule.Id -TaskName $taskName -StigName $StigName
+                    }
+                }
+            ) | Where-Object { $_ })
+            $incomplete = @($resolution.Incomplete | Where-Object { $_ })
+
             $baseId = Get-PowerStigBaseRuleId -Id $rule.Id
             $severity = $rule.Severity.ToUpper()
 
@@ -82,18 +95,16 @@ function ConvertTo-AnsibleTask {
             # of its halves; a rule that becomes several tasks needs one for the same reason.
             $group = $built.Group -or (Test-PowerStigSubRuleId -Id $rule.Id) -or $tasks.Count -gt 1
 
+            # What the rule hands on beside its task; Group-AnsibleTask combines these across a block.
+            $carried = @{ Handler = $handlers; RoleVariable = $roleVariables; Declaration = $declaration; Incomplete = $incomplete }
+
             if (-not $group) {
                 $task = $tasks[0]
                 $task['when'] = Get-AnsibleToggleName -TaskId $rule.Id -StigName $StigName
                 Write-Verbose "  Task: $($task.name)"
 
                 $null = $items.Add(@{
-                    Output = @{
-                        Rule = $rule
-                        Task = Add-AnsibleAssert -Task $task -Resolution $resolution
-                        Handler = $handlers
-                        RoleVariable = $roleVariables
-                    }
+                    Output = $carried + @{ Rule = $rule; Task = Add-AnsibleAssert -Task $task -Resolution $resolution }
                 })
                 continue
             }
@@ -106,7 +117,8 @@ function ConvertTo-AnsibleTask {
 
             # One assert per rule, on the first task it produces - the one that consumes the value.
             # A rule that becomes a single task, which is all of them bar RootCertificate, gets the
-            # same wrapping it would have got ungrouped.
+            # same wrapping it would have got ungrouped. What the rule carries rides on that first
+            # task alone, so a rule's is never counted twice.
             $first = $true
             foreach ($task in $tasks) {
                 Write-Verbose "  Task: $($task.name)"
@@ -117,7 +129,7 @@ function ConvertTo-AnsibleTask {
                     Severity = $severity
                     GroupDetail = $built.GroupDetail
                     Task = if ($first) { Add-AnsibleAssert -Task $task -Resolution $resolution } else { $task }
-                    Output = @{ Rule = $rule; Task = $groupTask; Handler = $handlers; RoleVariable = $roleVariables }
+                    Output = if ($first) { $carried + @{ Rule = $rule; Task = $groupTask } } else { @{ Rule = $rule; Task = $groupTask } }
                 })
                 $first = $false
             }

@@ -280,3 +280,41 @@ Describe 'ConvertTo-AnsibleTask block naming' {
         $item[0].Task.name | Should-Be 'V-400 | MEDIUM | Alpha, Beta'
     }
 }
+
+# Each sub-rule names its own organization variables, so the block a requirement collapses into
+# has to carry every member's - the gate and defaults/ read them off it. See docs/adr/0016.
+Describe 'ConvertTo-AnsibleTask carrying what a block''s sub-rules leave for defaults/' {
+
+    BeforeAll {
+        $subRules = @(
+            [pscustomobject] @{
+                Id = 'V-300.a'; Severity = 'medium'; DuplicateOf = ''
+                PolicyName = 'Maximum password age'; PolicyValue = ''; OrganizationValueRequired = $true
+            }
+            [pscustomobject] @{
+                Id = 'V-300.b'; Severity = 'medium'; DuplicateOf = ''
+                PolicyName = 'Minimum password age'; PolicyValue = ''; OrganizationValueRequired = $true
+            }
+        )
+        $setting = New-TestOrgSetting @'
+<OrganizationalSetting id="V-300.a" PolicyValue="60" />
+<OrganizationalSetting id="V-300.b" PolicyValue="" />
+'@
+        $script:block = @(Convert-Task -Rule $subRules -RuleType 'AccountPolicy' -OrganizationalSetting $setting)
+    }
+
+    It 'collapses both sub-rules into one block' {
+        $block.Count | Should-Be 1
+    }
+
+    It 'declares the variables of every sub-rule, not only the first' {
+        $declaration = $block[0].Declaration -join "`n"
+
+        $declaration | Should-BeLikeString '*300_a*60*'
+        $declaration | Should-BeLikeString '*300_b*'
+    }
+
+    It 'reports the unanswered value of a sub-rule after the first' {
+        @($block[0].Incomplete.RuleId) | Should-BeCollection @('V-300.b')
+    }
+}

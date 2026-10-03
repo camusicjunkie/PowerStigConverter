@@ -51,9 +51,13 @@ Every question about a rule's organization values is answered by one function,
 `Resolve-AnsibleOrganizationValue` — the value the task consumes, the variables `defaults/`
 declares, the ones the org settings file leaves unanswered, and the assert guarding those.
 `Resolve-AnsibleOrganizationValue` is the only place that reads a rule type's *fields* out of
-`OrganizationData.psd1`; two callers additionally test it for membership (`ContainsKey`) to skip
-rule types it says nothing about. Both adapt on their own, so adding a rule type is one edit in
-one file. See `docs/adr/0004`.
+`OrganizationData.psd1`; `ConvertTo-AnsibleTask` additionally tests it for membership
+(`ContainsKey`) to skip rule types it says nothing about. Both read the file's keys rather than a
+copied list, so adding a rule type is one edit in one file. See `docs/adr/0004`.
+
+Only a rule that produced a task matters to the rest of a conversion. The incomplete-value gate
+and the `defaults/` exporter read the converted tasks, never the raw rules, so dispatch is the one
+place that decides what gets skipped. See `docs/adr/0016`.
 
 ## Agent skills
 
