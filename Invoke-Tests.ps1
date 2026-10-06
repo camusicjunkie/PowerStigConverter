@@ -66,6 +66,29 @@ $ErrorActionPreference = 'Stop'
 # 6.0.0 has no Should-Invoke, Should-MatchString or Should-BeHashtable.
 Import-Module -Name Pester -MinimumVersion 6.2.0
 
+# CI also runs the suite on Windows PowerShell 5.1, whose parser rejects some syntax 7 accepts,
+# such as an if with no else as a hashtable value. Parsing under 5.1 here costs seconds, not a CI run.
+if ($PSVersionTable.PSEdition -eq 'Core' -and (Get-Command -Name powershell.exe -ErrorAction Ignore)) {
+    $parseErrors = powershell.exe -NoProfile -NonInteractive -Command {
+        param ($Root)
+
+        $files = @(Get-ChildItem -Path $Root -Filter '*.ps1' -File) +
+            @(Get-ChildItem -Path "$Root/Source", "$Root/tests", "$Root/ci" -Recurse -File -Include '*.ps1', '*.psm1', '*.psd1')
+
+        foreach ($file in $files) {
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref]$null, [ref]$errors)
+            foreach ($parseError in $errors) {
+                '{0}:{1}: {2}' -f $file.FullName, $parseError.Extent.StartLineNumber, $parseError.Message
+            }
+        }
+    } -args $PSScriptRoot
+
+    if ($parseErrors) {
+        throw "Windows PowerShell 5.1 cannot parse:`n$($parseErrors -join "`n")"
+    }
+}
+
 $configuration = New-PesterConfiguration
 $configuration.Run.Path = if ($Path) { $Path } else { Join-Path $PSScriptRoot 'tests' }
 $configuration.Output.Verbosity = 'Detailed'
