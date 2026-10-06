@@ -63,7 +63,7 @@ one file. See `docs/adr/0004`.
 ### Issue tracker
 
 Issues live in GitHub Issues for `camusicjunkie/PowerStigConverter`, via the `gh` CLI.
-See `docs/agents/issue-tracker.md`.
+See `docs/agents/issue-tracker.md`, which includes what a `Closes #n` commit owes its issue's labels.
 
 ### Triage labels
 
