@@ -3,14 +3,9 @@ name: CI
 # The module is Windows-only - it generates roles from Windows STIG data and its tests load
 # System.Security.AccessControl enum values - so there is nothing to gain from a linux runner.
 on:
+  # Every branch, rather than a list of prefixes: a list missed refactor/ and research/, so their
+  # pushes went untested until a PR happened to be open.
   push:
-    branches:
-      - main
-      - 'tests/**'
-      - 'fix/**'
-      - 'feat/**'
-      - 'feature/**'
-      - 'docs/**'
   pull_request:
   workflow_dispatch:
 
