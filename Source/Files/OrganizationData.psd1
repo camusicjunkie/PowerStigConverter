@@ -5,6 +5,10 @@
 # the names the generated task uses for them - IisLogging reads LogTargetW3C and
 # LogCustomFieldEntry off the node and reports them as LogTarget and LogCustomFields.
 #
+# InfOption names a rule field whose value is an INF option word (Enabled, Require Signing),
+# mapped to the value the policy takes through AccountPolicyData.psd1 / SecurityOptionData.psd1
+# when the table holds an option for it. See #123.
+#
 # The completeness check and the generators both read Required from here, so a field a task
 # consumes cannot be left out of the check by forgetting to add it in two places.
 @{
@@ -12,6 +16,7 @@
         'Name' = 'PolicyName'
         'Value' = 'PolicyValue'
         'Required' = @('PolicyValue')
+        'InfOption' = @('PolicyValue')
     }
     'Registry' = @{
         'Name' = 'ValueName'
@@ -22,6 +27,7 @@
         'Name' = 'OptionName'
         'Value' = 'OptionValue'
         'Required' = @('OptionValue')
+        'InfOption' = @('OptionValue')
     }
     'UserRight' = @{
         'Name' = 'DisplayName'

@@ -103,6 +103,12 @@ function Resolve-AnsibleOrganizationValue {
     $reference = @{}
     foreach ($variable in $variables) { $reference[$variable.Part] = $variable.Reference }
 
+    # Only where OrganizationData.psd1 says the value is an INF option, and only when the table
+    # holds one for it - anything else is the rule's own value. See #123.
+    $infValue = if ($data['InfOption'] -contains $data['Value'] -and $Rule.($data['Name'])) {
+        (Resolve-AnsibleInfOption -OptionName $Rule.($data['Name']) -Value $Rule.($data['Value'])).Value
+    }
+
     # A rule type whose task needs an object rather than a scalar declares its shape in
     # OrganizationData.psd1. Both arms build the same shape, so a task generator reads .Value
     # without knowing which one produced it.
@@ -126,9 +132,7 @@ function Resolve-AnsibleOrganizationValue {
     }
     # An organization value never reaches the task as a literal. See docs/adr/0003.
     elseif ($decidedByOrganization) { $reference[$data['Value']] }
-    elseif ($Rule.($data['Value']) -match 'Enabled|Disabled') {
-        (Resolve-AnsibleInfOption -OptionName $Rule.($data['Name']) -Value $Rule.($data['Value'])).Value
-    }
+    elseif ($null -ne $infValue) { $infValue }
     # PowerStig spells "nobody holds this right" two ways across revisions: the literal string
     # this rule type's 'Empty' names (e.g. UserRight's 'NULL', an already-superseded convention -
     # see #101), or, in every currently-shipped revision, a blank Identity outright.

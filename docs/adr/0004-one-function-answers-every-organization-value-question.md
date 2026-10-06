@@ -43,6 +43,11 @@ declarations. Four functions where there were eight, and the clump in one signat
   > now carry that too, and the resolver has no rule-type branch left. Note `.psd1` is restricted
   > language: `Import-PowerShellDataFile` rejects `[ordered]`, so ordering that matters is carried
   > by arrays and the resolver sorts `Shape`'s keys to keep the object reproducible.
+  >
+  > **Completed, see [#123](https://github.com/camusicjunkie/PowerStigConverter/issues/123).** One
+  > branch survived: an unanchored `-match 'Enabled|Disabled'` sent any rule type's value through
+  > the INF tables. `InfOption` now opts `AccountPolicy` and `SecurityOption` in, and a value is
+  > mapped exactly when the table holds an option for it.
 - The declaration in `defaults/`, the reference the task interpolates and the assert that guards
   it are three properties of the same resolved variable rather than three functions agreeing, so
   they cannot drift apart.

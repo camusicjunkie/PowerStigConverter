@@ -99,6 +99,22 @@ Describe 'Resolve-AnsibleOrganizationValue: the value the task consumes' {
         }
     }
 
+    # The mapping is whatever option the table holds for the value, not a spelling: the LDAP
+    # server signing rule in WindowsServer-2019-DC asks for 'Require Signing'. See #123.
+    Context 'a rule whose value is an option word other than Enabled or Disabled' {
+
+        It 'maps Require Signing to the type,value pair the table holds for it' {
+            $rule = [pscustomobject] @{
+                Id = 'V-102'
+                OptionName = 'Domain_controller_LDAP_server_signing_requirements'
+                OptionValue = 'Require Signing'
+                OrganizationValueRequired = $false
+            }
+
+            (Resolve-OrgValue -Rule $rule -RuleType SecurityOption).Value | Should-Be '4,2'
+        }
+    }
+
     Context 'a rule that carries its own value' {
 
         It 'passes the value straight through' {
@@ -110,6 +126,19 @@ Describe 'Resolve-AnsibleOrganizationValue: the value the task consumes' {
             }
 
             (Resolve-OrgValue -Rule $rule -RuleType AccountPolicy).Value | Should-Be '60'
+        }
+
+        # Only AccountPolicy and SecurityOption values are INF options; a word that happens to be
+        # one in another rule type is the rule's own value. See #123.
+        It 'passes Enabled straight through for a rule type that is not an INF option' {
+            $rule = [pscustomobject] @{
+                Id = 'V-103'
+                ValueName = 'Enabled'
+                ValueData = 'Enabled'
+                OrganizationValueRequired = $false
+            }
+
+            (Resolve-OrgValue -Rule $rule -RuleType Registry).Value | Should-Be 'Enabled'
         }
     }
 
