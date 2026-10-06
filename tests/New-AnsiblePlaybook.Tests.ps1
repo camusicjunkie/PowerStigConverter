@@ -47,6 +47,7 @@ Describe 'New-AnsiblePlaybook' {
             @{ RelativePath = 'defaults/main/main_default_cat2.yml' }
             @{ RelativePath = 'defaults/main/main_default_cat3.yml' }
             @{ RelativePath = 'defaults/main/main_default_org.yml' }
+            @{ RelativePath = 'defaults/main/main_default_severity.yml' }
             @{ RelativePath = 'vars/main.yml' }
             @{ RelativePath = 'handlers/main.yml' }
             @{ RelativePath = 'handlers/generated.yml' }
@@ -230,11 +231,11 @@ Describe 'New-AnsiblePlaybook' {
     Context 'the generated defaults' {
 
         It 'declares the three severity toggles tasks/main.yml imports on' {
-            $org = Get-RoleFile 'defaults/main/main_default_org.yml'
+            $severity = Get-RoleFile 'defaults/main/main_default_severity.yml'
 
-            $org | Should-BeLikeString "*${prefix}_cat1: true*"
-            $org | Should-BeLikeString "*${prefix}_cat2: true*"
-            $org | Should-BeLikeString "*${prefix}_cat3: true*"
+            $severity | Should-BeLikeString "*${prefix}_cat1: true*"
+            $severity | Should-BeLikeString "*${prefix}_cat2: true*"
+            $severity | Should-BeLikeString "*${prefix}_cat3: true*"
         }
 
         It 'declares a toggle, defaulted on, for each generated task' {
@@ -346,9 +347,8 @@ Describe 'New-AnsiblePlaybook' {
         }
     }
 
-    # RuleTypeOsFamily.psd1 excludes a rule type from the completeness gate the same way it
-    # excludes it from dispatch - an unanswered value dispatch was always going to skip anyway
-    # must not refuse a conversion nothing else touches. See docs/adr/0011. AccountPolicy is
+    # A rule type dispatch skips for the wrong OsFamily produces no task, so its unanswered value
+    # must not refuse a conversion nothing else touches. See docs/adr/0016. AccountPolicy is
     # Windows-only in the real table; this test overrides that fact rather than adding a fixture,
     # since no real STIG mixes a Windows-only rule type into Linux data (or vice versa) today.
     Context 'an organization value on a rule type the wrong OsFamily excludes' {
@@ -371,6 +371,60 @@ Describe 'New-AnsiblePlaybook' {
             }
 
             $result.Path | Should -Exist
+        }
+    }
+
+    # A rule its generator skips produces no task, so nothing references its variable - the gate
+    # must not refuse over it and defaults/ must not declare it. See docs/adr/0016. No real
+    # fixture carries the shape, so a one-rule STIG is written here: V-900's FilePath is a
+    # directory, which Build-AnsibleNxFileLineTask skips (ADR 0009), and its value is unanswered.
+    Context 'an organization value on a rule its generator skips' {
+
+        BeforeAll {
+            $skipRoot = Join-Path $TestDrive 'skip_source'
+            $processed = Join-Path $skipRoot 'source/StigData/Processed'
+            $null = New-Item -ItemType Directory -Path $processed -Force
+
+            Set-Content -Path (Join-Path $processed 'RHEL-9-9.9.xml') -Value @'
+<?xml version="1.0" encoding="utf-8"?>
+<DISASTIG version="9" stigid="RHEL_9_STIG" title="Red Hat Enterprise Linux 9 Security Technical Implementation Guide" fullversion="9.9">
+  <nxFileLineRule dscresourcemodule="nx">
+    <Rule id="V-900" severity="medium" conversionstatus="pass" title="SRG" dscresource="nxFileLine">
+      <ContainsLine />
+      <DoesNotContainPattern />
+      <DuplicateOf />
+      <FilePath>/etc/skipped.d/</FilePath>
+      <OrganizationValueRequired>True</OrganizationValueRequired>
+    </Rule>
+    <Rule id="V-901" severity="medium" conversionstatus="pass" title="SRG" dscresource="nxFileLine">
+      <ContainsLine>kept line</ContainsLine>
+      <DoesNotContainPattern />
+      <DuplicateOf />
+      <FilePath>/etc/kept.conf</FilePath>
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+    </Rule>
+  </nxFileLineRule>
+</DISASTIG>
+'@
+            Set-Content -Path (Join-Path $processed 'RHEL-9-9.9.org.default.xml') -Value @'
+<?xml version="1.0" encoding="utf-8"?>
+<OrganizationalSettings fullversion="9.9">
+  <OrganizationalSetting id="V-900" ContainsLine="" DoesNotContainPattern="" />
+</OrganizationalSettings>
+'@
+
+            $script:skipped = New-AnsiblePlaybook -StigName 'RHEL-9' -Path $skipRoot `
+                -OutputPath (Join-Path $TestDrive 'skipped') -RoleName 'skipped_role' `
+                -WarningAction SilentlyContinue 6>$null
+        }
+
+        It 'does not refuse the conversion over V-900, unanswered though it is' {
+            $skipped.Path | Should -Exist
+        }
+
+        It 'declares no variable for V-900' {
+            Get-Content -Path (Join-Path $skipped.DefaultPath 'main_default_org.yml') -Raw |
+                Should-NotBeLikeString '*_900_*'
         }
     }
 
@@ -500,6 +554,28 @@ Describe 'New-AnsiblePlaybook for a STIG with IIS logging' {
 
         It 'does not declare a variable for a value the rule already answers' {
             $iisOrg | Should-NotBeLikeString '*logflags*'
+        }
+    }
+
+    # This fixture has only medium rules. A role generated from an earlier revision that had high
+    # ones must not keep their toggles loading from defaults/main/. See #131.
+    Context 're-running over a role whose STIG has since lost its high severity rules' {
+
+        BeforeAll {
+            $staleOutput = Join-Path $TestDrive 'iis-rerun'
+            $staleRole = New-AnsiblePlaybook -StigName 'IISServer-10.0' -Path $fixtureRoot `
+                -OutputPath $staleOutput -RoleName 'iis_role' -WarningAction SilentlyContinue 6>$null
+
+            $script:staleCat1 = Join-Path $staleRole.DefaultPath 'main_default_cat1.yml'
+            Set-Content -Path $staleCat1 -Value 'stig_iisserver_10_0_999_when: true'
+
+            $null = New-AnsiblePlaybook -StigName 'IISServer-10.0' -Path $fixtureRoot `
+                -OutputPath $staleOutput -RoleName 'iis_role' -WarningAction SilentlyContinue 6>$null
+        }
+
+        It 'replaces the old toggles with an empty mapping' {
+            Get-Content -Path $staleCat1 |
+                Should-BeCollection @('# IISServer-10.0 has no high severity rules.', '{}')
         }
     }
 }

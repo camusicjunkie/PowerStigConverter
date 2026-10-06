@@ -228,10 +228,9 @@ Describe 'Build-AnsibleSqlScriptQueryTask' {
         It 'declares the same instance list the task loops' {
             $item = Get-SqlScriptQueryItem -Rule (New-SqlScriptQueryRule)
 
-            $item.RoleVariable | Should-Be 'instances'
-            Get-RoleVariableDeclaration -RoleVariable $item.RoleVariable -StigName 'SqlServer-2016-Instance' |
-                Should-ContainCollection @('stig_sqlserver_2016_instance_instances: []')
-            (Get-SqlScriptQueryTaskBody -Task $item.Task).loop | Should-BeLikeString '*stig_sqlserver_2016_instance_instances*'
+            @($item.RoleVariable).Count | Should-Be 1
+            $item.RoleVariable.Declaration | Should-Be 'stig_sqlserver_2016_instance_instances: []'
+            (Get-SqlScriptQueryTaskBody -Task $item.Task).loop | Should-Be $item.RoleVariable.Reference
         }
     }
 }

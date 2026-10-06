@@ -9,11 +9,11 @@ function Build-AnsibleIisLoggingTask {
 
     # No org settings attribute feeds the log path, so it is a role variable the site fills in
     # rather than an organization value. See docs/adr/0004.
-    $logPath = Get-AnsibleVariableReference -TaskId $Rule.Id -TaskName 'logpath' -StigName $StigName
+    $logPath = Get-AnsibleRuleVariable -Name 'logpath' -TaskId $Rule.Id -StigName $StigName
 
     $dsc = [ordered] @{
         'resource_name' = 'IISLogging'
-        'LogPath' = $logPath
+        'LogPath' = $logPath.Reference
     }
 
     # A setting the rule has nothing for is left out rather than sent empty.
@@ -37,9 +37,10 @@ function Build-AnsibleIisLoggingTask {
     }
 
     @{
+        RoleVariable = $logPath
         Task = @(
             @{
-                Detail = 'IIS Logging on {0}' -f $logPath
+                Detail = 'IIS Logging on {0}' -f $logPath.Reference
                 Body = [ordered] @{ 'ansible.windows.win_dsc' = $dsc }
             }
         )

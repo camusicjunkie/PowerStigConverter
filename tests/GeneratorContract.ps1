@@ -279,28 +279,6 @@ function New-ContractOrgSetting {
 
 <#
 .SYNOPSIS
-    The defaults/ lines a role declares for the role variables a generator named.
-.DESCRIPTION
-    Item 9's second half. A generator's RoleVariable is the single source for the reference its
-    task interpolates and the declaration defaults/ carries, so a test pins the pair by feeding
-    the generator's own answer to the exporter rather than spelling the name out twice. See #57.
-#>
-function Get-RoleVariableDeclaration {
-    param ([string[]] $RoleVariable, [string] $StigName)
-
-    InModuleScope -ModuleName PowerStigConverter -Parameters @{
-        RoleVariable = $RoleVariable; StigName = $StigName
-    } {
-        param ($RoleVariable, $StigName)
-
-        # Piped empty rather than passed: the rules decide the organization values, and this is
-        # asking only what the role variables declare.
-        (@() | Export-AnsibleOrganizationValue -StigName $StigName -RoleVariable $RoleVariable).main_default_org
-    }
-}
-
-<#
-.SYNOPSIS
     The register name the naming module builds, so a generator test pins the name it asked for
     rather than a string spelled out in two places. See #18.
 #>

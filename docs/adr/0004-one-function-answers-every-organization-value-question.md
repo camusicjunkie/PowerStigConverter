@@ -62,5 +62,9 @@ declarations. Four functions where there were eight, and the clump in one signat
   `Export-AnsibleOrganizationValue` declares it directly, from the same task name
   `New-AnsibleIisLoggingTask` builds its reference from. The generated output is unchanged — it is
   the same variable, declared the same way, under a name the glossary can carry.
+
+  > **Extended, see [#127](https://github.com/camusicjunkie/PowerStigConverter/issues/127).** Role
+  > variables now get the same single-record treatment: `Get-AnsibleRoleVariable` returns the
+  > name, reference, declaration and assert together, and the generator hands the record on.
 - `Get-PowerStigOrgSetting` now fails the way the rest of the feature does — a terminating error
   with an id and a `TargetObject` — rather than with a bare `throw`. See ADR-0002.

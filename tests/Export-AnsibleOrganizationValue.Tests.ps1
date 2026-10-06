@@ -9,30 +9,36 @@ BeforeAll {
         [pscustomobject] @{ PowerStigRule = $PowerStigRule; StigRule = $Rules }
     }
 
+    # Rules go through dispatch first, the way New-AnsiblePlaybook feeds the exporter: it declares
+    # only what the converted tasks carry, so a rule that produced no task declares nothing. See
+    # docs/adr/0016. -RoleVariable stands in for a task whose generator referenced those names.
     function Export-OrgValues {
-        param ($Groups, $OrganizationalSetting = @{}, $StigName = 'WindowsServer-2022-MS', [string[]] $RoleVariable = @())
+        param ($Groups, $OrganizationalSetting = @{}, $StigName = 'WindowsServer-2022-MS', [string[]] $RoleVariable = @(), $StigId = 'WN22-MS')
 
         InModuleScope -ModuleName PowerStigConverter -Parameters @{
             Groups = $Groups; OrganizationalSetting = $OrganizationalSetting
-            StigName = $StigName; RoleVariable = $RoleVariable
+            StigName = $StigName; RoleVariable = $RoleVariable; StigId = $StigId
         } {
-            param ($Groups, $OrganizationalSetting, $StigName, $RoleVariable)
-            $Groups | Export-AnsibleOrganizationValue -StigName $StigName `
-                -OrganizationalSetting $OrganizationalSetting -RoleVariable $RoleVariable
+            param ($Groups, $OrganizationalSetting, $StigName, $RoleVariable, $StigId)
+            $tasks = @(
+                $Groups | ConvertTo-AnsiblePlaybook -StigName $StigName -StigId $StigId -OrganizationalSetting $OrganizationalSetting -WarningAction SilentlyContinue
+                if ($RoleVariable) {
+                    @{ RoleVariable = @(foreach ($name in $RoleVariable) { Get-AnsibleRoleVariable -Name $name -StigName $StigName }) }
+                }
+            )
+            $tasks | Export-AnsibleOrganizationValue -StigName $StigName
         }
     }
 }
 
 Describe 'Export-AnsibleOrganizationValue' {
 
-    Context 'the severity toggles tasks/main.yml imports on' {
+    # The severity toggles are not organization values; Export-AnsibleConditionalValue writes
+    # them. See #130.
+    Context 'the severity toggles' {
 
-        It 'declares all three, defaulted on' {
-            $content = (Export-OrgValues -Groups @()).main_default_org -join "`n"
-
-            $content | Should-BeLikeString '*stig_server_2022_cat1: true*'
-            $content | Should-BeLikeString '*stig_server_2022_cat2: true*'
-            $content | Should-BeLikeString '*stig_server_2022_cat3: true*'
+        It 'declares none of them' {
+            (Export-OrgValues -Groups @()).main_default_org -join "`n" | Should-NotBeLikeString '*_cat[123]*'
         }
     }
 
@@ -41,7 +47,7 @@ Describe 'Export-AnsibleOrganizationValue' {
         It 'declares it with the answer from the org settings file' {
             $rule = [pscustomobject] @{
                 Id = 'V-100'; PolicyName = 'Account lockout duration'
-                DuplicateOf = ''; OrganizationValueRequired = $true
+                Severity = 'medium'; DuplicateOf = ''; OrganizationValueRequired = $true
             }
             $orgSetting = New-TestOrgSetting '<OrganizationalSetting id="V-100" PolicyValue="15" />'
 
@@ -54,7 +60,7 @@ Describe 'Export-AnsibleOrganizationValue' {
         It 'declares it with no value when nobody has answered' {
             $rule = [pscustomobject] @{
                 Id = 'V-100'; PolicyName = 'Account lockout duration'
-                DuplicateOf = ''; OrganizationValueRequired = $true
+                Severity = 'medium'; DuplicateOf = ''; OrganizationValueRequired = $true
             }
             $orgSetting = New-TestOrgSetting '<OrganizationalSetting id="V-100" PolicyValue="" />'
 
@@ -65,9 +71,9 @@ Describe 'Export-AnsibleOrganizationValue' {
         }
     }
 
-    # The role-scoped variables come in from the caller, derived from the tasks the generators
-    # built, rather than from a rule-type table here: a table cannot tell that a Server STIG's IIS
-    # rules reference no website. See #57.
+    # The role-scoped variables come from the tasks the generators built, rather than from a
+    # rule-type table: a table cannot tell that a Server STIG's IIS rules reference no website.
+    # See #57.
     Context 'a role variable declared once for the whole role' {
 
         It 'declares it as an empty list, carrying no rule id' {
@@ -95,7 +101,7 @@ Describe 'Export-AnsibleOrganizationValue' {
         It 'declares no variable for a rule carrying its own value' {
             $rule = [pscustomobject] @{
                 Id = 'V-100'; PolicyName = 'Maximum password age'; PolicyValue = '60'
-                DuplicateOf = ''; OrganizationValueRequired = $false
+                Severity = 'medium'; DuplicateOf = ''; OrganizationValueRequired = $false
             }
 
             $content = (Export-OrgValues -Groups @(New-RuleGroup 'AccountPolicyRule' @($rule))).main_default_org -join "`n"
@@ -106,7 +112,7 @@ Describe 'Export-AnsibleOrganizationValue' {
         It 'declares no variable for a duplicate' {
             $rule = [pscustomobject] @{
                 Id = 'V-100'; PolicyName = 'Account lockout duration'
-                DuplicateOf = 'V-099'; OrganizationValueRequired = $true
+                Severity = 'medium'; DuplicateOf = 'V-099'; OrganizationValueRequired = $true
             }
 
             $content = (Export-OrgValues -Groups @(New-RuleGroup 'AccountPolicyRule' @($rule))).main_default_org -join "`n"
@@ -115,19 +121,19 @@ Describe 'Export-AnsibleOrganizationValue' {
         }
 
         It 'ignores a rule type OrganizationData.psd1 says nothing about' {
-            $rule = [pscustomobject] @{ Id = 'V-110'; DuplicateOf = ''; OrganizationValueRequired = $true }
+            $rule = [pscustomobject] @{ Id = 'V-110'; Severity = 'medium'; DuplicateOf = ''; OrganizationValueRequired = $true }
 
             $content = (Export-OrgValues -Groups @(New-RuleGroup 'ProcessMitigationRule' @($rule))).main_default_org -join "`n"
 
             $content | Should-NotBeLikeString '*V-110*'
         }
 
-        # Dispatch skips this rule type for the same reason - declaring a variable here would be
-        # one no generated task ever references. See docs/adr/0011.
+        # Dispatch skips this rule type, so no task carries a variable for it - one declared here
+        # would be one nothing references. See docs/adr/0016.
         It 'declares no variable for a rule type whose adapter targets a different OsFamily' {
             $rule = [pscustomobject] @{
                 Id = 'V-100'; PolicyName = 'Account lockout duration'
-                DuplicateOf = ''; OrganizationValueRequired = $true
+                Severity = 'medium'; DuplicateOf = ''; OrganizationValueRequired = $true
             }
             $orgSetting = New-TestOrgSetting '<OrganizationalSetting id="V-100" PolicyValue="15" />'
 
@@ -143,7 +149,7 @@ Describe 'Export-AnsibleOrganizationValue' {
     Context 'the IIS log path' {
 
         It 'declares it blank for every IisLogging rule, answered or not' {
-            $rule = [pscustomobject] @{ Id = 'V-300'; DuplicateOf = ''; OrganizationValueRequired = $false }
+            $rule = [pscustomobject] @{ Id = 'V-300'; Severity = 'medium'; DuplicateOf = ''; OrganizationValueRequired = $false }
 
             $content = (Export-OrgValues -Groups @(New-RuleGroup 'IisLoggingRule' @($rule)) `
                 -StigName 'IISServer-10.0').main_default_org
@@ -161,10 +167,10 @@ Describe 'Export-AnsibleOrganizationValue' {
             @{ RuleType = 'WebConfigurationPropertyRule'; Id = 'V-310' }
             @{ RuleType = 'MimeTypeRule'; Id = 'V-311' }
         ) {
-            $rule = [pscustomobject] @{ Id = $Id; DuplicateOf = ''; OrganizationValueRequired = $false }
+            $rule = [pscustomobject] @{ Id = $Id; Severity = 'medium'; DuplicateOf = ''; OrganizationValueRequired = $false }
 
             $content = (Export-OrgValues -Groups @(New-RuleGroup $RuleType @($rule)) `
-                -StigName 'IISServer-10.0').main_default_org -join "`n"
+                -StigName 'IISServer-10.0' -StigId 'IIS_10_Server').main_default_org -join "`n"
 
             $content | Should-NotBeLikeString '*_website*'
         }

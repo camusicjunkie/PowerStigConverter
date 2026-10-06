@@ -92,18 +92,17 @@ Describe 'Build-AnsibleSslSettingsTask' {
         }
     }
 
-    # The generator's RoleVariable is the single source for the reference above, the declaration
-    # defaults/ carries and the assert guarding it, so this pins the pair by feeding the
-    # generator's own answer to the exporter. See #57 and docs/adr/0004.
+    # The generator's RoleVariable is one record carrying the reference the handler loops, the
+    # declaration defaults/ carries and the assert guarding it. See #127 and docs/adr/0004.
     Context 'the role variables it declares' {
 
         It 'declares the same list the handler loops' {
             $item = Invoke-Generator -Generator 'Build-AnsibleSslSettingsTask' -Rule (New-SslSettingsRule) `
                 -StigName 'IISSite-10.0' -ExtraParams @{ StigId = 'IIS_10-0_Site' }
 
-            $item.RoleVariable | Should-Be 'websites'
-            Get-RoleVariableDeclaration -RoleVariable $item.RoleVariable -StigName 'IISSite-10.0' |
-                Should-ContainCollection @('stig_iissite_10_0_websites: []')
+            @($item.RoleVariable).Count | Should-Be 1
+            $item.RoleVariable.Declaration | Should-Be 'stig_iissite_10_0_websites: []'
+            $item.Handler[0].loop | Should-Be $item.RoleVariable.Reference
         }
 
         # #55: the flag list is the tasks' own running total, seeded with default([]), so nothing
@@ -112,7 +111,7 @@ Describe 'Build-AnsibleSslSettingsTask' {
             $item = Invoke-Generator -Generator 'Build-AnsibleSslSettingsTask' -Rule (New-SslSettingsRule) `
                 -StigName 'IISSite-10.0' -ExtraParams @{ StigId = 'IIS_10-0_Site' }
 
-            $item.RoleVariable | Should-NotContainCollection 'sslflags'
+            @($item.RoleVariable.Name) | Should-NotContainCollection @('stig_iissite_10_0_sslflags')
         }
     }
 }

@@ -76,3 +76,7 @@ at dispatch, the same as "no adapter" already is.
   will not build without it, the same posture already adopted for `OrganizationData.psd1`.
 
 Decided during an architecture review following the Linux STIG map (#78).
+
+> **Amended, see [ADR 0016](0016-the-converted-rules-are-the-only-answer-to-whether-a-rule-matters.md).**
+> Dispatch is now the only place this check happens: the gate and the organization value exporter
+> read the converted rules, so a rule type dispatch skipped never reaches them.

@@ -1,90 +1,31 @@
 function Export-AnsibleOrganizationValue {
     [CmdletBinding()]
     param (
+        # The converted tasks, carrying the defaults/ lines and role-scoped variables they need.
+        # A rule the generators skipped has no task, so declares nothing. See docs/adr/0016.
         [Parameter(Mandatory, ValueFromPipeline)]
-        [object] $Rule,
+        [object] $Task,
 
-        [string] $StigName,
-
-        # The org settings loaded once by Get-PowerStigOrgSetting, keyed by rule id.
-        [Parameter()]
-        [hashtable] $OrganizationalSetting = @{},
-
-        # The role-scoped variables the generated tasks reference, as task names. Comes from the
-        # tasks rather than from a table here, so a STIG whose rules reference no website declares
-        # none - which a rule-type table could not tell. See #57.
-        [Parameter()]
-        [string[]] $RoleVariable = @()
+        [string] $StigName
     )
 
     begin {
         $organization = [System.Collections.SortedList]::new()
-        $osFamily = (Get-AnsibleOsAssertion -StigName $StigName).OsFamily
     }
     process {
-        $ruleType = $Rule.PowerStigRule -replace 'Rule'
-        $hasOrganizationValue = $script:organizationData.ContainsKey($ruleType)
-        $hasRoleVariable = $script:roleVariableData.ContainsKey($ruleType)
-        if (-not $hasOrganizationValue -and -not $hasRoleVariable) { return }
-
-        # Dispatch already skipped this rule type for the wrong OsFamily - declaring a variable
-        # here would be one no generated task ever references. See docs/adr/0011.
-        if (Get-AnsibleRuleTypeOsFamilyMismatch -RuleType $ruleType -OsFamily $osFamily) { return }
-
-        foreach ($rule in $Rule.StigRule) {
-            # A duplicate produces no task, so a variable for it would guard nothing.
-            if (-not [string]::IsNullOrEmpty($rule.DuplicateOf)) { continue }
-
-            $declarations = @(
-                # One declaration per organization variable the rule needs - flat rather than a
-                # mapping, so a single field can be overridden with -e and an assert can name the
-                # one that is unanswered.
-                if ($hasOrganizationValue) {
-                    $resolution = Resolve-AnsibleOrganizationValue -Rule $rule -RuleType $ruleType `
-                        -StigName $StigName -OrganizationalSetting $OrganizationalSetting
-                    foreach ($variable in $resolution.Variable) { $variable.Declaration }
-                }
-
-                # Some role variables carry no organization value at all - the IIS log path is the
-                # other way round: no org settings attribute feeds it, so it never appears above. A
-                # rule type that needs one still declares it blank for the site to fill in, because
-                # the task references it regardless, and a reference with no declaration fails the
-                # play on an undefined variable. RoleVariableData.psd1 names the task each rule
-                # type's generator builds the same reference from.
-                if ($hasRoleVariable) {
-                    foreach ($taskName in $script:roleVariableData[$ruleType].PerRule) {
-                        New-AnsibleVariableLine -TaskId $rule.Id -TaskName $taskName -StigName $StigName
-                    }
-                }
-            )
-
-            foreach ($declaration in $declarations) {
-                # Sub-rules collapse onto the same variable when they share a field.
-                if (-not $organization.ContainsKey($declaration)) {
-                    $organization.Add($declaration, $declaration)
-                }
+        # Flat, one line per variable, so a field can be overridden with -e (docs/adr/0003). Role
+        # variables come from the tasks, so a STIG referencing no website declares none (#57).
+        foreach ($declaration in @(@($Task.Declaration) + @($Task.RoleVariable).Declaration)) {
+            if ($declaration -and -not $organization.ContainsKey($declaration)) {
+                $organization.Add($declaration, $declaration)
             }
         }
     }
     end {
-        # Role-scoped, so it carries no rule id and is declared once however many rules read it -
-        # an empty list for the site to fill in, guarded by the assert Export-AnsibleTaskBySeverity
-        # prepends. Sorted in among the rest by the same SortedList.
-        foreach ($taskName in $RoleVariable) {
-            $declaration = New-AnsibleRoleVariableLine -TaskName $taskName -StigName $StigName
-            if (-not $organization.ContainsKey($declaration)) {
-                $organization.Add($declaration, $declaration)
-            }
-        }
-
-        $content = @(@'
-{0}_cat1: true
-{0}_cat2: true
-{0}_cat3: true
-
-'@ -f (Get-AnsibleVariablePrefix -StigName $StigName))
-
-        if ($organization.Count -gt 0) { $content += $organization.Values }
+        # Written even with nothing to declare, so a re-run cannot leave stale declarations. An empty
+        # mapping rather than an empty file, which yaml would read as null. See #130.
+        $content = if ($organization.Count -gt 0) { @($organization.Values) }
+            else { @(('# {0} declares no organization or role variables.' -f $StigName), '{}') }
 
         [ordered] @{ main_default_org = $content }
     }

@@ -98,6 +98,18 @@ Describe 'Build-AnsibleIisLoggingTask' {
         }
     }
 
+    # The log path is a per-rule role variable: no org settings attribute feeds it, so the
+    # generator declares it blank for the site to fill in. See #127 and docs/adr/0004.
+    Context 'the role variables it declares' {
+
+        It 'declares the log path the task references' {
+            $item = Invoke-Generator -Generator 'Build-AnsibleIisLoggingTask' -Rule (New-LoggingRule) -StigName 'IISServer-10.0'
+
+            $item.Task.'ansible.windows.win_dsc'.LogPath | Should-Be $item.RoleVariable.Reference
+            $item.RoleVariable.Declaration | Should-Be 'stig_iisserver_10_0_300_logpath: '
+        }
+    }
+
     # Read by the names the resolution reports, not the rule's - reading the rule's yields
     # null and the setting is silently dropped.
     Context 'carrying the logging settings through' {
