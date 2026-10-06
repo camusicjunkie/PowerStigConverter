@@ -22,14 +22,10 @@ function Export-AnsibleOrganizationValue {
         }
     }
     end {
-        $content = @(@'
-{0}_cat1: true
-{0}_cat2: true
-{0}_cat3: true
-
-'@ -f (Get-AnsibleVariablePrefix -StigName $StigName))
-
-        if ($organization.Count -gt 0) { $content += $organization.Values }
+        # Written even with nothing to declare, so a re-run cannot leave stale declarations. An empty
+        # mapping rather than an empty file, which yaml would read as null. See #130.
+        $content = if ($organization.Count -gt 0) { @($organization.Values) }
+            else { @(('# {0} declares no organization or role variables.' -f $StigName), '{}') }
 
         [ordered] @{ main_default_org = $content }
     }

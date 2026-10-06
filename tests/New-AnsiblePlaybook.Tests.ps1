@@ -47,6 +47,7 @@ Describe 'New-AnsiblePlaybook' {
             @{ RelativePath = 'defaults/main/main_default_cat2.yml' }
             @{ RelativePath = 'defaults/main/main_default_cat3.yml' }
             @{ RelativePath = 'defaults/main/main_default_org.yml' }
+            @{ RelativePath = 'defaults/main/main_default_severity.yml' }
             @{ RelativePath = 'vars/main.yml' }
             @{ RelativePath = 'handlers/main.yml' }
             @{ RelativePath = 'handlers/generated.yml' }
@@ -230,11 +231,11 @@ Describe 'New-AnsiblePlaybook' {
     Context 'the generated defaults' {
 
         It 'declares the three severity toggles tasks/main.yml imports on' {
-            $org = Get-RoleFile 'defaults/main/main_default_org.yml'
+            $severity = Get-RoleFile 'defaults/main/main_default_severity.yml'
 
-            $org | Should-BeLikeString "*${prefix}_cat1: true*"
-            $org | Should-BeLikeString "*${prefix}_cat2: true*"
-            $org | Should-BeLikeString "*${prefix}_cat3: true*"
+            $severity | Should-BeLikeString "*${prefix}_cat1: true*"
+            $severity | Should-BeLikeString "*${prefix}_cat2: true*"
+            $severity | Should-BeLikeString "*${prefix}_cat3: true*"
         }
 
         It 'declares a toggle, defaulted on, for each generated task' {
@@ -553,6 +554,28 @@ Describe 'New-AnsiblePlaybook for a STIG with IIS logging' {
 
         It 'does not declare a variable for a value the rule already answers' {
             $iisOrg | Should-NotBeLikeString '*logflags*'
+        }
+    }
+
+    # This fixture has only medium rules. A role generated from an earlier revision that had high
+    # ones must not keep their toggles loading from defaults/main/. See #131.
+    Context 're-running over a role whose STIG has since lost its high severity rules' {
+
+        BeforeAll {
+            $staleOutput = Join-Path $TestDrive 'iis-rerun'
+            $staleRole = New-AnsiblePlaybook -StigName 'IISServer-10.0' -Path $fixtureRoot `
+                -OutputPath $staleOutput -RoleName 'iis_role' -WarningAction SilentlyContinue 6>$null
+
+            $script:staleCat1 = Join-Path $staleRole.DefaultPath 'main_default_cat1.yml'
+            Set-Content -Path $staleCat1 -Value 'stig_iisserver_10_0_999_when: true'
+
+            $null = New-AnsiblePlaybook -StigName 'IISServer-10.0' -Path $fixtureRoot `
+                -OutputPath $staleOutput -RoleName 'iis_role' -WarningAction SilentlyContinue 6>$null
+        }
+
+        It 'replaces the old toggles with an empty mapping' {
+            Get-Content -Path $staleCat1 |
+                Should-BeCollection @('# IISServer-10.0 has no high severity rules.', '{}')
         }
     }
 }

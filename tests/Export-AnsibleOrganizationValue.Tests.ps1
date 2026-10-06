@@ -33,14 +33,12 @@ BeforeAll {
 
 Describe 'Export-AnsibleOrganizationValue' {
 
-    Context 'the severity toggles tasks/main.yml imports on' {
+    # The severity toggles are not organization values; Export-AnsibleConditionalValue writes
+    # them. See #130.
+    Context 'the severity toggles' {
 
-        It 'declares all three, defaulted on' {
-            $content = (Export-OrgValues -Groups @()).main_default_org -join "`n"
-
-            $content | Should-BeLikeString '*stig_server_2022_cat1: true*'
-            $content | Should-BeLikeString '*stig_server_2022_cat2: true*'
-            $content | Should-BeLikeString '*stig_server_2022_cat3: true*'
+        It 'declares none of them' {
+            (Export-OrgValues -Groups @()).main_default_org -join "`n" | Should-NotBeLikeString '*_cat[123]*'
         }
     }
 
