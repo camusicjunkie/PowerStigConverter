@@ -29,6 +29,10 @@ GitHub shares one number space across issues and PRs, so a bare `#42` may be eit
 
 Create a GitHub issue.
 
+## When a commit closes an issue before it merges
+
+A `Closes #<n>` commit on a branch leaves the issue open until the PR merges. As soon as the commit lands, run `gh issue edit <n> --remove-label ready-for-agent`, so the open `ready-for-agent` list only holds work nobody has done yet.
+
 ## When a skill says "fetch the relevant ticket"
 
 Run `gh issue view <number> --comments`.

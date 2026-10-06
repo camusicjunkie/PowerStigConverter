@@ -1,0 +1,5 @@
+# LF everywhere, so an editor writing LF into a CRLF checkout cannot leave a file with mixed endings.
+* text=auto eol=lf
+
+# UTF-16, which git cannot convert as text.
+Source/PowerSTIGConverter.psd1 -text

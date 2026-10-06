@@ -19,6 +19,9 @@ Requires `powershell-yaml` and `Plaster` at runtime (both declared in the manife
 `ModuleBuilder` to build and `Pester` 6.2.0+ to test. `git` must be on `PATH` for
 `Copy-PowerStigFile`.
 
+CI runs the suite under both PowerShell 7 and Windows PowerShell 5.1; locally only the parse is
+checked under 5.1. A branch with an open PR is not done until `gh pr checks` is green.
+
 Tests import the **built** module, not `Source/*.ps1`, which is what lets `InModuleScope` reach
 the private functions and reproduces the script-scope data `Source/prefix.ps1` sets up. Code
 coverage has to be measured over the build output for the same reason — pointed at `Source/` it
@@ -60,7 +63,7 @@ one file. See `docs/adr/0004`.
 ### Issue tracker
 
 Issues live in GitHub Issues for `camusicjunkie/PowerStigConverter`, via the `gh` CLI.
-See `docs/agents/issue-tracker.md`.
+See `docs/agents/issue-tracker.md`, which includes what a `Closes #n` commit owes its issue's labels.
 
 ### Triage labels
 
