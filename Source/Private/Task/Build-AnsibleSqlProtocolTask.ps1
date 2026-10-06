@@ -15,14 +15,14 @@ function Build-AnsibleSqlProtocolTask {
     #>
     param ($Rule, $StigName, $StigId, $Resolution)
 
-    $instances = Get-AnsibleRoleVariableReference -TaskName 'instances' -StigName $StigName
+    $instances = Get-AnsibleRoleVariable -Name 'instances' -StigName $StigName
 
     # PowerStig hands the flag over as the text 'True'/'False', which powershell-yaml would quote.
     # An explicit comparison, never a cast - [bool] 'False' is $true. See #64 and #69.
     $enabled = $Rule.Enabled -eq 'True'
 
     @{
-        RoleVariable = 'instances'
+        RoleVariable = $instances
         Task = @(
             @{
                 # Derived from the rule, so it stays true if a revision flips the protocol or flag.
@@ -34,7 +34,7 @@ function Build-AnsibleSqlProtocolTask {
                         'ProtocolName' = $Rule.ProtocolName
                         'Enabled' = $enabled
                     }
-                    'loop' = $instances
+                    'loop' = $instances.Reference
                 }
             }
         )

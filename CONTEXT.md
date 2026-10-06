@@ -114,6 +114,12 @@ generated rule off. One per generated task group, derived from the tasks themsel
 `defaults/` and `tasks/` cannot disagree.
 _Avoid_: flag, switch, feature toggle
 
+**Severity toggle**:
+The `prefix_cat1`, `prefix_cat2` and `prefix_cat3` variables in the role's `defaults/` that let an
+operator turn off a whole severity file at once. All three are always declared, whatever
+severities the STIG carries.
+_Avoid_: severity switch, category flag
+
 **Organization variable**:
 The `prefix_<id>_<name>` variable in the role's `defaults/` holding an organization value, which
 the generated task references rather than inlining. The single place an operator edits to answer
@@ -126,9 +132,8 @@ _Avoid_: default, parameter, override
 A variable in the role's `defaults/` that no organization value feeds — the adopting site fills
 it in, because it describes the site's own machines rather than DISA's requirement. Per-rule
 (`prefix_<id>_<name>`, the IIS log path) or role-scoped (`prefix_<name>`, the list of IIS sites
-every rule that references one configures). `RoleVariableData.psd1` names the per-rule ones by
-rule type; a role-scoped one is named by the generator that references it, as a `RoleVariable`
-output key, which is also what declares it in `defaults/` and asserts it is not empty.
+every rule that references one configures). Declared only when a generated task references it;
+a role-scoped one is also asserted non-empty, since an empty list configures nothing.
 _Avoid_: site variable, input
 
 **Handler**:

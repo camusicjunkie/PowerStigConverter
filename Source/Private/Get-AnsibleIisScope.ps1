@@ -25,10 +25,12 @@ function Get-AnsibleIisScope {
         return @{ Path = $MachinePath }
     }
 
+    $websites = Get-AnsibleRoleVariable -Name 'websites' -StigName $StigName
+
     @{
         # item is the site name the loop is on, so the path is the same string for every site.
         Path = 'IIS:\Sites\{{ item }}'
-        Loop = Get-AnsibleRoleVariableReference -TaskName 'websites' -StigName $StigName
-        RoleVariable = 'websites'
+        Loop = $websites.Reference
+        RoleVariable = $websites
     }
 }

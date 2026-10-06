@@ -10,10 +10,10 @@ function Build-AnsibleSqlDatabaseTask {
     #>
     param ($Rule, $StigName, $StigId, $Resolution)
 
-    $instances = Get-AnsibleRoleVariableReference -TaskName 'instances' -StigName $StigName
+    $instances = Get-AnsibleRoleVariable -Name 'instances' -StigName $StigName
 
     @{
-        RoleVariable = 'instances'
+        RoleVariable = $instances
         # Ensure is the only field .a-.d share, which is what makes it the block detail: a
         # candidate every sub-rule agrees on names the whole requirement. See ADR 0015.
         GroupDetail = 'Ensure the databases are {0}' -f $Rule.Ensure.ToLower()
@@ -27,7 +27,7 @@ function Build-AnsibleSqlDatabaseTask {
                         'Name' = $Rule.Name
                         'Ensure' = $Rule.Ensure
                     }
-                    'loop' = $instances
+                    'loop' = $instances.Reference
                 }
             }
         )

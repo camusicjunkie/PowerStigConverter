@@ -46,7 +46,7 @@ Describe 'Get-AnsibleIisScope' {
         }
 
         It 'names the role variable that list comes from' {
-            (Get-Scope -StigId 'IIS_10-0_Site').RoleVariable | Should-Be 'websites'
+            (Get-Scope -StigId 'IIS_10-0_Site').RoleVariable.Name | Should-Be 'stig_iissite_10_0_websites'
         }
     }
 }

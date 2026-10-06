@@ -27,7 +27,9 @@ it produced a task, so there is nothing left for the gate or the exporter to fil
 names) and `Incomplete` on the item beside the task, so the exporter no longer reads rule types,
 `OrganizationData.psd1` or `RoleVariableData.psd1`. A block combines these from every sub-rule, and
 `Handler` and `RoleVariable` with them, because each sub-rule names its own variables from its own
-id, and keeping only the first sub-rule's would drop the rest.
+id, and keeping only the first sub-rule's would drop the rest. (Since #127 the per-rule role
+variable is no longer in `Declaration`: its generator returns it as a `RoleVariable` record, and
+`RoleVariableData.psd1` is gone.)
 
 **Dispatch is the only place the OsFamily check happens.** The helper ADR 0011 introduced is
 folded back into it, and its skip-and-warn behaviour from ADR 0010 is unchanged.
@@ -56,7 +58,7 @@ the declarations themselves, so the exporter no longer needs a rule type.
 - The refusal lists incomplete values in the order dispatch emits them: the STIG's order, except
   that a block's sub-rules are listed together where the first of them sits (#125).
 - Warnings dispatch raises now come before the gate's refusal rather than after it.
-- `Export-AnsibleOrganizationValue` still writes the three severity switches, which have nothing to
-  do with organization values. Moving them is a separate change.
+- `Export-AnsibleOrganizationValue` still writes the three severity toggles, which have nothing to
+  do with organization values. Moving them is a separate change (done in #130).
 
 Decided in [#121](https://github.com/camusicjunkie/PowerStigConverter/issues/121).

@@ -343,7 +343,7 @@ Describe 'ConvertTo-AnsibleTask collapsing sub-rules into a block' {
                     @{
                         GroupDetail = 'probe'
                         Task = @{ Detail = 'set it'; Body = @{ 'ansible.builtin.debug' = @{ msg = $Rule.Id } } }
-                        Handler = if ($Rule.Handler) { @{ Name = $Rule.Handler; Body = @{ 'ansible.builtin.debug' = @{ msg = $Rule.Handler } } } }
+                        Handler = if ($Rule.Handler) { @{ Name = $Rule.Handler; Body = @{ 'ansible.builtin.debug' = @{ msg = $Rule.Handler } } } } else { $null }
                         RoleVariable = $Rule.RoleVariable
                     }
                 }

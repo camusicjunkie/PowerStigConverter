@@ -124,9 +124,9 @@ Describe 'Build-AnsibleSqlDatabaseTask' {
         It 'declares the same list the tasks loop' {
             $item = Get-SqlDatabaseItem -Rule (New-SqlDatabaseRule)
 
-            $item.RoleVariable | Should-Be 'instances'
-            Get-RoleVariableDeclaration -RoleVariable $item.RoleVariable -StigName 'SqlServer-2016-Instance' |
-                Should-ContainCollection @('stig_sqlserver_2016_instance_instances: []')
+            @($item.RoleVariable).Count | Should-Be 1
+            $item.RoleVariable.Declaration | Should-Be 'stig_sqlserver_2016_instance_instances: []'
+            $item.Task.block[0].loop | Should-Be $item.RoleVariable.Reference
         }
     }
 }

@@ -14,7 +14,8 @@ function Export-AnsibleTaskBySeverity {
 
     begin {
         $items = [System.Collections.ArrayList]::new()
-        $roleVariables = [System.Collections.Generic.SortedSet[string]]::new()
+        # Keyed by name: a role-scoped list read by many rules is asserted once, and in name order.
+        $roleVariables = [System.Collections.SortedList]::new()
     }
     process {
         $null = $items.Add(@{
@@ -23,24 +24,19 @@ function Export-AnsibleTaskBySeverity {
             Value = $Task.Task
         })
 
-        foreach ($name in @($Task.RoleVariable)) {
-            if ($name) { $null = $roleVariables.Add($name) }
+        foreach ($variable in @($Task.RoleVariable)) {
+            if ($variable.Assert) { $roleVariables[$variable.Name] = $variable.Assert }
         }
     }
     end {
-        $bySeverity = Group-AnsibleRuleBySeverity -InputObject $items.ToArray()
+        $asserts = @(foreach ($assert in $roleVariables.Values) { ConvertTo-Yaml $assert -KeepArray })
 
-        $asserts = @(foreach ($name in $roleVariables) {
-            ConvertTo-Yaml (New-AnsibleRoleVariableAssert -TaskName $name -StigName $StigName) -KeepArray
-        })
-
-        $common = @{ Assert = $asserts; StigName = $StigName }
-
-        [ordered] @{
-            cat1 = Format-AnsibleSeverityFile -Task ($bySeverity.high.Values) -Severity 'high' @common
-            cat2 = Format-AnsibleSeverityFile -Task ($bySeverity.medium.Values) -Severity 'medium' @common
-            cat3 = Format-AnsibleSeverityFile -Task ($bySeverity.low.Values) -Severity 'low' @common
+        $files = [ordered] @{}
+        foreach ($category in (Group-AnsibleBySeverity -InputObject $items.ToArray()).GetEnumerator()) {
+            $files[$category.Key] = Format-AnsibleSeverityFile -Task $category.Value.Item.Values `
+                -Severity $category.Value.Severity -Assert $asserts -StigName $StigName
         }
+        $files
     }
 }
 
@@ -71,26 +67,4 @@ function Format-AnsibleSeverityFile {
     }
 
     @($Assert) + $tasks
-}
-
-<#
-.SYNOPSIS
-    The assert guarding one role-scoped list.
-.DESCRIPTION
-    An empty list is not an error in ansible, it is a no-op, so a site role whose website list is
-    still [] hardens nothing and says nothing. ADR-0001 says a conversion that cannot be honest
-    fails loudly; this is that failure wearing a no-op's clothes. See #57.
-#>
-function New-AnsibleRoleVariableAssert {
-    param ([string] $TaskName, [string] $StigName)
-
-    $variable = Get-AnsibleRoleVariableName -TaskName $TaskName -StigName $StigName
-
-    [ordered] @{
-        'name' = 'Assert {0} names something' -f $variable
-        'ansible.builtin.assert' = [ordered] @{
-            'that' = @('{0} | length > 0' -f $variable)
-            'fail_msg' = '{0} is empty, so this role would configure nothing. Set it in defaults/main/main.yml or group_vars.' -f $variable
-        }
-    }
 }

@@ -17,7 +17,7 @@ function Build-AnsibleSqlScriptQueryTask {
     #>
     param ($Rule, $StigName, $StigId, $Resolution)
 
-    $instances = Get-AnsibleRoleVariableReference -TaskName 'instances' -StigName $StigName
+    $instances = Get-AnsibleRoleVariable -Name 'instances' -StigName $StigName
 
     $body = [ordered] @{
         'resource_name' = 'SqlScriptQuery'
@@ -39,7 +39,7 @@ function Build-AnsibleSqlScriptQueryTask {
     Write-AnsibleUnboundScriptVariableWarning -Rule $Rule
 
     @{
-        RoleVariable = 'instances'
+        RoleVariable = $instances
         Task = @(
             @{
                 # SqlScriptQuery rules carry no field to name the requirement by - only the three
@@ -48,7 +48,7 @@ function Build-AnsibleSqlScriptQueryTask {
                 Detail = 'Ensure the SQL script requirement is met'
                 Body = [ordered] @{
                     'ansible.windows.win_dsc' = $body
-                    'loop' = $instances
+                    'loop' = $instances.Reference
                 }
             }
         )

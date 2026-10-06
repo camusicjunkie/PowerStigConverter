@@ -103,19 +103,20 @@ New-AnsiblePlaybook -StigName WindowsServer-2022-MS -OutputPath .\roles -RoleNam
 ```
 <RoleName>/
   tasks/
-    main.yml                 asserts the OS, imports each severity file by tag
-    cat1.yml                 generated
-    cat2.yml                 generated
-    cat3.yml                 generated
+    main.yml                   asserts the OS, imports each severity file by tag
+    cat1.yml                   generated
+    cat2.yml                   generated
+    cat3.yml                   generated
   defaults/main/
-    main.yml                 hand-editable defaults
-    main_default_cat1.yml    generated
-    main_default_cat2.yml    generated
-    main_default_cat3.yml    generated
-    main_default_org.yml     generated
+    main.yml                   hand-editable defaults
+    main_default_cat1.yml      generated
+    main_default_cat2.yml      generated
+    main_default_cat3.yml      generated
+    main_default_org.yml       generated
+    main_default_severity.yml  generated
   vars/main.yml
-  handlers/main.yml         imports generated.yml
-  handlers/generated.yml    generated
+  handlers/main.yml            imports generated.yml
+  handlers/generated.yml       generated
 ```
 
 Re-running is safe. The generated files are replaced every run; the four scaffolding files are
@@ -131,7 +132,8 @@ Tasks are split by rule severity, matching the DISA category system:
 
 All three are always written. A STIG with no rules at one severity - Windows Defender has no low
 ones - gets a file holding an empty task list and the reason it is empty, because `tasks/main.yml`
-imports all three statically.
+imports all three statically. Its `main_default_catN.yml` is likewise written as an empty mapping,
+so a re-run cannot leave toggles behind from a revision that did have rules at that severity.
 
 Alongside these, the module emits the variables the tasks depend on: organisation-specific values
 that a STIG leaves for the implementing site to decide, and conditional values that vary by host.
