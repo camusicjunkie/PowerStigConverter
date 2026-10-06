@@ -3,13 +3,17 @@
 BeforeAll {
     . $PSScriptRoot/Initialize-TestModule.ps1
 
+    # -RoleVariable names the role-scoped lists the task references; each becomes the record a
+    # generator would return.
     function New-TaskItem {
         param ($Id, $Severity, $Name = 'a task', [string[]] $RoleVariable = @())
 
         @{
             Rule = [pscustomobject] @{ Id = $Id; Severity = $Severity }
             Task = [ordered] @{ 'name' = $Name; 'ansible.windows.win_feature' = [ordered] @{ 'name' = 'TFTP-Client' } }
-            RoleVariable = $RoleVariable
+            RoleVariable = @(foreach ($variable in $RoleVariable) {
+                Invoke-PrivateCommand -Command 'Get-AnsibleRoleVariable' -Splat @{ Name = $variable; StigName = 'WindowsServer-2022-MS' }
+            })
         }
     }
 

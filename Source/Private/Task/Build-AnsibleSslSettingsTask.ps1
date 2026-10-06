@@ -14,8 +14,8 @@ function Build-AnsibleSslSettingsTask {
 
     $flags = @($Rule.Value -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 
-    $flagList = Get-AnsibleRoleVariableName -TaskName 'sslflags' -StigName $StigName
-    $websites = Get-AnsibleRoleVariableReference -TaskName 'websites' -StigName $StigName
+    $flagList = Get-AnsibleFactName -Name 'sslflags' -StigName $StigName
+    $websites = Get-AnsibleRoleVariable -Name 'websites' -StigName $StigName
 
     # default([]) rather than a declaration in defaults/: the list is the tasks' own running
     # total, not a blank for the site to fill in the way the website list is.
@@ -25,7 +25,7 @@ function Build-AnsibleSslSettingsTask {
     @{
         # The handler loops over the site list; the flag list is the tasks' own running total and
         # defaults/ says nothing about it, so only the one is declared. See #55.
-        RoleVariable = 'websites'
+        RoleVariable = $websites
         Task = @(
             @{
                 Detail = 'Ensure SSL settings include {0}' -f ($flags -join ', ')
@@ -50,7 +50,7 @@ function Build-AnsibleSslSettingsTask {
                     'Bindings' = '{{{{ {0} | unique }}}}' -f $flagList
                     'Ensure' = 'Present'
                 }
-                'loop' = $websites
+                'loop' = $websites.Reference
             }
         }
     }

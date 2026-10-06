@@ -189,17 +189,16 @@ Describe 'Build-AnsibleSqlLoginTask' {
         }
     }
 
-    # Item 9. The generator's RoleVariable is the single source for the name the loop reads and the
-    # declaration defaults/ carries, so this feeds the generator's own answer to the exporter.
+    # Item 9. The generator's RoleVariable is one record carrying the name the loop reads and the
+    # declaration defaults/ carries. See #127.
     Context 'the role variables it declares' {
 
         It 'declares the same instance list the task loops' {
             $item = Get-SqlLoginItem -Rule (New-SqlLoginRule)
 
-            $item.RoleVariable | Should-Be 'instances'
-            Get-RoleVariableDeclaration -RoleVariable $item.RoleVariable -StigName 'SqlServer-2016-Instance' |
-                Should-ContainCollection @('stig_sqlserver_2016_instance_instances: []')
-            (Get-SqlLoginTaskBody -Task $item.Task).loop | Should-BeLikeString '*stig_sqlserver_2016_instance_instances*'
+            @($item.RoleVariable).Count | Should-Be 1
+            $item.RoleVariable.Declaration | Should-Be 'stig_sqlserver_2016_instance_instances: []'
+            (Get-SqlLoginTaskBody -Task $item.Task).loop | Should-BeLikeString "*$($item.RoleVariable.Name) | product(*"
         }
     }
 }

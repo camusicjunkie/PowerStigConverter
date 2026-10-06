@@ -125,10 +125,9 @@ Describe 'Build-AnsibleSqlServerConfigurationTask' {
         It 'declares the same list the task loops' {
             $item = Get-SqlServerConfigurationItem -Rule (New-SqlServerConfigurationRule)
 
-            $item.RoleVariable | Should-Be 'instances'
-            Get-RoleVariableDeclaration -RoleVariable $item.RoleVariable -StigName 'SqlServer-2016-Instance' |
-                Should-ContainCollection @('stig_sqlserver_2016_instance_instances: []')
-            $item.Task.loop | Should-Be '{{ stig_sqlserver_2016_instance_instances }}'
+            @($item.RoleVariable).Count | Should-Be 1
+            $item.RoleVariable.Declaration | Should-Be 'stig_sqlserver_2016_instance_instances: []'
+            $item.Task.loop | Should-Be $item.RoleVariable.Reference
         }
     }
 }
