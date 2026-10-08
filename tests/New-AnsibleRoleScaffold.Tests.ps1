@@ -92,6 +92,22 @@ Describe 'New-AnsibleRoleScaffold' {
             Get-Content -Path (Join-Path $scaffold.Path 'tasks/main.yml') -Raw |
                 Should-BeLikeString '*Microsoft Windows Server 2012 R2*'
         }
+
+        # ansible-core 2.19 rejects a conditional that is not a boolean, which the regex_search
+        # filter's matched string is not; the search test is.
+        It 'matches the <OsFamily> product name with a test, not a filter' -ForEach @(
+            @{ OsFamily = 'Windows'; StigName = 'WindowsServer-2022-MS' }
+            @{ OsFamily = 'RedHat'; StigName = 'RHEL-9' }
+        ) {
+            $root = Join-Path $TestDrive "match_$OsFamily"
+            $null = New-Item -Path $root -ItemType Directory -Force
+            $scaffold = New-Scaffold -Path $root -RoleName 'match_role' -StigName $StigName
+
+            $main = Get-Content -Path (Join-Path $scaffold.Path 'tasks/main.yml') -Raw
+
+            $main | Should-BeLikeString '*ansible_distribution is search(*'
+            $main | Should-NotBeLikeString '*regex_search*'
+        }
     }
 
     # Re-running New-AnsiblePlaybook must not discard edits to the four scaffolding files, so
