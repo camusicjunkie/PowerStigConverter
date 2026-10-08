@@ -62,6 +62,12 @@ Only a rule that produced a task matters to the rest of a conversion. The incomp
 and the `defaults/` exporter read the converted tasks, never the raw rules, so dispatch is the one
 place that decides what gets skipped. See `docs/adr/0016`.
 
+## Live test host
+
+`lab/` builds a Windows Server VirtualBox VM and applies generated roles to it from WSL's
+Ansible, with no console steps: `lab/New-StigLabVm.ps1` once, then `lab/Invoke-StigLabRun.ps1`
+per run. Credentials and run output live in the gitignored `lab/.local/`. See `lab/README.md`.
+
 ## Agent skills
 
 ### Issue tracker

@@ -4,3 +4,6 @@ launch.json
 # Scratch git worktrees that agent sessions check out in-tree. Only the worktrees directory,
 # so a .claude/ that later holds settings or skills can still be committed.
 .claude/worktrees/
+
+# Per-machine lab state: generated passwords, inventories, roles and run logs.
+lab/.local/
