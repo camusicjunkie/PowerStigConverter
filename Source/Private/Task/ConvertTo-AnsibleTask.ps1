@@ -37,6 +37,12 @@ function ConvertTo-AnsibleTask {
             # A duplicate is covered by the rule it points at.
             if (-not [string]::IsNullOrEmpty($rule.DuplicateOf)) { continue }
 
+            # An unparsed rule carries no fields to build a task from. See CONTEXT.md.
+            if ($rule.DscResource -eq 'None') {
+                Write-Warning ('{0}: PowerStig could not parse this {1} rule - skipping.' -f $rule.Id, $RuleType)
+                continue
+            }
+
             # Guarded on the data, not on the type name - a rule type OrganizationData.psd1 says
             # nothing about has no organization value to resolve.
             $resolution = if ($script:organizationData.ContainsKey($RuleType)) {
