@@ -9,6 +9,7 @@ BeforeAll {
     function New-RegistryRule {
         param (
             $Id = 'V-170',
+            $Key = 'HKEY_LOCAL_MACHINE\Software\Policies\Microsoft\Windows\System',
             $ValueData = '1',
             $ValueType = 'DWORD',
             $OrganizationValueRequired = $false,
@@ -19,7 +20,7 @@ BeforeAll {
             Id = $Id
             Severity = 'medium'
             DuplicateOf = ''
-            Key = 'HKEY_LOCAL_MACHINE\Software\Policies\Microsoft\Windows\System'
+            Key = $Key
             ValueName = 'EnableSmartScreen'
             ValueType = $ValueType
             ValueData = $ValueData
@@ -54,8 +55,20 @@ Describe 'Build-AnsibleRegistryTask' {
         It 'points win_regedit at the key and value the rule names' {
             $regedit = (Get-RegistryTask -Rule (New-RegistryRule)).'ansible.windows.win_regedit'
 
-            $regedit.path | Should-Be 'HKEY_LOCAL_MACHINE\Software\Policies\Microsoft\Windows\System'
+            $regedit.path | Should-Be 'HKLM:\Software\Policies\Microsoft\Windows\System'
             $regedit.name | Should-Be 'EnableSmartScreen'
+        }
+
+        # win_regedit takes only PowerShell drive paths; PowerStig writes the hive four ways.
+        It 'writes <Key> as the drive path win_regedit takes' -ForEach @(
+            @{ Key = 'HKEY_LOCAL_MACHINE\Software\Policies'; Path = 'HKLM:\Software\Policies' }
+            @{ Key = 'HKEY_LOCAL_Machine\SOFTWARE\Policies'; Path = 'HKLM:\SOFTWARE\Policies' }
+            @{ Key = 'HKLM\System\CurrentControlSet'; Path = 'HKLM:\System\CurrentControlSet' }
+            @{ Key = 'HKEY_CURRENT_USER\Software\Policies'; Path = 'HKCU:\Software\Policies' }
+        ) {
+            $regedit = (Get-RegistryTask -Rule (New-RegistryRule -Key $Key)).'ansible.windows.win_regedit'
+
+            $regedit.path | Should-Be $Path
         }
 
         # win_regedit wants the type lowercased; the STIG spells it DWORD.
@@ -88,7 +101,7 @@ Describe 'Build-AnsibleRegistryTask' {
             $regedit = (Get-RegistryTask -Rule $rule).'ansible.windows.win_regedit'
 
             $regedit.state | Should-Be 'absent'
-            $regedit.path | Should-Be 'HKEY_LOCAL_MACHINE\Software\Policies\Microsoft\Windows\System'
+            $regedit.path | Should-Be 'HKLM:\Software\Policies\Microsoft\Windows\System'
             $regedit.name | Should-Be 'EnableSmartScreen'
         }
 
