@@ -827,6 +827,23 @@ Describe 'New-AnsiblePlaybook for the Linux rule types' {
         }
     }
 
+    # ADR 0017: a Permission path's variable resolves through the env fact the scaffolding sets,
+    # so the two have to agree on its name. Both fixtures carry %SystemDrive%\.
+    Context 'a Permission path holding an environment variable' {
+
+        It 'reads <Role>''s variable from the env fact its tasks/main.yml sets' -ForEach @(
+            @{ Role = 'ms2025'; Fact = 'stig_server_2025_env' }
+            @{ Role = 'client10'; Fact = 'stig_client_10_env' }
+        ) {
+            $content = Get-Variable -Name $Role -ValueOnly
+
+            $content.TaskMain | Should-MatchString ([regex]::Escape("${Fact}:"))
+            # The YAML writer escapes the path's backslash in a double-quoted scalar.
+            $content.Tasks | Should-MatchString ([regex]::Escape("path: `"{{ $Fact['systemdrive'] }}\\"))
+            $content.Tasks | Should-NotMatchString '(?m)^\s*path: %'
+        }
+    }
+
     # ADR 0007: the Linux role gets its own scaffolding - a different OS assertion, no Server
     # Core fact, no reboot handler.
     Context 'the Linux role scaffolding' {

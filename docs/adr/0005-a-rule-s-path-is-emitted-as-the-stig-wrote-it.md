@@ -2,6 +2,10 @@
 status: accepted
 ---
 
+> Partly superseded by [ADR-0017](0017-a-path-s-environment-variables-resolve-from-the-target-s-facts.md):
+> `win_acl` does not expand environment variables, so the path's `%Var%` now resolves from the
+> target's facts. The rule that a generator reads only the rule stands.
+
 # A rule's path is emitted as the STIG wrote it
 
 `Build-AnsiblePermissionTask` decided the path it wrote into the role by asking the **converting**

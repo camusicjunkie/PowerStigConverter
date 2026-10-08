@@ -89,17 +89,23 @@ Describe 'Build-AnsiblePermissionTask' {
         }
     }
 
-    # Why the raw path rather than the expanded one: see the generator's help.
+    # win_acl takes the path literally, so a variable is resolved on the target from the role's
+    # env fact, keyed by lowercased name because Windows ignores the case STIGs vary. See docs/adr/0017.
     Context 'a path holding an environment variable' {
 
-        It 'sends it exactly as the STIG wrote it' {
+        It 'reads <Path> from the target environment as <Expected>' -ForEach @(
+            @{ Path = '%SystemRoot%\System32\config'; Expected = "{{ stig_server_2022_env['systemroot'] }}\System32\config" }
+            @{ Path = '%Windir%\System32\eventvwr.exe'; Expected = "{{ stig_server_2022_env['windir'] }}\System32\eventvwr.exe" }
+            @{ Path = '%ProgramFiles(x86)%'; Expected = "{{ stig_server_2022_env['programfiles(x86)'] }}" }
+            @{ Path = 'C:\Windows\System32'; Expected = 'C:\Windows\System32' }
+        ) {
             $task = (Invoke-Generator -Generator 'Build-AnsiblePermissionTask' `
-                -Rule (New-PermissionRule) -StigName 'WindowsServer-2022-MS').Task
+                -Rule (New-PermissionRule -Path $Path) -StigName 'WindowsServer-2022-MS').Task
 
-            $task.block[0].'ansible.windows.win_acl'.path | Should-Be '%SystemRoot%\System32\config'
+            $task.block[0].'ansible.windows.win_acl'.path | Should-Be $Expected
         }
 
-        It 'names the task for the same path, so the role reads the way it runs' {
+        It 'names the task for the path as the STIG wrote it' {
             $task = (Invoke-Generator -Generator 'Build-AnsiblePermissionTask' `
                 -Rule (New-PermissionRule) -StigName 'WindowsServer-2022-MS').Task
 

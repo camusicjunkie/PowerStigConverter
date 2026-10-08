@@ -16,6 +16,12 @@
   when: ansible_os_installation_type == 'Server Core'
   tags: always
 
+# A Permission path's %Var% resolves here; lowercased because Windows ignores the case STIGs vary.
+- name: Index the target's environment by lowercased name
+  ansible.builtin.set_fact:
+    <%= $PLASTER_PARAM_VariablePrefix %>_env: "{{ dict(ansible_facts['env'].keys() | map('lower') | zip(ansible_facts['env'].values())) }}"
+  tags: always
+
 - name: Execute the CAT 1 tasks
   ansible.builtin.import_tasks: cat1.yml
   when: <%= $PLASTER_PARAM_VariablePrefix %>_cat1
