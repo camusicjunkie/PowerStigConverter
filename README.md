@@ -197,7 +197,7 @@ The scaffolding takes that prefix as the `VariablePrefix` plaster parameter, so 
 and the hand-written scaffolding always agree on the names.
 
 The OS assertion in `tasks/main.yml` is derived the same way, matched against
-`ansible_distribution`:
+`ansible_facts['distribution']`:
 
 | STIG | asserts |
 | --- | --- |

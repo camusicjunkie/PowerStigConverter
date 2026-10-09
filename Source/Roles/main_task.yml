@@ -2,18 +2,18 @@
 - name: Check OS version and family
   ansible.builtin.assert:
     that:
-    - ansible_os_family == 'Windows'
-    - ansible_distribution is search('<%= $PLASTER_PARAM_OsPattern %>')
-    success_msg: "{{ ansible_distribution }} {{ ansible_distribution_major_version }} is the detected operating system."
+    - ansible_facts['os_family'] == 'Windows'
+    - ansible_facts['distribution'] is search('<%= $PLASTER_PARAM_OsPattern %>')
+    success_msg: "{{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_major_version'] }} is the detected operating system."
     fail_msg: |
       This role can only be run against <%= $PLASTER_PARAM_OsDescription %> editions.
-      {{ ansible_distribution }} {{ ansible_distribution_major_version }} is not supported.
+      {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_major_version'] }} is not supported.
   tags: always
 
 - name: Set fact if Server Core
   ansible.builtin.set_fact:
     <%= $PLASTER_PARAM_VariablePrefix %>_server_core: true
-  when: ansible_os_installation_type == 'Server Core'
+  when: ansible_facts['os_installation_type'] == 'Server Core'
   tags: always
 
 # A Permission path's %Var% resolves here; lowercased because Windows ignores the case STIGs vary.

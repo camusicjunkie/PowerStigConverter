@@ -117,8 +117,21 @@ Describe 'New-AnsibleRoleScaffold' {
 
             $main = Get-Content -Path (Join-Path $scaffold.Path 'tasks/main.yml') -Raw
 
-            $main | Should-BeLikeString '*ansible_distribution is search(*'
+            $main | Should-MatchString "ansible_facts\['distribution'\] is search\("
             $main | Should-NotBeLikeString '*regex_search*'
+        }
+
+        # INJECT_FACTS_AS_VARS goes away in ansible-core 2.24; see #150.
+        It 'reads no fact as a top-level ansible_ variable (<OsFamily>)' -ForEach @(
+            @{ OsFamily = 'Windows'; StigName = 'WindowsServer-2022-MS' }
+            @{ OsFamily = 'RedHat'; StigName = 'RHEL-9' }
+        ) {
+            $root = Join-Path $TestDrive "toplevel_$OsFamily"
+            $null = New-Item -Path $root -ItemType Directory -Force
+            $scaffold = New-Scaffold -Path $root -RoleName 'tl_role' -StigName $StigName
+
+            $main = Get-Content -Path (Join-Path $scaffold.Path 'tasks/main.yml') -Raw
+            ($main -match 'ansible_(?!facts\b)') | Should-BeFalse
         }
     }
 
@@ -216,8 +229,8 @@ Describe 'New-AnsibleRoleScaffold' {
         It 'asserts the RedHat family and major version instead of Windows' {
             $main = Get-Content -Path (Join-Path $linux.Path 'tasks/main.yml') -Raw
 
-            $main | Should-BeLikeString "*ansible_os_family == 'RedHat'*"
-            $main | Should-BeLikeString "*ansible_distribution_major_version == '9'*"
+            $main | Should-MatchString "ansible_facts\['os_family'\] == 'RedHat'"
+            $main | Should-MatchString "ansible_facts\['distribution_major_version'\] == '9'"
             $main | Should-NotBeLikeString '*Windows*'
         }
 
