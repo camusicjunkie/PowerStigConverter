@@ -135,4 +135,33 @@ Describe 'Build-AnsiblePermissionTask' {
         # That the generator never asks this machine about the path is item 8 of the contract,
         # which every generator test now runs.
     }
+
+    # SECURITY and SAM admit only SYSTEM, so the task runs as it; other keys keep the connecting
+    # account (issue #147, ADR 0006).
+    Context 'a registry key only SYSTEM can open' {
+
+        It 'runs the task as SYSTEM for <Path>' -ForEach @(
+            @{ Path = 'HKLM:\SECURITY' }
+            @{ Path = 'HKLM:\security\Policy' }
+            @{ Path = 'HKLM:\SAM\SAM' }
+            @{ Path = 'HKEY_LOCAL_MACHINE\SECURITY' }
+        ) {
+            $task = (Invoke-Generator -Generator 'Build-AnsiblePermissionTask' `
+                -Rule (New-PermissionRule -Path $Path) -StigName 'WindowsServer-2025-MS').Task
+
+            $task.block[0].become | Should-BeTrue
+            $task.block[0].become_user | Should-Be 'SYSTEM'
+        }
+
+        It 'leaves <Path> to the connecting account' -ForEach @(
+            @{ Path = 'HKLM:\SOFTWARE\Microsoft' }
+            @{ Path = 'HKLM:\SECURITYX' }
+            @{ Path = '%SystemRoot%\System32\config' }
+        ) {
+            $task = (Invoke-Generator -Generator 'Build-AnsiblePermissionTask' `
+                -Rule (New-PermissionRule -Path $Path) -StigName 'WindowsServer-2025-MS').Task
+
+            $task.block[0].Contains('become') | Should-BeFalse
+        }
+    }
 }
