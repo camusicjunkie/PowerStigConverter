@@ -575,7 +575,7 @@ Describe 'New-AnsiblePlaybook for a STIG with IIS logging' {
 
         It 'replaces the old toggles with an empty mapping' {
             Get-Content -Path $staleCat1 |
-                Should-BeCollection @('# IISServer-10.0 has no high severity rules.', '{}')
+                Should-BeCollection @('# No tasks were generated for IISServer-10.0 at high severity.', '{}')
         }
     }
 }
