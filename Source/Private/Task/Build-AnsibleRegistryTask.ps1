@@ -17,8 +17,14 @@ function Build-AnsibleRegistryTask {
     # leave the key unsplit on a machine where '\' is not a path separator.
     $keyLeaf = $Rule.Key.Substring($Rule.Key.LastIndexOf('\') + 1)
 
+    # win_regedit takes only a PowerShell drive path. PowerStig spells the hive in full, abbreviated
+    # and in mixed case; the lookup is case-insensitive, and an unrecognised hive passes through.
+    $hive, $subKey = $Rule.Key -split '\\', 2
+    $drive = @{ HKEY_LOCAL_MACHINE = 'HKLM'; HKLM = 'HKLM'; HKEY_CURRENT_USER = 'HKCU'; HKCU = 'HKCU' }[$hive.TrimEnd(':')]
+    $path = if ($drive) { '{0}:\{1}' -f $drive, $subKey } else { $Rule.Key }
+
     $regedit = [ordered] @{
-        'path' = $Rule.Key
+        'path' = $path
         'name' = $Rule.ValueName
     }
 

@@ -231,9 +231,9 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
                 # $ matches before the \n, not before the \r.
                 '(?ms)^- name: V-241989 \| MEDIUM \| DomainProfile\r?$.+?' +
                 'V-241989\.a \| MEDIUM \| Set EnableFirewall.+?' +
-                'path: HKEY_LOCAL_MACHINE\\SOFTWARE\\Policies\\Microsoft\\WindowsFirewall\\DomainProfile\r?$.+?' +
+                'path: HKLM:\\SOFTWARE\\Policies\\Microsoft\\WindowsFirewall\\DomainProfile\r?$.+?' +
                 'V-241989\.b \| MEDIUM \| Set EnableFirewall.+?' +
-                'path: HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services\\SharedAccess\\Parameters\\FirewallPolicy\\DomainProfile\r?$'
+                'path: HKLM:\\SYSTEM\\CurrentControlSet\\Services\\SharedAccess\\Parameters\\FirewallPolicy\\DomainProfile\r?$'
             )
         }
 
@@ -243,8 +243,8 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
         It 'names a pair whose halves share no key leaf from the value they do share' {
             $firewall.Tasks | Should-MatchString (
                 '(?ms)^- name: V-241990 \| MEDIUM \| EnableFirewall\r?$.+?' +
-                'path: HKEY_LOCAL_MACHINE\\SOFTWARE\\Policies\\Microsoft\\WindowsFirewall\\PrivateProfile\r?$.+?' +
-                'path: HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services\\SharedAccess\\Parameters\\FirewallPolicy\\StandardProfile\r?$'
+                'path: HKLM:\\SOFTWARE\\Policies\\Microsoft\\WindowsFirewall\\PrivateProfile\r?$.+?' +
+                'path: HKLM:\\SYSTEM\\CurrentControlSet\\Services\\SharedAccess\\Parameters\\FirewallPolicy\\StandardProfile\r?$'
             )
         }
 
@@ -291,7 +291,7 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
 
         It 'carries an ASR rule''s GUID ValueName and its spaced key through untouched' {
             $defender.Tasks | Should-BeLikeString '*name: BE9BA2D9-53EA-4CDC-84E5-9B1EEEE46550*'
-            $defender.Tasks | Should-BeLikeString '*path: HKEY_LOCAL_MACHINE\Software\Policies\Microsoft\Windows Defender\Windows Defender Exploit Guard\ASR\Rules*'
+            $defender.Tasks | Should-BeLikeString '*path: HKLM:\Software\Policies\Microsoft\Windows Defender\Windows Defender Exploit Guard\ASR\Rules*'
         }
 
         # Defender is the first in-scope product whose real data carries no rule at one severity -
