@@ -79,15 +79,44 @@ Describe 'Build-AnsibleUserRightTask' {
             @($right.users).Count | Should-Be 1
         }
 
-        # PowerStig spells "nobody holds this right" as the string NULL.
-        It 'sends an empty list when the rule denies the right to everyone' {
+        # PowerStig ends some identities with a sentence period; the module cannot resolve it. See #143.
+        It 'drops a trailing period from an identity' {
             $right = (Invoke-Generator -Generator 'Build-AnsibleUserRightTask' `
-                -Rule (New-UserRightRule -Identity 'NULL') -StigName 'WindowsServer-2022-MS').Task.'ansible.windows.win_user_right'
+                -Rule (New-UserRightRule -Identity 'Administrators.,Enterprise Admins.') -StigName 'WindowsServer-2022-MS').Task.'ansible.windows.win_user_right'
 
-            @($right.users).Count | Should-Be 0
+            $right.users -join '|' | Should-Be 'Administrators|Enterprise Admins'
         }
     }
 
+    # win_user_right crashes on an empty users list, so a right nobody may hold removes its
+    # current holders instead. PowerStig spells that NULL or a blank Identity. See #143.
+    Context 'a right nobody may hold' {
+
+        It 'gathers the holders, then removes them, when Identity is <Identity>' -ForEach @(
+            @{ Identity = 'NULL' }
+            @{ Identity = '' }
+        ) {
+            $block = (Invoke-Generator -Generator 'Build-AnsibleUserRightTask' `
+                -Rule (New-UserRightRule -Identity $Identity) -StigName 'WindowsServer-2022-MS').Task.block
+
+            $gather = $block[0]
+            $remove = $block[1]
+            $gather.Contains('ansible.windows.win_powershell') | Should-BeTrue
+            $gather.'ansible.windows.win_powershell'.script | Should-BeLikeString '*SeNetworkLogonRight*'
+            $gather.changed_when | Should-BeFalse
+            $remove.'ansible.windows.win_user_right'.action | Should-Be 'remove'
+            $remove.'ansible.windows.win_user_right'.name | Should-Be 'SeNetworkLogonRight'
+            $remove.'ansible.windows.win_user_right'.users | Should-Be "{{ $($gather.register).result }}"
+            $remove.when | Should-Be "$($gather.register).result | length > 0"
+        }
+
+        It 'never sends an empty users list' {
+            $block = (Invoke-Generator -Generator 'Build-AnsibleUserRightTask' `
+                -Rule (New-UserRightRule -Identity 'NULL') -StigName 'WindowsServer-2022-MS').Task.block
+
+            ($block | ConvertTo-Json -Depth 6) -match '"users":\s*\[\s*\]' | Should-BeFalse
+        }
+    }
     Context 'a value the organization decides' {
 
         It 'interpolates the organization variable rather than inlining a list' {
