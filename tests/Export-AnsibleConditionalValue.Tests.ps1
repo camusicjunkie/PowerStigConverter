@@ -73,9 +73,9 @@ Describe 'Export-AnsibleConditionalValue' {
             $files = Export-Toggles -Items @(New-TaskItem -Id 'V-100')
 
             $files.main_default_cat1 |
-                Should-BeCollection @('# WindowsServer-2022-MS has no high severity rules.', '{}')
+                Should-BeCollection @('# No tasks were generated for WindowsServer-2022-MS at high severity.', '{}')
             $files.main_default_cat3 |
-                Should-BeCollection @('# WindowsServer-2022-MS has no low severity rules.', '{}')
+                Should-BeCollection @('# No tasks were generated for WindowsServer-2022-MS at low severity.', '{}')
         }
     }
 
