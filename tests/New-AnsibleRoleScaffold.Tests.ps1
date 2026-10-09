@@ -84,6 +84,18 @@ Describe 'New-AnsibleRoleScaffold' {
             $defaults | Should-BeLikeString '*stig_client_11_server_core*'
         }
 
+        # The fact a Permission path's variable resolves through. See docs/adr/0017.
+        It 'indexes the target environment by lowercased name' {
+            $root = Join-Path $TestDrive 'env'
+            $null = New-Item -Path $root -ItemType Directory -Force
+            $scaffold = New-Scaffold -Path $root -RoleName 'env_role' -StigName 'WindowsServer-2022-MS'
+
+            $main = Get-Content -Path (Join-Path $scaffold.Path 'tasks/main.yml') -Raw
+
+            $main | Should-MatchString ([regex]::Escape(
+                "stig_server_2022_env: `"{{ dict(ansible_facts['env'].keys() | map('lower') | zip(ansible_facts['env'].values())) }}`""))
+        }
+
         It 'asserts the OS the STIG is for' {
             $root = Join-Path $TestDrive 'os'
             $null = New-Item -Path $root -ItemType Directory -Force
@@ -142,6 +154,11 @@ Describe 'New-AnsibleRoleScaffold' {
                 Should-NotBeLikeString '*Server Core*'
             Get-Content -Path (Join-Path $linux.Path 'defaults/main/main.yml') -Raw |
                 Should-NotBeLikeString '*server_core*'
+        }
+
+        It 'sets no env fact, since Permission is the only rule type that reads one and targets Windows' {
+            Get-Content -Path (Join-Path $linux.Path 'tasks/main.yml') -Raw |
+                Should-NotBeLikeString '*_env:*'
         }
 
         It 'scaffolds no reboot handler, since no in-scope Linux rule notifies one' {
