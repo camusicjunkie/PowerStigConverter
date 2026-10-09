@@ -3,7 +3,7 @@
   ansible.builtin.assert:
     that:
     - ansible_os_family == '<%= $PLASTER_PARAM_OsFamily %>'
-    - ansible_distribution | regex_search('(<%= $PLASTER_PARAM_OsPattern %>)')
+    - ansible_distribution is search('<%= $PLASTER_PARAM_OsPattern %>')
     - ansible_distribution_major_version == '<%= $PLASTER_PARAM_OsMajorVersion %>'
     success_msg: "{{ ansible_distribution }} {{ ansible_distribution_major_version }} is the detected operating system."
     fail_msg: |
