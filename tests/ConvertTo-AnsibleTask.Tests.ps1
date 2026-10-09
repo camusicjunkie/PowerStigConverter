@@ -75,6 +75,35 @@ Describe 'ConvertTo-AnsibleTask' {
         }
     }
 
+    # WindowsServer-2025-MS-1.1's V-278193.c: no DuplicateOf, not org-decided, and no fields at
+    # all - resolving its store path threw on the empty Location and failed the whole conversion.
+    Context 'an unparsed rule' {
+
+        It 'skips it' {
+            $rule = [pscustomobject] @{
+                Id = 'V-180.c'; Severity = 'medium'; DuplicateOf = ''; DscResource = 'none'
+                CertificateName = ''; Thumbprint = ''; Location = ''; OrganizationValueRequired = $false
+            }
+
+            $result = @(Convert-Task -Rule $rule -RuleType 'RootCertificate' 3>$null)
+
+            $result.Count | Should-Be 0
+        }
+
+        It 'warns that it was skipped, naming it' {
+            $rule = [pscustomobject] @{
+                Id = 'V-180.c'; Severity = 'medium'; DuplicateOf = ''; DscResource = 'none'
+                CertificateName = ''; Thumbprint = ''; Location = ''; OrganizationValueRequired = $false
+            }
+
+            $warned = @(Convert-Task -Rule $rule -RuleType 'RootCertificate' 3>&1 |
+                Where-Object { $_ -is [System.Management.Automation.WarningRecord] })
+
+            $warned.Count | Should-Be 1
+            $warned[0].Message | Should-BeLikeString '*V-180.c*'
+        }
+    }
+
     Context 'a rule type OrganizationData.psd1 says nothing about' {
 
         # Resolve-AnsibleOrganizationValue throws for a rule type it has no entry for, so a rule
