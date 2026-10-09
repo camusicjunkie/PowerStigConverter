@@ -12,5 +12,5 @@ function Get-AnsibleEmptySeverityReason {
         [string] $Severity
     )
 
-    '# {0} has no {1} severity rules.' -f $StigName, $Severity
+    '# No tasks were generated for {0} at {1} severity.' -f $StigName, $Severity
 }
