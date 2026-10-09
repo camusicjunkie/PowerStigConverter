@@ -53,6 +53,25 @@ Describe 'Build-AnsibleWindowsFeatureTask' {
             $task.'ansible.windows.win_feature'.state | Should-Be 'present'
         }
 
+        # A feature the target does not ship is already absent; win_feature fails on the name.
+        # See #146.
+        It 'tolerates only the not-valid-name failure when removing a feature' {
+            $task = (Invoke-Generator -Generator 'Build-AnsibleWindowsFeatureTask' `
+                -Rule (New-WindowsFeatureRule) -StigName 'WindowsServer-2022-MS').Task
+
+            $register = Get-ExpectedRegisterName -TaskId 'V-130' -StigName 'WindowsServer-2022-MS' -Suffix 'feature_result'
+            $task.register | Should-Be $register
+            $task.failed_when | Should-Be "$register is failed and 'is not valid' not in ($register.msg | default(''))"
+        }
+
+        It 'leaves installing a feature to fail on any error' {
+            $task = (Invoke-Generator -Generator 'Build-AnsibleWindowsFeatureTask' `
+                -Rule (New-WindowsFeatureRule -Ensure 'Present') -StigName 'WindowsServer-2022-MS').Task
+
+            $task.Contains('failed_when') | Should-BeFalse
+            $task.Contains('register') | Should-BeFalse
+        }
+
         It 'names the task for the rule id, its severity and the change it makes' {
             $task = (Invoke-Generator -Generator 'Build-AnsibleWindowsFeatureTask' `
                 -Rule (New-WindowsFeatureRule) -StigName 'WindowsServer-2022-MS').Task
