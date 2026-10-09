@@ -74,6 +74,26 @@ Describe 'Build-AnsiblePermissionTask' {
         }
     }
 
+    # Windows resolves a service account only under NT SERVICE (issue #144).
+    Context 'an entry naming a service account' {
+
+        It 'qualifies <Principal> as <Expected>' -ForEach @(
+            @{ Principal = 'TrustedInstaller'; Expected = 'NT SERVICE\TrustedInstaller' }
+            @{ Principal = 'Eventlog'; Expected = 'NT SERVICE\EventLog' }
+            @{ Principal = 'NT SERVICE\TrustedInstaller'; Expected = 'NT SERVICE\TrustedInstaller' }
+            @{ Principal = 'Administrators'; Expected = 'Administrators' }
+        ) {
+            $rule = New-PermissionRule -Entries @(
+                [pscustomobject] @{ Principal = $Principal; Rights = 'FullControl'; Type = 'Allow'; Inheritance = 'This folder only' }
+            )
+
+            $task = (Invoke-Generator -Generator 'Build-AnsiblePermissionTask' `
+                -Rule $rule -StigName 'WindowsServer-2022-MS').Task
+
+            $task.block[0].'ansible.windows.win_acl'.user | Should-Be $Expected
+        }
+    }
+
     # A STIG that does not say otherwise is granting, not denying.
     Context 'an entry that does not say whether it allows or denies' {
 
