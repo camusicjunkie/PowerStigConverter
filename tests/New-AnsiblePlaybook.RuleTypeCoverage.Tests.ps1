@@ -357,7 +357,7 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
         ) {
             $tasks = (Get-Variable -Name $Role -ValueOnly).Tasks
             $tasks | Should-BeLikeString '*Access Credential Manager as a trusted caller*'
-            $tasks | Should-MatchString '(?m)^\s*users:\s*$'
+            $tasks | Should-BeLikeString '*Remove every holder of Access Credential Manager*'
         }
     }
 
