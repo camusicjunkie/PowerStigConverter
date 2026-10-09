@@ -161,7 +161,7 @@ Describe 'Build-AnsiblePermissionTask' {
             $task = (Invoke-Generator -Generator 'Build-AnsiblePermissionTask' `
                 -Rule (New-PermissionRule -Path $Path) -StigName 'WindowsServer-2025-MS').Task
 
-            $task.block[0].ContainsKey('become') | Should-BeFalse
+            $task.block[0].Contains('become') | Should-BeFalse
         }
     }
 }
