@@ -18,6 +18,9 @@ function Build-AnsiblePermissionTask {
         "{{ $fact['$($match.Groups[1].Value.ToLower())'] }}"
     })
 
+    # SECURITY and SAM are readable only by SYSTEM, and the rule's path says so (issue #147).
+    $systemOnly = $Rule.Path -match '^(HKLM:|HKEY_LOCAL_MACHINE)\\(SECURITY|SAM)(\\|$)'
+
     @{
         # Always a block, because one rule sets several entries on the same path.
         Group = $true
@@ -28,7 +31,7 @@ function Build-AnsiblePermissionTask {
 
                 $principal = if ($servicePrincipal.ContainsKey($entry.Principal)) { $servicePrincipal[$entry.Principal] } else { $entry.Principal }
 
-                @{
+                $task = @{
                     Detail = 'Set {0} permissions for {1} on {2}' -f $entry.Rights, $entry.Principal, $Rule.Path
                     Body = [ordered] @{
                         'ansible.windows.win_acl' = [ordered] @{
@@ -42,6 +45,12 @@ function Build-AnsiblePermissionTask {
                         }
                     }
                 }
+                # Runs as the account the key admits, with no credential (ADR 0006).
+                if ($systemOnly) {
+                    $task.Body.become = $true
+                    $task.Body.become_user = 'SYSTEM'
+                }
+                $task
             }
         )
     }
