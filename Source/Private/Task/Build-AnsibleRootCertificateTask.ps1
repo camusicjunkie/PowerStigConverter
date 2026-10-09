@@ -38,7 +38,7 @@ function Build-AnsibleRootCertificateTask {
                 Name = 'Assert {0} is set to {1}' -f $Rule.CertificateName, $store.StoreName
                 Body = [ordered] @{
                     'ansible.builtin.assert' = [ordered] @{
-                        'that' = "$registerName.certificates.issued_by exists"
+                        'that' = "$registerName.certificates | length > 0"
                         'fail_msg' = '{0} does not exist in the {1} certificate store' -f $Rule.CertificateName, $store.StoreName
                     }
                 }
