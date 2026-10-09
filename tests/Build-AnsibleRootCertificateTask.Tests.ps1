@@ -57,6 +57,14 @@ Describe 'Build-AnsibleRootCertificateTask' {
             $assert.'ansible.builtin.assert'.fail_msg | Should-BeLikeString '*DoD Root CA 3*'
         }
 
+        # Text-compared tests let invalid Jinja through (#145); this one is checked against a real evaluator.
+        It 'asserts on whether the gather returned any certificate' {
+            $task = Get-RootCertificateTask -Rule (New-RootCertificateRule) -OrganizationalSetting (New-RootStore)
+            $assert = $task.block | Where-Object { $_.name -like 'Assert *' }
+
+            $assert.'ansible.builtin.assert'.that | Should-BeLikeString '*.certificates | length > 0'
+        }
+
         It 'names the block for the base id, its severity and the certificate' {
             $task = Get-RootCertificateTask -Rule (New-RootCertificateRule) -OrganizationalSetting (New-RootStore)
 
