@@ -132,8 +132,9 @@ _Avoid_: default, parameter, override
 A variable in the role's `defaults/` that no organization value feeds — the adopting site fills
 it in, because it describes the site's own machines rather than DISA's requirement. Per-rule
 (`prefix_<id>_<name>`, the IIS log path) or role-scoped (`prefix_<name>`, the list of IIS sites
-every rule that references one configures). Declared only when a generated task references it;
-a role-scoped one is also asserted non-empty, since an empty list configures nothing.
+every rule that references one configures). Declared only when a generated task references it,
+and asserted non-empty in the severity file's preamble, since an empty one configures nothing.
+See ADR-0018.
 _Avoid_: site variable, input
 
 **Handler**:
