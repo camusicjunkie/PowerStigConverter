@@ -33,6 +33,10 @@ Create a GitHub issue.
 
 A `Closes #<n>` commit on a branch leaves the issue open until the PR merges. As soon as the commit lands, run `gh issue edit <n> --remove-label ready-for-agent`, so the open `ready-for-agent` list only holds work nobody has done yet.
 
+## Commit messages
+
+A commit message ends at `Closes #<n>`, or `Refs #<n>` when the issue is already closed. It carries no Claude trailer.
+
 ## When a skill says "fetch the relevant ticket"
 
 Run `gh issue view <number> --comments`.
