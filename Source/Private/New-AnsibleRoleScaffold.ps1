@@ -38,6 +38,9 @@ function New-AnsibleRoleScaffold {
 
         $null = Invoke-Plaster @plasterParams
     }
+    else {
+        Add-AnsibleEnvFact -Path (Join-Path $rolePath 'tasks/main.yml') -StigName $StigName
+    }
 
     $taskPath = Join-Path $rolePath 'tasks'
     $defaultPath = Join-Path $rolePath 'defaults' | Join-Path -ChildPath 'main'
@@ -55,4 +58,54 @@ function New-AnsibleRoleScaffold {
         DefaultPath = $defaultPath
         HandlerPath = $handlerPath
     }
+}
+
+function Add-AnsibleEnvFact {
+    <#
+    .SYNOPSIS
+        Adds the env fact to a Windows role's tasks/main.yml when it lacks one.
+    .DESCRIPTION
+        tasks/main.yml is hand-editable and written once, so a role scaffolded before the env fact
+        existed never gets it from the template. The task is copied from the template so the two
+        cannot drift, and inserted ahead of the CAT imports. See #149 and docs/adr/0017.
+    #>
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory)]
+        [string] $Path,
+
+        [Parameter(Mandatory)]
+        [string] $StigName
+    )
+
+    if (-not (Test-Path -Path $Path -PathType Leaf) -or
+        (Get-AnsibleOsAssertion -StigName $StigName).OsFamily -ne 'Windows') {
+        return
+    }
+
+    $prefix = Get-AnsibleVariablePrefix -StigName $StigName
+    $content = Get-Content -Path $Path -Raw
+    if ($content -match ('(?m)^\s*{0}_env\s*:' -f [regex]::Escape($prefix))) {
+        return
+    }
+
+    $template = Get-Content -Path (Join-Path $PSScriptRoot 'Roles/main_task.yml') -Raw
+    $block = [regex]::Match($template, "(?ms)(^#[^\r\n]*\r?\n)?^- name: Index the target's environment.*?^  tags: always\r?\n\r?\n")
+    if (-not $block.Success) {
+        return
+    }
+
+    $task = $block.Value.Replace('<%= $PLASTER_PARAM_VariablePrefix %>', $prefix)
+    $newline = if ($content.Contains("`r`n")) { "`r`n" } else { "`n" }
+    $task = $task -replace '\r?\n', $newline
+
+    $anchor = [regex]::Match($content, '(?m)^- name: Execute the CAT 1 tasks')
+    $updated = if ($anchor.Success) {
+        $content.Insert($anchor.Index, $task)
+    }
+    else {
+        $content.TrimEnd() + $newline + $newline + $task.TrimEnd() + $newline
+    }
+
+    Set-Content -Path $Path -Value $updated -NoNewline
 }

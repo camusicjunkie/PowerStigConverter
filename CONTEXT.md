@@ -95,8 +95,8 @@ _Avoid_: converter, handler, builder
 **Severity file**:
 One of the role's three generated task files — `tasks/cat1.yml`, `cat2.yml` and `cat3.yml`,
 holding the high, medium and low severity rules respectively. The scaffolded `tasks/main.yml`
-imports all three statically, so all three are always written: a STIG with no rules at one
-severity gets a file holding an empty task list and the reason it is empty, the way
+imports all three statically, so all three are always written: a severity at which no task was
+generated gets a file holding an empty task list and the reason it is empty, the way
 `handlers/generated.yml` is written for a STIG whose rules notify no handler.
 _Avoid_: category file, cat file, CAT III file
 

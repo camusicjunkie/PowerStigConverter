@@ -29,7 +29,7 @@ function Export-AnsibleConditionalValue {
             # An empty mapping, as main_default_org.yml is. See #131.
             $toggles = $category.Value
             $content = if ($toggles.Item.Count -gt 0) { @($toggles.Item.Values) }
-                else { @(('# {0} has no {1} severity rules.' -f $StigName, $toggles.Severity), '{}') }
+                else { @((Get-AnsibleEmptySeverityReason -StigName $StigName -Severity $toggles.Severity), '{}') }
             $files['main_default_{0}' -f $category.Key] = $content
             # tasks/main.yml guards each severity file's import on one, so all three are declared
             # whatever the STIG carries. See #130.

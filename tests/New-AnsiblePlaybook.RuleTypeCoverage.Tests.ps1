@@ -299,7 +299,7 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
         # missing file fails the whole role at parse time rather than skipping the category.
         # See #118.
         It 'writes a valid, empty cat3 for the severity the STIG has no rules at' {
-            $defender.TaskFile['cat3'] | Should-BeLikeString '*WindowsDefender-All has no low severity rules*'
+            $defender.TaskFile['cat3'] | Should-BeLikeString '*No tasks were generated for WindowsDefender-All at low severity*'
             # \r? for the same reason the Firewall cases above carry it: the role files are
             # written with CRLF, and .NET's multiline $ matches before the \n, not the \r.
             $defender.TaskFile['cat3'] | Should-MatchString '(?m)^\[\]\r?$'
@@ -357,7 +357,7 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
         ) {
             $tasks = (Get-Variable -Name $Role -ValueOnly).Tasks
             $tasks | Should-BeLikeString '*Access Credential Manager as a trusted caller*'
-            $tasks | Should-MatchString '(?m)^\s*users:\s*$'
+            $tasks | Should-BeLikeString '*Remove every holder of Access Credential Manager*'
         }
     }
 
@@ -849,14 +849,14 @@ Describe 'New-AnsiblePlaybook for the Linux rule types' {
     Context 'the Linux role scaffolding' {
 
         It 'asserts the RedHat family and the STIG''s own major version, not Windows' {
-            $rhel.TaskMain | Should-BeLikeString "*ansible_os_family == 'RedHat'*"
-            $rhel.TaskMain | Should-BeLikeString "*ansible_distribution_major_version == '9'*"
+            $rhel.TaskMain | Should-MatchString "ansible_facts\['os_family'\] == 'RedHat'"
+            $rhel.TaskMain | Should-MatchString "ansible_facts\['distribution_major_version'\] == '9'"
             $rhel.TaskMain | Should-NotBeLikeString '*Windows*'
         }
 
         It 'tells RHEL and OracleLinux apart by major version, not distribution name alone' {
-            $ol8.TaskMain | Should-BeLikeString "*ansible_distribution_major_version == '8'*"
-            $ol9.TaskMain | Should-BeLikeString "*ansible_distribution_major_version == '9'*"
+            $ol8.TaskMain | Should-MatchString "ansible_facts\['distribution_major_version'\] == '8'"
+            $ol9.TaskMain | Should-MatchString "ansible_facts\['distribution_major_version'\] == '9'"
         }
 
         It 'sets no Server Core fact, which does not exist on Linux' {

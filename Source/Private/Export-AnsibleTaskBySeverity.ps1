@@ -63,7 +63,7 @@ function Format-AnsibleSeverityFile {
         # A valid, empty task list rather than an empty file, for the same reason
         # Export-AnsibleHandler writes one: yaml reads this as no tasks, where nothing at all is a
         # parse the import cannot be relied on to survive.
-        return @(('# {0} has no {1} severity rules.' -f $StigName, $Severity), '[]')
+        return @((Get-AnsibleEmptySeverityReason -StigName $StigName -Severity $Severity), '[]')
     }
 
     @($Assert) + $tasks

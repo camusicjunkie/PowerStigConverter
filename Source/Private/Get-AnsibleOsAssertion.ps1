@@ -5,10 +5,10 @@ function Get-AnsibleOsAssertion {
         [string] $StigName
     )
 
-    # ansible_distribution reports the full product name and edition, for example
+    # ansible_facts['distribution'] reports the full product name and edition, for example
     # "Microsoft Windows Server 2022 Datacenter" or "Microsoft Windows 11 Enterprise", so the
-    # role asserts on the leading product name only. Linux's ansible_distribution is bare
-    # ("RedHat" or "OracleLinux"), and ansible_os_family reports "RedHat" for both - RHEL-9 and
+    # role asserts on the leading product name only. Linux's is bare
+    # ("RedHat" or "OracleLinux"), and ansible_facts['os_family'] reports "RedHat" for both - RHEL-9 and
     # OracleLinux-8/9 share it, so OsMajorVersion is what tells them apart. See ADR 0007.
     $osFamily = 'Windows'
     $osMajorVersion = $null

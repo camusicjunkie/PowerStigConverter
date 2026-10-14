@@ -76,7 +76,7 @@ Describe 'Export-AnsibleTaskBySeverity' {
         }
 
         It 'says in the file which severity the STIG has no rules at' {
-            $noLowRules.cat3 -join "`n" | Should-BeLikeString '*WindowsServer-2022-MS has no low severity rules*'
+            $noLowRules.cat3 -join "`n" | Should-BeLikeString '*No tasks were generated for WindowsServer-2022-MS at low severity*'
         }
     }
 

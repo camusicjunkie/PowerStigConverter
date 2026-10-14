@@ -55,27 +55,33 @@ Describe 'Save-AnsibleRoleFile' {
         }
     }
 
-    # A STIG with no rules of a given severity must not leave an empty cat file behind for
-    # tasks/main.yml to import.
+    # An entry with no content is an exporter bug; skipping it left a previous run's file on disk
+    # (#131), so it fails the conversion instead (#135).
     Context 'entries with nothing to write' {
 
-        It 'skips an entry whose value is <Reason>' -ForEach @(
+        It 'throws naming the file when an entry''s value is <Reason>' -ForEach @(
             @{ Reason = 'null'; Value = $null }
             @{ Reason = 'an empty collection'; Value = @() }
         ) {
-            Save-File -OutputPath $TestDrive -Content ([ordered] @{ nothing_to_write = $Value })
-
-            Join-Path $TestDrive 'nothing_to_write.yml' | Should -Not -Exist
+            { Save-File -OutputPath $TestDrive -Content ([ordered] @{ nothing_to_write = $Value }) } |
+                Should -Throw -ExpectedMessage '*nothing_to_write*'
         }
 
-        It 'still writes the entries that do have content' {
-            Save-File -OutputPath $TestDrive -Content ([ordered] @{
-                empty_one = @()
+        It 'writes nothing for any entry when one is empty' {
+            { Save-File -OutputPath $TestDrive -Content ([ordered] @{
                 populated_one = 'content'
-            })
+                empty_one = @()
+            }) } | Should -Throw
 
+            Join-Path $TestDrive 'populated_one.yml' | Should -Not -Exist
             Join-Path $TestDrive 'empty_one.yml' | Should -Not -Exist
-            Join-Path $TestDrive 'populated_one.yml' | Should -Exist
+        }
+
+        It 'leaves a file from an earlier run alone' {
+            Save-File -OutputPath $TestDrive -Content ([ordered] @{ stale = 'from the first run' })
+            { Save-File -OutputPath $TestDrive -Content ([ordered] @{ stale = $null }) } | Should -Throw
+
+            Get-Content -Path (Join-Path $TestDrive 'stale.yml') | Should-Be 'from the first run'
         }
     }
 

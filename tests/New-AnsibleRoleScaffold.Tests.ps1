@@ -117,8 +117,21 @@ Describe 'New-AnsibleRoleScaffold' {
 
             $main = Get-Content -Path (Join-Path $scaffold.Path 'tasks/main.yml') -Raw
 
-            $main | Should-BeLikeString '*ansible_distribution is search(*'
+            $main | Should-MatchString "ansible_facts\['distribution'\] is search\("
             $main | Should-NotBeLikeString '*regex_search*'
+        }
+
+        # INJECT_FACTS_AS_VARS goes away in ansible-core 2.24; see #150.
+        It 'reads no fact as a top-level ansible_ variable (<OsFamily>)' -ForEach @(
+            @{ OsFamily = 'Windows'; StigName = 'WindowsServer-2022-MS' }
+            @{ OsFamily = 'RedHat'; StigName = 'RHEL-9' }
+        ) {
+            $root = Join-Path $TestDrive "toplevel_$OsFamily"
+            $null = New-Item -Path $root -ItemType Directory -Force
+            $scaffold = New-Scaffold -Path $root -RoleName 'tl_role' -StigName $StigName
+
+            $main = Get-Content -Path (Join-Path $scaffold.Path 'tasks/main.yml') -Raw
+            ($main -match 'ansible_(?!facts\b)') | Should-BeFalse
         }
     }
 
@@ -147,6 +160,62 @@ Describe 'New-AnsibleRoleScaffold' {
         }
     }
 
+    # A role scaffolded before #137 has no env fact, and tasks/main.yml is written once. See #149.
+    Context 'a role that predates the env fact' {
+
+        BeforeAll {
+            $script:envLine = 'stig_server_2022_env:'
+        }
+
+        BeforeEach {
+            $script:oldRoot = Join-Path $TestDrive ([guid]::NewGuid())
+            $null = New-Item -Path $oldRoot -ItemType Directory -Force
+            $script:old = New-Scaffold -Path $oldRoot -RoleName 'old' -StigName 'WindowsServer-2022-MS'
+            $script:oldMain = Join-Path $old.Path 'tasks/main.yml'
+
+            $text = (Get-Content -Path $oldMain -Raw) -replace '(?ms)^# A Permission path.*?tags: always\r?\n\r?\n', ''
+            $text = $text.Replace('- name: Execute the CAT 1 tasks', "- name: Hand written`n  ansible.builtin.debug:`n    msg: mine`n`n- name: Execute the CAT 1 tasks")
+            Set-Content -Path $oldMain -Value $text -NoNewline
+        }
+
+        It 'sets the env fact when regenerated, keeping the hand edits' {
+            Get-Content -Path $oldMain -Raw | Should-NotBeLikeString "*$envLine*"
+
+            $null = New-Scaffold -Path $oldRoot -RoleName 'old' -StigName 'WindowsServer-2022-MS'
+
+            $main = Get-Content -Path $oldMain -Raw
+            $main | Should-BeLikeString "*$envLine*"
+            $main | Should-BeLikeString '*msg: mine*'
+            $main.IndexOf($envLine) | Should -BeLessThan $main.IndexOf('Execute the CAT 1 tasks')
+        }
+
+        It 'changes nothing on a second regeneration' {
+            $null = New-Scaffold -Path $oldRoot -RoleName 'old' -StigName 'WindowsServer-2022-MS'
+            $once = Get-Content -Path $oldMain -Raw
+            $null = New-Scaffold -Path $oldRoot -RoleName 'old' -StigName 'WindowsServer-2022-MS'
+
+            Get-Content -Path $oldMain -Raw | Should-Be $once
+        }
+
+        It 'leaves a file that already sets it alone, edits included' {
+            $null = New-Scaffold -Path $oldRoot -RoleName 'old' -StigName 'WindowsServer-2022-MS'
+            $edited = (Get-Content -Path $oldMain -Raw).Replace('msg: mine', 'msg: edited')
+            Set-Content -Path $oldMain -Value $edited -NoNewline
+            $null = New-Scaffold -Path $oldRoot -RoleName 'old' -StigName 'WindowsServer-2022-MS'
+
+            Get-Content -Path $oldMain -Raw | Should-Be $edited
+        }
+
+        It 'does not add it to a Linux role' {
+            $root = Join-Path $TestDrive 'oldlinux'
+            $null = New-Item -Path $root -ItemType Directory -Force
+            $r = New-Scaffold -Path $root -RoleName 'l' -StigName 'RHEL-9'
+            $null = New-Scaffold -Path $root -RoleName 'l' -StigName 'RHEL-9'
+
+            Get-Content -Path (Join-Path $r.Path 'tasks/main.yml') -Raw | Should-NotBeLikeString '*_env:*'
+        }
+    }
+
     # ADR 0007: a Linux STIG gets the Linux templates instead, selected by Plaster's own
     # condition attribute on OsFamily rather than a second TemplatePath.
     Context 'a Linux STIG' {
@@ -160,8 +229,8 @@ Describe 'New-AnsibleRoleScaffold' {
         It 'asserts the RedHat family and major version instead of Windows' {
             $main = Get-Content -Path (Join-Path $linux.Path 'tasks/main.yml') -Raw
 
-            $main | Should-BeLikeString "*ansible_os_family == 'RedHat'*"
-            $main | Should-BeLikeString "*ansible_distribution_major_version == '9'*"
+            $main | Should-MatchString "ansible_facts\['os_family'\] == 'RedHat'"
+            $main | Should-MatchString "ansible_facts\['distribution_major_version'\] == '9'"
             $main | Should-NotBeLikeString '*Windows*'
         }
 
