@@ -348,7 +348,7 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
             @{ Role = 'client10' }
             @{ Role = 'client11' }
         ) {
-            (Get-Variable -Name $Role -ValueOnly).Tasks | Should-BeLikeString "*services[0].state == 'stopped'*"
+            (Get-Variable -Name $Role -ValueOnly).Tasks | Should-BeLikeString '*services`[0`].state == ''stopped''*'
         }
 
         It 'recognises <Role>''s blank Identity as "nobody holds this right"' -ForEach @(
