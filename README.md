@@ -92,7 +92,7 @@ New-AnsiblePlaybook -StigName WindowsServer-2022-MS -Path D:\stigs
 
 A complete Ansible role is created in the current directory, named after the STIG. Use
 `-OutputPath` to build it somewhere else and `-RoleName` to name it yourself; the directory is
-created if it does not exist.
+created if it does not exist. A STIG whose name ends in `-All` drops it, so `WindowsDefender-All` gives `windowsdefender`.
 
 ```powershell
 New-AnsiblePlaybook -StigName WindowsServer-2022-MS -OutputPath .\roles -RoleName stig_2022_ms
