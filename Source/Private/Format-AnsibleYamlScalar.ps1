@@ -22,8 +22,9 @@ function Format-AnsibleYamlScalar {
     # unquoted 00:05:00 reaches the module as 300 rather than as the timespan the STIG wrote.
     $sexagesimal = '|^-?\d+(:\d+)+$'
 
-    $unsafe = if ($InSequence) { ':\s|^\s|\s$|,|]|^[#&*!|>%@`\[]' + $sexagesimal }
-        else { ':\s|^\s|\s$|^[#&*!|>%@`\[\]]' + $sexagesimal }
+    # A leading brace opens a mapping and a leading quote is stripped, so both need quoting.
+    $unsafe = if ($InSequence) { ':\s|^\s|\s$|,|]|^[#&*!|>%@`\[{}''"]' + $sexagesimal }
+        else { ':\s|^\s|\s$|^[#&*!|>%@`\[\]{}''"]' + $sexagesimal }
 
     if ($Value -is [string] -and $Value -match $unsafe) {
         "'{0}'" -f ($Value -replace "'", "''")
