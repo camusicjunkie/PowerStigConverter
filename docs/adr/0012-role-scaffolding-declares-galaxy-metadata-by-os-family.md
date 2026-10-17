@@ -40,6 +40,10 @@ module's tested ansible-core range (`lineinfile`'s regexp-as-bytes behavior, rel
 `nxFileLine`). Pinning the floor of that range documents a fact this repo already verified rather
 than inventing a new one.
 
+The Windows role pins `2.16` instead: `ansible.windows` 3.8.0 and `community.windows` 3.3.0 both declare
+`requires_ansible: >=2.16.0`, so 2.15 could never run it. The Linux role uses only `ansible.builtin`
+and keeps `2.15`.
+
 **`galaxy_info.description` is built from `OsDescription`, the same value the Windows assert's
 failure message already uses** (`'STIG hardening role for {0}'`) — no new Plaster parameter.
 

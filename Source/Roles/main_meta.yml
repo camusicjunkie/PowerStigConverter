@@ -5,7 +5,7 @@
 galaxy_info:
   role_name: <%= $PLASTER_PARAM_RoleName %>
   description: STIG hardening role for <%= $PLASTER_PARAM_OsDescription %>
-  min_ansible_version: "2.15"
+  min_ansible_version: "2.16"
   platforms:
     - name: Windows
 

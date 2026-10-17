@@ -26,7 +26,7 @@ function Build-AnsibleRootCertificateTask {
             @{
                 Name = 'Gather info for {0}' -f $Rule.CertificateName
                 Body = [ordered] @{
-                    'community.windows.win_certificate_info' = [ordered] @{
+                    'ansible.windows.win_certificate_info' = [ordered] @{
                         'store_name' = $store.StoreName
                         'store_location' = $store.StoreLocation
                         'thumbprint' = $Rule.Thumbprint
