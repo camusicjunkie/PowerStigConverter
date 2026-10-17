@@ -6,6 +6,8 @@ if (-not $script:vboxManage) {
 }
 
 function Invoke-VBoxManage {
+    # VBoxManage prints its progress bar on stderr; under the callers' Stop that would throw.
+    $ErrorActionPreference = 'Continue'
     $output = & $script:vboxManage @args 2>&1
     if ($LASTEXITCODE -ne 0) {
         throw "VBoxManage $($args -join ' ') failed:`n$($output -join "`n")"
