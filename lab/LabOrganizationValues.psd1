@@ -10,6 +10,14 @@
     # Renames a built-in account: the lab connects as 'ansible', so WinRM is unaffected.
     'V-278197' = @{ OptionValue = 'LabAdmin' }
     'V-278198' = @{ OptionValue = 'LabGuest' }
+    # Server 2022 MS: the same questions under its own rule ids.
+    'V-254442.*' = @{ Location = 'Cert:\LocalMachine\Root' }
+    'V-254443' = @{ Location = 'Cert:\LocalMachine\Disallowed' }
+    'V-254447' = @{ OptionValue = 'LabAdmin' }
+    'V-254448' = @{ OptionValue = 'LabGuest' }
+    # The antivirus and firewall services the STIG asks the organization to name: Defender's.
+    'V-254248' = @{ ServiceName = 'WinDefend'; StartupType = 'Automatic' }
+    'V-254265' = @{ ServiceName = 'mpssvc'; StartupType = 'Automatic' }
     # Edge's ProxySettings policy is a JSON string; a direct connection is the harmless answer.
     'V-235719' = @{ ValueData = '{"ProxyMode":"direct"}' }
 }
