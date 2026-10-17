@@ -6,6 +6,8 @@ if (-not $script:vboxManage) {
 }
 
 function Invoke-VBoxManage {
+    # VBoxManage prints its progress bar on stderr; under the callers' Stop that would throw.
+    $ErrorActionPreference = 'Continue'
     $output = & $script:vboxManage @args 2>&1
     if ($LASTEXITCODE -ne 0) {
         throw "VBoxManage $($args -join ' ') failed:`n$($output -join "`n")"
@@ -69,4 +71,44 @@ function New-StigLabWslDirectory {
         Wsl     = $wsl
         Windows = "\\wsl.localhost\$distro$($wsl -replace '/', '\')"
     }
+}
+
+# A copy of the named STIGs' processed data with the blanks the organization would answer
+# filled from LabOrganizationValues.psd1, so a run exercises those rules. Lab only: the values
+# are placeholders, and the converter itself still refuses a blank.
+function New-StigLabOrganizationData {
+    param (
+        [Parameter(Mandatory)] [string] $Name,
+        [Parameter(Mandatory)] [string[]] $StigName,
+        [Parameter()] [string] $Path
+    )
+
+    $source = if ($Path) { $Path } else { "$env:LOCALAPPDATA\PowerStig" }
+    $processed = 'source\StigData\Processed'
+    $target = Get-StigLabStatePath -Name $Name -ChildPath 'stigdata'
+    $targetProcessed = Join-Path $target $processed
+    Remove-Item -Path $target -Recurse -Force -ErrorAction Ignore
+    New-Item -Path $targetProcessed -ItemType Directory -Force | Out-Null
+
+    $values = Import-PowerShellDataFile -Path (Join-Path $PSScriptRoot 'LabOrganizationValues.psd1')
+    foreach ($stig in $StigName) {
+        Get-ChildItem -Path (Join-Path $source $processed) -File |
+            Where-Object { $_.Name -match ('^' + [regex]::Escape($stig) + '-[\d.]+(\.org\.default)?\.xml$') } |
+            Copy-Item -Destination $targetProcessed
+    }
+
+    foreach ($file in Get-ChildItem -Path $targetProcessed -Filter '*.org.default.xml') {
+        [xml] $xml = Get-Content -Path $file.FullName -Raw
+        foreach ($node in $xml.OrganizationalSettings.OrganizationalSetting) {
+            foreach ($attribute in @($node.Attributes)) {
+                if ($attribute.Name -eq 'id' -or $attribute.Value -ne '') { continue }
+                $answer = $values.GetEnumerator() | Where-Object { $node.id -like $_.Key } |
+                    ForEach-Object { $_.Value[$attribute.Name] } | Select-Object -First 1
+                if ($answer) { $attribute.Value = $answer }
+            }
+        }
+        $xml.Save($file.FullName)
+    }
+
+    $target
 }
