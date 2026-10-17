@@ -6,7 +6,11 @@ describes and not only against fixtures.
 ## Needs
 
 - VirtualBox, with a host-only adapter on 192.168.56.0/24.
-- A Windows Server ISO that supports unattended install.
+- A Windows Server ISO that supports unattended install. Use retail or volume media, not
+  evaluation media: VirtualBox's unattended install writes an empty product key into its answer
+  file when it has none, and Setup on evaluation media stops on that with "Windows cannot find the
+  Microsoft Software License Terms". The default `-ProductKey` is for Server 2025 Datacenter; pass
+  the matching key for another release.
 - WSL with `ansible-core` and the `ansible.windows` and `community.windows` collections.
 - The STIG data `Copy-PowerStigFile` fetches.
 
