@@ -45,10 +45,12 @@ function Build-AnsiblePermissionTask {
                         }
                     }
                 }
-                # Runs as the account the key admits, with no credential (ADR 0006).
+                # Runs as the account the key admits, with no credential (ADR 0006). The method is named
+                # because the default, sudo, is not supported on Windows.
                 if ($systemOnly) {
                     $task.Body.become = $true
                     $task.Body.become_user = 'SYSTEM'
+                    $task.Body.become_method = 'ansible.builtin.runas'
                 }
                 $task
             }

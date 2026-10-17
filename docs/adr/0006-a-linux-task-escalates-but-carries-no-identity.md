@@ -57,3 +57,12 @@ keys are owned by `ConvertTo-AnsibleTask`, which is deliberately rule-type agnos
 start branching on rule type — so attaching it there would put `become` on Windows tasks too.
 Whether the adapters declare it, or the role template carries it once at the play level, is
 settled by the ticket that designs the first Linux generator.
+
+## Windows names its method
+
+A Windows task that must run as SYSTEM (a Permission rule on `HKLM:\SECURITY` or `HKLM:\SAM`,
+#147) emits `become_method: ansible.builtin.runas` as well as `become` and `become_user`. The
+rule above is about Linux, where sudo, su and doas are all in use and the choice is the site's.
+Windows has one method that reaches SYSTEM without a credential, and Ansible's default, sudo,
+fails there with "Become plugin sudo is not supported by the Windows exec wrapper", so naming it
+states a fact about the target, not about the site.
