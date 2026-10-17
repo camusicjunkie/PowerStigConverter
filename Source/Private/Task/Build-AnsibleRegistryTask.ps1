@@ -48,7 +48,9 @@ function Build-AnsibleRegistryTask {
         GroupDetail = if (Test-PowerStigSubRuleId -Id $Rule.Id) { @($keyLeaf, $Rule.ValueName) } else { $Rule.ValueName }
         Task = @(
             @{
-                Detail = '{0} {1}' -f $(if ($absent) { 'Remove' } else { 'Set' }), $Rule.ValueName
+                # A value name alone can be a bare GUID or '2', so the key it sits in is named too.
+                Detail = if ($absent) { 'Remove value {1} from {0}' -f $keyLeaf, $Rule.ValueName }
+                    else { 'Set {0} with value {1}' -f $keyLeaf, $Rule.ValueName }
                 Body = [ordered] @{
                     'ansible.windows.win_regedit' = $regedit
                 }

@@ -115,11 +115,18 @@ Describe 'Build-AnsibleRegistryTask' {
             @($regedit.Keys) | Should-BeCollection @('path', 'name', 'state')
         }
 
+        # A value name can be a bare GUID or a digit, so the name says which key the value is set in.
+        It 'names the task for the key and the value it sets' {
+            $rule = New-RegistryRule
+
+            (Get-RegistryTask -Rule $rule).name | Should-Be 'V-170 | MEDIUM | Set System with value EnableSmartScreen'
+        }
+
         # 'Set DisableAntiSpyware' on a task that deletes it reads as the opposite of what it does.
         It 'names the task for the removal' {
             $rule = New-RegistryRule -Ensure 'Absent' -ValueData '' -ValueType 'None'
 
-            (Get-RegistryTask -Rule $rule).name | Should-Be 'V-170 | MEDIUM | Remove EnableSmartScreen'
+            (Get-RegistryTask -Rule $rule).name | Should-Be 'V-170 | MEDIUM | Remove value EnableSmartScreen from System'
         }
 
         # Ensure changes the state key and nothing else: the toggle and the severity file a rule
