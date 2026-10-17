@@ -11,17 +11,21 @@ function Build-AnsibleRegistryTask {
     # spelling. See docs/adr/0014.
     $absent = $Rule.Ensure -eq 'Absent'
 
+    # Google-Chrome-2.11 spells six keys ending in a stray `\"` (V-275780 and its siblings), which
+    # would put the policy in a subkey literally named "; the policy belongs on the key before it.
+    $key = $Rule.Key -replace '\\"$', ''
+
     # PowerStig always writes registry keys backslash-delimited, regardless of the converting
     # machine's platform, so the leaf is taken by matching that literal character rather than
     # through Split-Path - whose separator comes from the current provider/platform and would
     # leave the key unsplit on a machine where '\' is not a path separator.
-    $keyLeaf = $Rule.Key.Substring($Rule.Key.LastIndexOf('\') + 1)
+    $keyLeaf = $key.Substring($key.LastIndexOf('\') + 1)
 
     # win_regedit takes only a PowerShell drive path. PowerStig spells the hive in full, abbreviated
     # and in mixed case; the lookup is case-insensitive, and an unrecognised hive passes through.
-    $hive, $subKey = $Rule.Key -split '\\', 2
+    $hive, $subKey = $key -split '\\', 2
     $drive = @{ HKEY_LOCAL_MACHINE = 'HKLM'; HKLM = 'HKLM'; HKEY_CURRENT_USER = 'HKCU'; HKCU = 'HKCU' }[$hive.TrimEnd(':')]
-    $path = if ($drive) { '{0}:\{1}' -f $drive, $subKey } else { $Rule.Key }
+    $path = if ($drive) { '{0}:\{1}' -f $drive, $subKey } else { $key }
 
     $regedit = [ordered] @{
         'path' = $path
@@ -49,8 +53,8 @@ function Build-AnsibleRegistryTask {
         Task = @(
             @{
                 # A value name alone can be a bare GUID or '2', so the key it sits in is named too.
-                Detail = if ($absent) { 'Remove value {1} from {0}' -f $keyLeaf, $Rule.ValueName }
-                    else { 'Set {0} with value {1}' -f $keyLeaf, $Rule.ValueName }
+                Detail = if ($absent) { 'Remove {1} from {0}' -f $keyLeaf, $Rule.ValueName }
+                    else { 'Set {1} in {0}' -f $keyLeaf, $Rule.ValueName }
                 Body = [ordered] @{
                     'ansible.windows.win_regedit' = $regedit
                 }

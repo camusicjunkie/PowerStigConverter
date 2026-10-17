@@ -119,14 +119,23 @@ Describe 'Build-AnsibleRegistryTask' {
         It 'names the task for the key and the value it sets' {
             $rule = New-RegistryRule
 
-            (Get-RegistryTask -Rule $rule).name | Should-Be 'V-170 | MEDIUM | Set System with value EnableSmartScreen'
+            (Get-RegistryTask -Rule $rule).name | Should-Be 'V-170 | MEDIUM | Set EnableSmartScreen in System'
         }
 
+        # Google-Chrome-2.11 spells six keys with a trailing \" that would make a subkey named ".
+        It 'drops a stray trailing quote from the key' {
+            $rule = New-RegistryRule -Key 'HKEY_LOCAL_MACHINE\Software\Policies\Google\Chrome\"'
+
+            $task = Get-RegistryTask -Rule $rule
+
+            $task.'ansible.windows.win_regedit'.path | Should-Be 'HKLM:\Software\Policies\Google\Chrome'
+            $task.name | Should-Be 'V-170 | MEDIUM | Set EnableSmartScreen in Chrome'
+        }
         # 'Set DisableAntiSpyware' on a task that deletes it reads as the opposite of what it does.
         It 'names the task for the removal' {
             $rule = New-RegistryRule -Ensure 'Absent' -ValueData '' -ValueType 'None'
 
-            (Get-RegistryTask -Rule $rule).name | Should-Be 'V-170 | MEDIUM | Remove value EnableSmartScreen from System'
+            (Get-RegistryTask -Rule $rule).name | Should-Be 'V-170 | MEDIUM | Remove EnableSmartScreen from System'
         }
 
         # Ensure changes the state key and nothing else: the toggle and the severity file a rule

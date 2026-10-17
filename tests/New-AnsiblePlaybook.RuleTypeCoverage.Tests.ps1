@@ -230,9 +230,9 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
                 # \r? before every $: the role files are written with CRLF, and .NET's multiline
                 # $ matches before the \n, not before the \r.
                 '(?ms)^- name: V-241989 \| MEDIUM \| DomainProfile\r?$.+?' +
-                'V-241989\.a \| MEDIUM \| Set DomainProfile with value EnableFirewall.+?' +
+                'V-241989\.a \| MEDIUM \| Set EnableFirewall in DomainProfile.+?' +
                 'path: HKLM:\\SOFTWARE\\Policies\\Microsoft\\WindowsFirewall\\DomainProfile\r?$.+?' +
-                'V-241989\.b \| MEDIUM \| Set DomainProfile with value EnableFirewall.+?' +
+                'V-241989\.b \| MEDIUM \| Set EnableFirewall in DomainProfile.+?' +
                 'path: HKLM:\\SYSTEM\\CurrentControlSet\\Services\\SharedAccess\\Parameters\\FirewallPolicy\\DomainProfile\r?$'
             )
         }
@@ -256,7 +256,7 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
         }
 
         It 'builds a plain task rather than a block for the rule that is not a sub-rule' {
-            $firewall.TaskFile['cat2'] | Should-MatchString '(?m)^- name: V-242004 \| MEDIUM \| Set PublicProfile with value AllowLocalPolicyMerge\r?$'
+            $firewall.TaskFile['cat2'] | Should-MatchString '(?m)^- name: V-242004 \| MEDIUM \| Set AllowLocalPolicyMerge in PublicProfile\r?$'
         }
 
         It 'lands its low-severity rule in cat3 and its high-severity one in cat1' {
@@ -369,7 +369,7 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
 
         It 'puts both halves of the registry sub-rule pair in one block, only one an organisation value' {
             $dc2025.Tasks | Should-BeLikeString '*V-278090 | MEDIUM | DeviceGuard*'
-            $dc2025.Tasks | Should-BeLikeString '*V-278090.a | MEDIUM | Set DeviceGuard with value EnableVirtualizationBasedSecurity*'
+            $dc2025.Tasks | Should-BeLikeString '*V-278090.a | MEDIUM | Set EnableVirtualizationBasedSecurity in DeviceGuard*'
             $dc2025.Tasks | Should-BeLikeString '*data: 1*'
             $dc2025.Tasks | Should-BeLikeString '*{{ stig_server_2025_278090_b_requireplatformsecurityfeatures }}*'
             $dc2025.Defaults | Should-BeLikeString '*stig_server_2025_278090_b_requireplatformsecurityfeatures: 1*'
