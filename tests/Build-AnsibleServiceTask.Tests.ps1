@@ -73,13 +73,18 @@ Describe 'Build-AnsibleServiceTask' {
         It 'asserts started when the rule wants the service running' {
             $task = Get-ServiceTask -Rule (New-ServiceRule -ServiceState 'Running')
 
-            $task.block[1].'ansible.builtin.assert'.that | Should-BeLikeString '*is started'
+            # services is a list, so the state is read off its one element. See #170.
+            $register = $task.block[0].register
+            $task.block[1].'ansible.builtin.assert'.that |
+                Should-Be "$register.services | length == 1 and $register.services[0].state == 'started'"
         }
 
         It 'asserts stopped when the rule wants the service stopped' {
             $task = Get-ServiceTask -Rule (New-ServiceRule -ServiceState 'Stopped')
 
-            $task.block[1].'ansible.builtin.assert'.that | Should-BeLikeString '*is stopped'
+            $register = $task.block[0].register
+            $task.block[1].'ansible.builtin.assert'.that |
+                Should-Be "$register.services | length == 1 and $register.services[0].state == 'stopped'"
         }
 
         # Missing/unrecognized ServiceState must not silently fall back to 'started' - that is

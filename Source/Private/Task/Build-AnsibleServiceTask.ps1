@@ -35,7 +35,8 @@ function Build-AnsibleServiceTask {
                     [ordered] @{
                         'name' = 'Assert {0} is set to {1}' -f $service.ServiceName, $service.StartupType
                         'ansible.builtin.assert' = [ordered] @{
-                            'that' = "$registerName.services.state is $state"
+                            # services is a list: one element when the service exists, none when it does not.
+                            'that' = "$registerName.services | length == 1 and $registerName.services[0].state == '$state'"
                             'fail_msg' = "$($service.ServiceName) is not $state"
                         }
                     }
