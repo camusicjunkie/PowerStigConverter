@@ -20,7 +20,7 @@ function New-AnsiblePlaybook {
     )
 
     if ([string]::IsNullOrWhiteSpace($RoleName)) {
-        $RoleName = $StigName.ToLower() -replace '[^\w]+', '_'
+        $RoleName = Get-AnsibleRoleName -StigName $StigName
     }
 
     [xml] $xml = Get-Content (Get-PowerStigFile -Type Name -Path $Path | Where-Object BaseName -like $StigName*)
