@@ -151,6 +151,8 @@ Describe 'Build-AnsiblePermissionTask' {
 
             $task.block[0].become | Should-BeTrue
             $task.block[0].become_user | Should-Be 'SYSTEM'
+            # Left to default it is sudo, which Windows rejects; seen on the lab VM.
+            $task.block[0].become_method | Should-Be 'ansible.builtin.runas'
         }
 
         It 'leaves <Path> to the connecting account' -ForEach @(
