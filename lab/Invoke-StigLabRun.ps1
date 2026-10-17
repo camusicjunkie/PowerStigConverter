@@ -79,7 +79,7 @@ $roles = Join-Path $run 'roles'
 # Generate before touching the VM, so a conversion that refuses costs nothing.
 . (Join-Path $PSScriptRoot '..\tests\Initialize-TestModule.ps1')
 $generate = @{ OutputPath = $roles; AllowIncompleteOrganizationValue = $AllowIncompleteOrganizationValue }
-if ($Path) { $generate.Path = $Path }
+$generate.Path = New-StigLabOrganizationData -Name $Name -StigName $StigName -Path $Path
 foreach ($stig in $StigName) {
     New-AnsiblePlaybook -StigName $stig @generate
 }
