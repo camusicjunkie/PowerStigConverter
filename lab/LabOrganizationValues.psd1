@@ -10,4 +10,6 @@
     # Renames a built-in account: the lab connects as 'ansible', so WinRM is unaffected.
     'V-278197' = @{ OptionValue = 'LabAdmin' }
     'V-278198' = @{ OptionValue = 'LabGuest' }
+    # Edge's ProxySettings policy is a JSON string; a direct connection is the harmless answer.
+    'V-235719' = @{ ValueData = '{"ProxyMode":"direct"}' }
 }
