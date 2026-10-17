@@ -20,4 +20,8 @@
     'V-254265' = @{ ServiceName = 'mpssvc'; StartupType = 'Automatic' }
     # Edge's ProxySettings policy is a JSON string; a direct connection is the harmless answer.
     'V-235719' = @{ ValueData = '{"ProxyMode":"direct"}' }
+    # Chrome's three blanks: an extension allowlist, and an encrypted search provider's name and URL.
+    'V-221563' = @{ ValueData = 'oiigbmnaadbkfbmpbfijlflahbdbdgdf' }
+    'V-221564' = @{ ValueData = 'Google Encrypted' }
+    'V-221565' = @{ ValueData = 'https://www.google.com/search?q={searchTerms}' }
 }
