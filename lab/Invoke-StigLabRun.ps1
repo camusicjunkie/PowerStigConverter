@@ -19,10 +19,29 @@
 #>
 [CmdletBinding()]
 param (
+    # Completes from the lab folders that hold a vm.json, i.e. the VMs New-StigLabVm.ps1 built.
     [Parameter(Mandatory)]
+    [ArgumentCompleter({
+        param ($commandName, $parameterName, $wordToComplete, $commandAst)
+        $script = Get-Command -Name $commandAst.GetCommandName() -ErrorAction Ignore
+        if (-not $script) { return }
+        Get-ChildItem -Path (Join-Path (Split-Path $script.Source) '.local') -Directory -ErrorAction Ignore |
+            Where-Object { Test-Path (Join-Path $_.FullName 'vm.json') -PathType Leaf } |
+            ForEach-Object Name |
+            Where-Object { $_ -like "$wordToComplete*" }
+    })]
     [string] $Name,
 
+    # Completes from the processed STIG data, like New-AnsiblePlaybook, without loading the module.
     [Parameter(Mandatory)]
+    [ArgumentCompleter({
+        param ($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters)
+        $root = if ($fakeBoundParameters.Path) { $fakeBoundParameters.Path } else { "$env:LOCALAPPDATA\PowerStig" }
+        Get-ChildItem -Path (Join-Path $root 'source\StigData\Processed') -Exclude '*.org.default.xml' -ErrorAction Ignore |
+            ForEach-Object { if ($_.Name -match '^(.+)-[\d.]+\.xml$') { $Matches[1] } } |
+            Sort-Object -Unique |
+            Where-Object { $_ -like "$wordToComplete*" }
+    })]
     [string[]] $StigName,
 
     # Where Copy-PowerStigFile put the STIG data, if not the default.
