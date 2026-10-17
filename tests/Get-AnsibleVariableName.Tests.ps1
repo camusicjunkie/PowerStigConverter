@@ -120,6 +120,9 @@ Describe 'New-AnsibleVariableLine' {
             @{ Reason = 'opens with a yaml comment marker'; NodeValue = '#not a comment'; Expected = "'#not a comment'" }
             @{ Reason = 'opens with a yaml anchor marker'; NodeValue = '&anchor'; Expected = "'&anchor'" }
             @{ Reason = 'opens with a yaml block scalar marker'; NodeValue = '|block'; Expected = "'|block'" }
+            @{ Reason = 'opens with a brace, which yaml reads as a mapping'; NodeValue = '{"ProxyMode":"direct"}'; Expected = "'{""ProxyMode"":""direct""}'" }
+            @{ Reason = 'opens with a double quote, which yaml would strip'; NodeValue = '"abc"'; Expected = "'""abc""'" }
+            @{ Reason = 'opens with a single quote, which yaml would strip'; NodeValue = "'abc'"; Expected = "'''abc'''" }
         ) {
             Invoke-PrivateCommand -Command 'New-AnsibleVariableLine' -Splat @{
                 TaskId = 'V-1'; TaskName = 'name'; StigName = $stig; NodeValue = $NodeValue
@@ -166,6 +169,12 @@ Describe 'New-AnsibleVariableLine' {
             Invoke-PrivateCommand -Command 'New-AnsibleVariableLine' -Splat @{
                 TaskId = 'V-1'; TaskName = 'name'; StigName = $stig; NodeValue = [string[]] @('a,b', 'c')
             } | Should-Be "${prefix}_1_name: ['a,b', c]"
+        }
+
+        It 'quotes an element that opens with a brace' {
+            Invoke-PrivateCommand -Command 'New-AnsibleVariableLine' -Splat @{
+                TaskId = 'V-1'; TaskName = 'name'; StigName = $stig; NodeValue = [string[]] @('{a}', 'c')
+            } | Should-Be "${prefix}_1_name: ['{a}', c]"
         }
     }
 }
