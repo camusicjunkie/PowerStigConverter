@@ -30,6 +30,7 @@ param (
     [int] $ImageIndex = 4,
 
     # Microsoft's published KMS client key for Server 2025 Datacenter; it only skips the key prompt.
+    # Evaluation media needs none: pass -ProductKey '' to send no key at all.
     [Parameter()]
     [string] $ProductKey = 'D764K-2NDRG-47T6Q-P8T8W-YP6DF',
 
@@ -109,11 +110,24 @@ $bootstrap = (Get-Content -Path (Join-Path $PSScriptRoot 'Initialize-StigLabGues
 $command = "& {`n$bootstrap`n} -MacAddress '$mac' -IPAddress '$IPAddress'"
 $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($command))
 
-Invoke-VBoxManage unattended install $Name "--iso=$IsoPath" "--image-index=$ImageIndex" `
-    "--user=$user" "--password=$password" "--full-user-name=$user" "--key=$ProductKey" `
-    --install-additions "--hostname=$Name.stig.lab" --time-zone=UTC `
-    "--post-install-command=powershell.exe -NoProfile -ExecutionPolicy Bypass -EncodedCommand $encoded" `
-    --start-vm=headless | Out-Null
+$install = @(
+    'unattended', 'install', $Name, "--iso=$IsoPath", "--image-index=$ImageIndex"
+    "--user=$user", "--password=$password", "--full-user-name=$user"
+    '--install-additions', "--hostname=$Name.stig.lab", '--time-zone=UTC'
+    "--post-install-command=powershell.exe -NoProfile -ExecutionPolicy Bypass -EncodedCommand $encoded"
+    '--start-vm=headless'
+)
+if ($ProductKey) { $install += "--key=$ProductKey" }
+else {
+    # VirtualBox writes an empty <Key> into the answer file when it has no key, and Setup rejects
+    # that as missing license terms. Evaluation media wants no ProductKey element at all.
+    $template = Join-Path (Split-Path $script:vboxManage) 'UnattendedTemplates\win_nt6_unattended.xml'
+    $keyless = Get-StigLabStatePath -Name $Name -ChildPath 'win_nt6_unattended.xml'
+    (Get-Content -Path $template -Raw) -replace '(?s)\s*<ProductKey>.*?</ProductKey>' |
+        Set-Content -Path $keyless -NoNewline
+    $install += "--script-template=$keyless"
+}
+Invoke-VBoxManage @install | Out-Null
 
 Write-Verbose "Installing Windows on $Name; the guest powers itself off when the bootstrap succeeds."
 $deadline = (Get-Date).AddMinutes($TimeoutMinutes)
