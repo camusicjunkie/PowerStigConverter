@@ -37,16 +37,16 @@ BeforeAll {
 Describe 'Build-AnsibleRootCertificateTask' {
 
     Add-GeneratorContractTests -Generator 'Build-AnsibleRootCertificateTask' `
-        -Module 'community.windows.win_certificate_info' `
+        -Module 'ansible.windows.win_certificate_info' `
         -Factory { New-RootCertificateRule }
 
     Context 'the task it builds' {
 
         It 'gathers the certificate by thumbprint' {
             $task = Get-RootCertificateTask -Rule (New-RootCertificateRule) -OrganizationalSetting (New-RootStore)
-            $gather = $task.block | Where-Object { $_.Contains('community.windows.win_certificate_info') }
+            $gather = $task.block | Where-Object { $_.Contains('ansible.windows.win_certificate_info') }
 
-            $gather.'community.windows.win_certificate_info'.thumbprint |
+            $gather.'ansible.windows.win_certificate_info'.thumbprint |
                 Should-Be 'D73CA91102A2204A36459ED32213B467D7CE97FB'
         }
 
@@ -73,7 +73,7 @@ Describe 'Build-AnsibleRootCertificateTask' {
 
         It 'registers the gathered certificate in the variable the naming module builds' {
             $task = Get-RootCertificateTask -Rule (New-RootCertificateRule) -OrganizationalSetting (New-RootStore)
-            $gather = $task.block | Where-Object { $_.Contains('community.windows.win_certificate_info') }
+            $gather = $task.block | Where-Object { $_.Contains('ansible.windows.win_certificate_info') }
 
             $gather.register | Should-Be (Get-ExpectedRegisterName -TaskId 'V-180' `
                     -StigName 'WindowsServer-2022-MS' -Suffix 'certificate_info')
@@ -83,7 +83,7 @@ Describe 'Build-AnsibleRootCertificateTask' {
         It 'names the register for the base id of a sub-rule' {
             $task = Get-RootCertificateTask -Rule (New-RootCertificateRule -Id 'V-180.b') `
                 -OrganizationalSetting (New-ContractOrgSetting '<OrganizationalSetting id="V-180.b" Location="Cert:\LocalMachine\Root" />')
-            $gather = $task.block | Where-Object { $_.Contains('community.windows.win_certificate_info') }
+            $gather = $task.block | Where-Object { $_.Contains('ansible.windows.win_certificate_info') }
 
             $gather.register | Should-Be (Get-ExpectedRegisterName -TaskId 'V-180' `
                     -StigName 'WindowsServer-2022-MS' -Suffix 'certificate_info')
@@ -96,7 +96,7 @@ Describe 'Build-AnsibleRootCertificateTask' {
         # consumes and the asserts check those values. See docs/adr/0003.
         It 'interpolates a variable for the store and another for its location' {
             $task = Get-RootCertificateTask -Rule (New-RootCertificateRule) -OrganizationalSetting (New-RootStore)
-            $gather = ($task.block | Where-Object { $_.Contains('community.windows.win_certificate_info') }).'community.windows.win_certificate_info'
+            $gather = ($task.block | Where-Object { $_.Contains('ansible.windows.win_certificate_info') }).'ansible.windows.win_certificate_info'
 
             $gather.store_name | Should-Be '{{ stig_server_2022_180_store_name }}'
             $gather.store_location | Should-Be '{{ stig_server_2022_180_store_location }}'
@@ -124,7 +124,7 @@ Describe 'Build-AnsibleRootCertificateTask' {
             $gather = $task.block | Where-Object { $_.name -like 'Gather info*' }
 
             $gather.Contains('block') | Should-BeFalse
-            $gather.'community.windows.win_certificate_info' | Should-NotBeNull
+            $gather.'ansible.windows.win_certificate_info' | Should-NotBeNull
         }
 
         It 'builds no such guard once the store has been answered' {

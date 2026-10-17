@@ -95,7 +95,7 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
     It 'converts an <RuleType> rule into <Module>' -ForEach @(
         @{ RuleType = 'AuditSetting'; Module = 'AuditSetting'; Role = 'dc' }
         @{ RuleType = 'Permission'; Module = 'ansible.windows.win_acl'; Role = 'dc' }
-        @{ RuleType = 'RootCertificate'; Module = 'community.windows.win_certificate_info'; Role = 'dc' }
+        @{ RuleType = 'RootCertificate'; Module = 'ansible.windows.win_certificate_info'; Role = 'dc' }
         @{ RuleType = 'Service'; Module = 'ansible.windows.win_service_info'; Role = 'dc' }
         @{ RuleType = 'MimeType'; Module = 'IISMimeTypeMapping'; Role = 'iis' }
         @{ RuleType = 'WebConfigurationProperty'; Module = 'WebConfigProperty'; Role = 'iis' }
@@ -113,41 +113,41 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
         # WindowsServer-2025-DC/-MS: every one of the eleven rule types the product carries,
         # dispatched from real data. See #95 and #96.
         @{ RuleType = 'AccountPolicy'; Module = 'community.windows.win_security_policy'; Role = 'dc2025' }
-        @{ RuleType = 'AuditPolicy'; Module = 'community.windows.win_audit_policy_system'; Role = 'dc2025' }
+        @{ RuleType = 'AuditPolicy'; Module = 'ansible.windows.win_audit_policy_system'; Role = 'dc2025' }
         @{ RuleType = 'AuditSetting'; Module = 'AuditSetting'; Role = 'dc2025' }
         @{ RuleType = 'Permission'; Module = 'ansible.windows.win_acl'; Role = 'dc2025' }
         @{ RuleType = 'Registry'; Module = 'ansible.windows.win_regedit'; Role = 'dc2025' }
-        @{ RuleType = 'RootCertificate'; Module = 'community.windows.win_certificate_info'; Role = 'dc2025' }
+        @{ RuleType = 'RootCertificate'; Module = 'ansible.windows.win_certificate_info'; Role = 'dc2025' }
         @{ RuleType = 'SecurityOption'; Module = 'community.windows.win_security_policy'; Role = 'dc2025' }
         @{ RuleType = 'UserRight'; Module = 'ansible.windows.win_user_right'; Role = 'dc2025' }
         @{ RuleType = 'WindowsFeature'; Module = 'ansible.windows.win_feature'; Role = 'dc2025' }
         @{ RuleType = 'AccountPolicy'; Module = 'community.windows.win_security_policy'; Role = 'ms2025' }
-        @{ RuleType = 'AuditPolicy'; Module = 'community.windows.win_audit_policy_system'; Role = 'ms2025' }
+        @{ RuleType = 'AuditPolicy'; Module = 'ansible.windows.win_audit_policy_system'; Role = 'ms2025' }
         @{ RuleType = 'AuditSetting'; Module = 'AuditSetting'; Role = 'ms2025' }
         @{ RuleType = 'Permission'; Module = 'ansible.windows.win_acl'; Role = 'ms2025' }
         @{ RuleType = 'Registry'; Module = 'ansible.windows.win_regedit'; Role = 'ms2025' }
-        @{ RuleType = 'RootCertificate'; Module = 'community.windows.win_certificate_info'; Role = 'ms2025' }
+        @{ RuleType = 'RootCertificate'; Module = 'ansible.windows.win_certificate_info'; Role = 'ms2025' }
         @{ RuleType = 'SecurityOption'; Module = 'community.windows.win_security_policy'; Role = 'ms2025' }
         @{ RuleType = 'UserRight'; Module = 'ansible.windows.win_user_right'; Role = 'ms2025' }
         @{ RuleType = 'WindowsFeature'; Module = 'ansible.windows.win_feature'; Role = 'ms2025' }
         # WindowsClient-10/-11: every one of the twelve rule types the products carry, dispatched
         # from real data. See #98 and #99.
         @{ RuleType = 'AccountPolicy'; Module = 'community.windows.win_security_policy'; Role = 'client10' }
-        @{ RuleType = 'AuditPolicy'; Module = 'community.windows.win_audit_policy_system'; Role = 'client10' }
+        @{ RuleType = 'AuditPolicy'; Module = 'ansible.windows.win_audit_policy_system'; Role = 'client10' }
         @{ RuleType = 'AuditSetting'; Module = 'AuditSetting'; Role = 'client10' }
         @{ RuleType = 'Permission'; Module = 'ansible.windows.win_acl'; Role = 'client10' }
         @{ RuleType = 'Registry'; Module = 'ansible.windows.win_regedit'; Role = 'client10' }
-        @{ RuleType = 'RootCertificate'; Module = 'community.windows.win_certificate_info'; Role = 'client10' }
+        @{ RuleType = 'RootCertificate'; Module = 'ansible.windows.win_certificate_info'; Role = 'client10' }
         @{ RuleType = 'SecurityOption'; Module = 'community.windows.win_security_policy'; Role = 'client10' }
         @{ RuleType = 'Service'; Module = 'ansible.windows.win_service_info'; Role = 'client10' }
         @{ RuleType = 'UserRight'; Module = 'ansible.windows.win_user_right'; Role = 'client10' }
         @{ RuleType = 'WindowsFeature'; Module = 'ansible.windows.win_feature'; Role = 'client10' }
         @{ RuleType = 'AccountPolicy'; Module = 'community.windows.win_security_policy'; Role = 'client11' }
-        @{ RuleType = 'AuditPolicy'; Module = 'community.windows.win_audit_policy_system'; Role = 'client11' }
+        @{ RuleType = 'AuditPolicy'; Module = 'ansible.windows.win_audit_policy_system'; Role = 'client11' }
         @{ RuleType = 'AuditSetting'; Module = 'AuditSetting'; Role = 'client11' }
         @{ RuleType = 'Permission'; Module = 'ansible.windows.win_acl'; Role = 'client11' }
         @{ RuleType = 'Registry'; Module = 'ansible.windows.win_regedit'; Role = 'client11' }
-        @{ RuleType = 'RootCertificate'; Module = 'community.windows.win_certificate_info'; Role = 'client11' }
+        @{ RuleType = 'RootCertificate'; Module = 'ansible.windows.win_certificate_info'; Role = 'client11' }
         @{ RuleType = 'SecurityOption'; Module = 'community.windows.win_security_policy'; Role = 'client11' }
         @{ RuleType = 'Service'; Module = 'ansible.windows.win_service_info'; Role = 'client11' }
         @{ RuleType = 'UserRight'; Module = 'ansible.windows.win_user_right'; Role = 'client11' }

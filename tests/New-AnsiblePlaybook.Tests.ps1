@@ -148,7 +148,7 @@ Describe 'New-AnsiblePlaybook' {
         It 'converts an audit policy rule to win_audit_policy_system' {
             $cat3 = Get-RoleFile 'tasks/cat3.yml'
 
-            $cat3 | Should-BeLikeString '*community.windows.win_audit_policy_system*'
+            $cat3 | Should-BeLikeString '*ansible.windows.win_audit_policy_system*'
             $cat3 | Should-BeLikeString '*subcategory: Credential Validation*'
             $cat3 | Should-BeLikeString '*audit_type: Success*'
         }

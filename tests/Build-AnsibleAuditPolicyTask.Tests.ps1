@@ -22,7 +22,7 @@ BeforeAll {
 Describe 'Build-AnsibleAuditPolicyTask' {
 
     Add-GeneratorContractTests -Generator 'Build-AnsibleAuditPolicyTask' `
-        -Module 'community.windows.win_audit_policy_system' `
+        -Module 'ansible.windows.win_audit_policy_system' `
         -Factory { New-AuditPolicyRule }
 
     Context 'the task it builds' {
@@ -31,7 +31,7 @@ Describe 'Build-AnsibleAuditPolicyTask' {
             $task = (Invoke-Generator -Generator 'Build-AnsibleAuditPolicyTask' `
                 -Rule (New-AuditPolicyRule) -StigName 'WindowsServer-2022-MS').Task
 
-            $audit = $task.'community.windows.win_audit_policy_system'
+            $audit = $task.'ansible.windows.win_audit_policy_system'
             $audit.subcategory | Should-Be 'Credential Validation'
             $audit.audit_type | Should-Be 'Success'
         }
