@@ -513,8 +513,9 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
             $iis.Defaults | Should-NotBeLikeString '*website*'
         }
 
-        It 'asserts nothing, having no role-scoped list to guard' {
-            $iis.Tasks | Should-NotBeLikeString '*names something*'
+        It 'guards no role-scoped list, having none to guard' {
+            $iis.Tasks | Should-NotBeLikeString '*_websites | length*'
+            $iis.Tasks | Should-NotBeLikeString '*_webapppools | length*'
         }
     }
 

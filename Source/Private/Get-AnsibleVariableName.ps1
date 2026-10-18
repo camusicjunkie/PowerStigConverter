@@ -52,12 +52,29 @@ function Get-AnsibleRoleVariable {
         Name = $variable
         Reference = '{0} {1} {2}' -f '{{', $variable, '}}'
         Declaration = '{0}: []' -f $variable
-        Assert = [ordered] @{
-            'name' = 'Assert {0} names something' -f $variable
-            'ansible.builtin.assert' = [ordered] @{
-                'that' = @('{0} | length > 0' -f $variable)
-                'fail_msg' = '{0} is empty, so this role would configure nothing. Set it in defaults/main/main.yml or group_vars.' -f $variable
-            }
+        Assert = New-AnsibleRoleVariableAssert -Name $variable
+    }
+}
+
+<#
+.SYNOPSIS
+    The assert that a role variable names something.
+.DESCRIPTION
+    One builder for both kinds of role variable, so the role-scoped and the per-rule assert cannot
+    drift apart. See docs/adr/0018.
+#>
+function New-AnsibleRoleVariableAssert {
+    [CmdletBinding()]
+    [OutputType([System.Collections.Specialized.OrderedDictionary])]
+    param (
+        [Parameter(Mandatory)] [string] $Name
+    )
+
+    [ordered] @{
+        'name' = 'Assert {0} names something' -f $Name
+        'ansible.builtin.assert' = [ordered] @{
+            'that' = @('{0} | length > 0' -f $Name)
+            'fail_msg' = '{0} is empty, so this role would configure nothing. Set it in defaults/main/main.yml or group_vars.' -f $Name
         }
     }
 }
@@ -66,7 +83,7 @@ function Get-AnsibleRoleVariable {
 .SYNOPSIS
     A role variable the site fills in per rule - prefix_id_name - as the same record.
 .DESCRIPTION
-    Declared blank and not asserted; whether it should be is #128.
+    Declared blank and asserted non-empty with the role-scoped ones. See docs/adr/0018.
 #>
 function Get-AnsibleRuleVariable {
     [CmdletBinding()]
@@ -79,11 +96,13 @@ function Get-AnsibleRuleVariable {
 
     $splat = @{ TaskId = $TaskId; TaskName = $Name; StigName = $StigName }
 
+    $variable = Get-AnsibleVariableName @splat
+
     [pscustomobject] @{
-        Name = Get-AnsibleVariableName @splat
+        Name = $variable
         Reference = Get-AnsibleVariableReference @splat
         Declaration = New-AnsibleVariableLine @splat
-        Assert = $null
+        Assert = New-AnsibleRoleVariableAssert -Name $variable
     }
 }
 
