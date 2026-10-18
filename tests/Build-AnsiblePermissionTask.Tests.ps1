@@ -222,4 +222,60 @@ Describe 'Build-AnsiblePermissionTask' {
                 Should-BeNull
         }
     }
+
+    # Server Operators exists only on a domain controller (issue #148).
+    Context 'an entry whose principal exists only on a domain controller' {
+
+        BeforeAll {
+            function Get-DcOnlyEntry {
+                @(
+                    [pscustomobject] @{ Principal = 'Server Operators'; Rights = 'ReadAndExecute'; Type = 'Allow'; Inheritance = '' }
+                    [pscustomobject] @{ Principal = 'Administrators'; Rights = 'FullControl'; Type = 'Allow'; Inheritance = '' }
+                )
+            }
+
+            # Written from inside the module, so read off the warning stream.
+            function Invoke-DcOnlyGenerator {
+                param ($StigName, $Entries = (Get-DcOnlyEntry))
+
+                $output = Invoke-Generator -Generator 'Build-AnsiblePermissionTask' `
+                    -Rule (New-PermissionRule -Id 'V-1.c' -Entries $Entries) -StigName $StigName 3>&1
+                @{
+                    Warning = @($output | Where-Object { $_ -is [System.Management.Automation.WarningRecord] })
+                    Task = $output | Where-Object { $_ -isnot [System.Management.Automation.WarningRecord] }
+                }
+            }
+        }
+
+        It 'leaves it out of <StigName> and keeps the others' -ForEach @(
+            @{ StigName = 'WindowsServer-2025-MS' }
+            @{ StigName = 'WindowsClient-11' }
+        ) {
+            $result = Invoke-DcOnlyGenerator -StigName $StigName
+
+            @($result.Task.Task.block).Count | Should-Be 1
+            $result.Task.Task.block[0].'ansible.windows.win_acl'.user | Should-Be 'Administrators'
+        }
+
+        It 'warns, naming the rule, the principal and the product' {
+            $result = Invoke-DcOnlyGenerator -StigName 'WindowsServer-2025-MS'
+
+            $result.Warning.Count | Should-Be 1
+            $result.Warning[0].Message | Should-BeLikeString '*V-1.c*Server Operators*WindowsServer-2025-MS*'
+        }
+
+        It 'keeps it on a domain controller, without a warning' {
+            $result = Invoke-DcOnlyGenerator -StigName 'WindowsServer-2025-DC'
+
+            @($result.Task.Task.block).Count | Should-Be 2
+            $result.Warning.Count | Should-Be 0
+        }
+
+        It 'builds nothing where it is the only entry' {
+            $entries = @([pscustomobject] @{ Principal = 'Server Operators'; Rights = 'Read'; Type = 'Allow'; Inheritance = '' })
+            $result = Invoke-DcOnlyGenerator -StigName 'WindowsServer-2025-MS' -Entries $entries
+
+            $result.Task | Should-BeNull
+        }
+    }
 }

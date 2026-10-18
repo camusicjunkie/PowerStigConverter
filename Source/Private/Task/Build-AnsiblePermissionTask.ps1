@@ -12,11 +12,23 @@ function Build-AnsiblePermissionTask {
         principal is a parenthesised abbreviation - PowerStig's misreading of '(RX)' in the check
         text - names no account and is left out; a rule left with none builds nothing.
         See #173 and #174.
+
+        An entry naming a principal that exists only on a domain controller ('Server Operators') is
+        left out of any product that is not one, with a warning. See #148 and docs/adr/0020.
     #>
     param ($Rule, $StigName, $StigId, $Resolution)
 
     $entries = @($Rule.AccessControlEntry.Entry | Where-Object { $_.Principal -notmatch '^\(.*\)$' })
-    if ($entries.Count -eq 0) { return }
+
+    if ($StigName -notmatch '-DC$') {
+        $entries = @($entries | Where-Object {
+            $dcOnly = $_.Principal -in $script:domainControllerOnlyPrincipal
+            if ($dcOnly) {
+                Write-Warning ('{0}: {1} exists only on a domain controller, so its entry is skipped for {2}. See docs/adr/0020.' -f $Rule.Id, $_.Principal, $StigName)
+            }
+            -not $dcOnly
+        })
+    }    if ($entries.Count -eq 0) { return }
 
     # Windows resolves these service accounts only under NT SERVICE (issue #144).
     $servicePrincipal = @{ trustedinstaller = 'NT SERVICE\TrustedInstaller'; eventlog = 'NT SERVICE\EventLog' }
