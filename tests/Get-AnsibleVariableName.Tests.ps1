@@ -238,9 +238,16 @@ Describe 'Get-AnsibleRuleVariable' {
             $logPath.Declaration | Should-Be "${prefix}_300_a_logpath: "
         }
 
-        # Whether it should be is #128; until then the generated role is unchanged.
-        It 'carries no assert' {
-            $logPath.Assert | Should-BeNull
+        # A blank one would configure logging with an empty path and report success. See docs/adr/0018.
+        It 'asserts the variable names something' {
+            $logPath.Assert.'ansible.builtin.assert'.that | Should-BeCollection @("${prefix}_300_a_logpath | length > 0")
+        }
+
+        It 'builds the assert the role-scoped variables do' {
+            $roleScoped = Invoke-PrivateCommand -Command 'Get-AnsibleRoleVariable' -Splat @{ Name = 'logpath'; StigName = $stig }
+
+            $logPath.Assert.'ansible.builtin.assert'.fail_msg |
+                Should-Be $roleScoped.Assert.'ansible.builtin.assert'.fail_msg.Replace($roleScoped.Name, $logPath.Name)
         }
     }
 }

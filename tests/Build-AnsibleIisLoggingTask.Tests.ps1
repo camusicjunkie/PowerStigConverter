@@ -108,6 +108,14 @@ Describe 'Build-AnsibleIisLoggingTask' {
             $item.Task.'ansible.windows.win_dsc'.LogPath | Should-Be $item.RoleVariable.Reference
             $item.RoleVariable.Declaration | Should-Be 'stig_iisserver_10_0_300_logpath: '
         }
+
+        # Left blank, the role would configure logging with an empty path and report success.
+        It 'asserts the log path names something' {
+            $item = Invoke-Generator -Generator 'Build-AnsibleIisLoggingTask' -Rule (New-LoggingRule) -StigName 'IISServer-10.0'
+
+            $item.RoleVariable.Assert.'ansible.builtin.assert'.that |
+                Should-BeCollection @('stig_iisserver_10_0_300_logpath | length > 0')
+        }
     }
 
     # Read by the names the resolution reports, not the rule's - reading the rule's yields

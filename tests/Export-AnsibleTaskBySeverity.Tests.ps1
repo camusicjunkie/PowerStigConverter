@@ -17,6 +17,17 @@ BeforeAll {
         }
     }
 
+    # A per-rule role variable, as the IIS logging generator returns it.
+    function New-RuleVariableTaskItem {
+        param ($Id, $Severity)
+
+        $item = New-TaskItem -Id $Id -Severity $Severity
+        $item.RoleVariable = @(Invoke-PrivateCommand -Command 'Get-AnsibleRuleVariable' -Splat @{
+            Name = 'logpath'; TaskId = $Id; StigName = 'WindowsServer-2022-MS'
+        })
+        $item
+    }
+
     function Export-Tasks {
         param ($Items, $StigName = 'WindowsServer-2022-MS')
 
@@ -139,6 +150,33 @@ Describe 'Export-AnsibleTaskBySeverity' {
             $files = Export-Tasks -Items @(New-TaskItem -Id 'V-1' -Severity 'high')
 
             $files.cat1 -join "`n" | Should-NotBeLikeString '*ansible.builtin.assert*'
+        }
+    }
+
+    # A blank per-rule variable would configure logging with an empty path and report success.
+    # See docs/adr/0018.
+    Context 'a role variable the site fills in per rule' {
+
+        BeforeAll {
+            $script:perRule = Export-Tasks -Items @(
+                New-RuleVariableTaskItem -Id 'V-1' -Severity 'high'
+                New-RuleVariableTaskItem -Id 'V-2' -Severity 'medium'
+            )
+        }
+
+        It 'asserts it in the preamble of the severity file that carries its rule' {
+            $perRule.cat1[0] | Should-BeLikeString '*ansible.builtin.assert*'
+            $perRule.cat1 -join "`n" | Should-BeLikeString '*stig_server_2022_1_logpath | length > 0*'
+            $perRule.cat2 -join "`n" | Should-BeLikeString '*stig_server_2022_2_logpath | length > 0*'
+        }
+
+        # Every severity file imports on its own tag, so each carries every guard.
+        It 'repeats the guard for the other rule in each file that has tasks' {
+            $perRule.cat1 -join "`n" | Should-BeLikeString '*stig_server_2022_2_logpath | length > 0*'
+        }
+
+        It 'leaves the guard out of a severity file with no tasks' {
+            $perRule.cat3 -join "`n" | Should-NotBeLikeString '*ansible.builtin.assert*'
         }
     }
 }
