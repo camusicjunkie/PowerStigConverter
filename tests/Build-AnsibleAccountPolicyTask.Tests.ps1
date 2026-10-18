@@ -11,15 +11,15 @@ BeforeAll {
     . $PSScriptRoot/GeneratorContract.ps1
 
     function New-AccountPolicyRule {
-        param ($Id = 'V-100', $OrganizationValueRequired = $false)
+        param ($Id = 'V-100', $OrganizationValueRequired = $false, $PolicyName = 'Maximum password age', $PolicyValue = '60')
 
         [pscustomobject] @{
             Id = $Id
             Severity = 'medium'
             DuplicateOf = ''
             # Flattens to a key of AccountPolicyData.psd1, where the section and key live.
-            PolicyName = 'Maximum password age'
-            PolicyValue = '60'
+            PolicyName = $PolicyName
+            PolicyValue = $PolicyValue
             OrganizationValueRequired = $OrganizationValueRequired
         }
     }
@@ -84,6 +84,41 @@ Describe 'Build-AnsibleAccountPolicyTask' {
                 -StigName 'WindowsServer-2022-MS' -OrganizationalSetting $orgSetting).Task
 
             $task.block[0].'ansible.builtin.assert' | Should-NotBeNull
+        }
+    }
+
+    # secedit does not take a domain's lockout policy, so on a domain controller those two rules
+    # set the Default Domain Policy instead (issue #175).
+    Context 'a lockout rule on a domain controller' {
+
+        It 'sets <name> through the Default Domain Policy' -ForEach @(
+            @{ name = 'Account lockout duration'; parameter = 'LockoutDuration' }
+            @{ name = 'Reset account lockout counter after'; parameter = 'LockoutObservationWindow' }
+        ) {
+            $rule = New-AccountPolicyRule -PolicyName $name -PolicyValue '15'
+            $task = (Invoke-Generator -Generator 'Build-AnsibleAccountPolicyTask' -Rule $rule `
+                -StigName 'WindowsServer-2025-DC').Task
+
+            $task.Contains('community.windows.win_security_policy') | Should-BeFalse
+            $powershell = $task.'ansible.windows.win_powershell'
+            $powershell.script.Contains("-$parameter") | Should-BeTrue
+            $powershell.parameters.Minutes | Should-Be 15
+        }
+
+        It 'leaves the other lockout rule to secedit' {
+            $rule = New-AccountPolicyRule -PolicyName 'Account lockout threshold' -PolicyValue '3'
+            $task = (Invoke-Generator -Generator 'Build-AnsibleAccountPolicyTask' -Rule $rule `
+                -StigName 'WindowsServer-2025-DC').Task
+
+            $task.'community.windows.win_security_policy'.key | Should-Be 'LockoutBadCount'
+        }
+
+        It 'leaves the same rule on a member server to secedit' {
+            $rule = New-AccountPolicyRule -PolicyName 'Account lockout duration' -PolicyValue '15'
+            $task = (Invoke-Generator -Generator 'Build-AnsibleAccountPolicyTask' -Rule $rule `
+                -StigName 'WindowsServer-2025-MS').Task
+
+            $task.'community.windows.win_security_policy'.key | Should-Be 'LockoutDuration'
         }
     }
 }
