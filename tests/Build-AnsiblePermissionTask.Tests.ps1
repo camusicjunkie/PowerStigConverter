@@ -166,4 +166,60 @@ Describe 'Build-AnsiblePermissionTask' {
             $task.block[0].Contains('become') | Should-BeFalse
         }
     }
+
+    # win_acl takes a path literally, so a wildcard has to be expanded on the target (issue #173).
+    Context 'a path ending in a wildcard' {
+
+        BeforeAll {
+            $script:rule = New-PermissionRule -Id 'V-138' -Path '%windir%\NTDS\*.*'
+            $script:block = (Invoke-Generator -Generator 'Build-AnsiblePermissionTask' `
+                -Rule $script:rule -StigName 'WindowsServer-2025-DC').Task.block
+        }
+
+        It 'finds the files in the directory first' {
+            $find = $script:block[0].'ansible.windows.win_find'
+
+            $find.paths | Should-Be "{{ stig_server_2025_env['windir'] }}\NTDS"
+            $find.patterns | Should-BeCollection @('*.*')
+            $find.file_type | Should-Be 'file'
+            $script:block[0].register | Should-Be 'stig_server_2025_138_files'
+        }
+
+        It 'applies each entry to every file found' {
+            $script:block[1].'ansible.windows.win_acl'.path | Should-Be '{{ item.path }}'
+            $script:block[1].loop | Should-Be '{{ stig_server_2025_138_files.files }}'
+        }
+
+        It 'leaves a path with no wildcard to a single win_acl task' {
+            $task = (Invoke-Generator -Generator 'Build-AnsiblePermissionTask' `
+                -Rule (New-PermissionRule) -StigName 'WindowsServer-2025-DC').Task
+
+            $task.block.Count | Should-Be 1
+            $task.block[0].Contains('loop') | Should-BeFalse
+        }
+    }
+
+    # PowerStig reads '(RX)' in a check's text as an account (issue #174).
+    Context 'an entry whose principal is a parenthesised abbreviation' {
+
+        It 'builds no task for it' {
+            $entries = @(
+                [pscustomobject] @{ Principal = '(RX)'; Rights = 'ReadAndExecute'; Type = ''; Inheritance = '' }
+                [pscustomobject] @{ Principal = 'Administrators'; Rights = 'FullControl'; Type = 'Allow'; Inheritance = '' }
+            )
+            $task = (Invoke-Generator -Generator 'Build-AnsiblePermissionTask' `
+                -Rule (New-PermissionRule -Entries $entries) -StigName 'WindowsServer-2025-DC').Task
+
+            @($task.block).Count | Should-Be 1
+            $task.block[0].'ansible.windows.win_acl'.user | Should-Be 'Administrators'
+        }
+
+        It 'builds nothing where it is the only entry' {
+            $entries = @([pscustomobject] @{ Principal = '(RX)'; Rights = 'ReadAndExecute'; Type = ''; Inheritance = '' })
+
+            Invoke-Generator -Generator 'Build-AnsiblePermissionTask' `
+                -Rule (New-PermissionRule -Entries $entries) -StigName 'WindowsServer-2025-DC' |
+                Should-BeNull
+        }
+    }
 }
