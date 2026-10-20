@@ -8,14 +8,14 @@ function Build-AnsiblePermissionTask {
         the target's. The task name keeps the path as the STIG wrote it. See docs/adr/0017.
 
         win_acl takes a path literally, so a path ending in a wildcard ('%windir%\NTDS\*.*') is
-        searched for on the target and each entry applied to every file found. An entry whose
-        principal is a parenthesised abbreviation - PowerStig's misreading of '(RX)' in the check
-        text - names no account and is left out; a rule left with none builds nothing.
-        See #173 and #174.
+        searched for on the target and each entry applied to every file found. See #173.
+
+        A rule left with no entry builds nothing - RuleCorrection.psd1 removes an entry PowerStig
+        misparsed, such as '(RX)'. See docs/adr/0020.
     #>
     param ($Rule, $StigName, $StigId, $Resolution)
 
-    $entries = @($Rule.AccessControlEntry.Entry | Where-Object { $_.Principal -notmatch '^\(.*\)$' })
+    $entries = @($Rule.AccessControlEntry.Entry | Where-Object { $_ })
     if ($entries.Count -eq 0) { return }
 
     # Windows resolves these service accounts only under NT SERVICE (issue #144).

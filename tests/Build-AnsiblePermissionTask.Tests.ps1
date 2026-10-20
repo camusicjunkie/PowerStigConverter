@@ -199,26 +199,15 @@ Describe 'Build-AnsiblePermissionTask' {
         }
     }
 
-    # PowerStig reads '(RX)' in a check's text as an account (issue #174).
-    Context 'an entry whose principal is a parenthesised abbreviation' {
+    # RuleCorrection.psd1 can remove every entry a rule had, as it does V-278139's '(RX)'.
+    # See docs/adr/0020.
+    Context 'a rule left with no entry' {
 
-        It 'builds no task for it' {
-            $entries = @(
-                [pscustomobject] @{ Principal = '(RX)'; Rights = 'ReadAndExecute'; Type = ''; Inheritance = '' }
-                [pscustomobject] @{ Principal = 'Administrators'; Rights = 'FullControl'; Type = 'Allow'; Inheritance = '' }
-            )
-            $task = (Invoke-Generator -Generator 'Build-AnsiblePermissionTask' `
-                -Rule (New-PermissionRule -Entries $entries) -StigName 'WindowsServer-2025-DC').Task
+        It 'builds nothing' {
+            $rule = New-PermissionRule
+            $rule.AccessControlEntry = [pscustomobject] @{ Entry = $null }
 
-            @($task.block).Count | Should-Be 1
-            $task.block[0].'ansible.windows.win_acl'.user | Should-Be 'Administrators'
-        }
-
-        It 'builds nothing where it is the only entry' {
-            $entries = @([pscustomobject] @{ Principal = '(RX)'; Rights = 'ReadAndExecute'; Type = ''; Inheritance = '' })
-
-            Invoke-Generator -Generator 'Build-AnsiblePermissionTask' `
-                -Rule (New-PermissionRule -Entries $entries) -StigName 'WindowsServer-2025-DC' |
+            Invoke-Generator -Generator 'Build-AnsiblePermissionTask' -Rule $rule -StigName 'WindowsServer-2025-DC' |
                 Should-BeNull
         }
     }

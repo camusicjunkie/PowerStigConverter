@@ -23,7 +23,8 @@ function New-AnsiblePlaybook {
         $RoleName = Get-AnsibleRoleName -StigName $StigName
     }
 
-    [xml] $xml = Get-Content (Get-PowerStigFile -Type Name -Path $Path | Where-Object BaseName -like $StigName*)
+    $stigFile = Get-PowerStigFile -Type Name -Path $Path | Where-Object BaseName -like $StigName*
+    [xml] $xml = Get-Content $stigFile
 
     $stigId = $xml.DISASTIG.stigid
 
@@ -39,6 +40,10 @@ function New-AnsiblePlaybook {
     # exporter. It used to be re-read and re-parsed once per rule from two places, which left
     # nowhere to judge the inputs complete before writing anything.
     $organizationalSetting = Get-PowerStigOrgSetting -StigName $StigName -Path $Path
+
+    # PowerStig's own data errors are corrected per rule before any generator sees them, so a
+    # generator never has to guess at bad input. See docs/adr/0020.
+    Repair-PowerStigData -Xml $xml -OrganizationalSetting $organizationalSetting -StigFile $stigFile.BaseName
 
     # Convert first and feed the gate and every exporter from the same tasks, so only a rule that
     # produced a task can refuse or declare anything. Converting writes nothing. See docs/adr/0016.

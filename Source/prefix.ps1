@@ -11,3 +11,4 @@ $script:organizationData = Import-PowerShellDataFile -Path $PSScriptRoot\Files\O
 $script:ruleTypeOsFamily = Import-PowerShellDataFile -Path $PSScriptRoot\Files\RuleTypeOsFamily.psd1
 $script:accountPolicyData = Import-PowerShellDataFile -Path $PSScriptRoot\Files\AccountPolicyData.psd1
 $script:securityOptionData = Import-PowerShellDataFile -Path $PSScriptRoot\Files\SecurityOptionData.psd1
+$script:ruleCorrection = Import-PowerShellDataFile -Path $PSScriptRoot\Files\RuleCorrection.psd1
