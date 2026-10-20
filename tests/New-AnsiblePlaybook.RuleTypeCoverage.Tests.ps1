@@ -96,7 +96,7 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
         @{ RuleType = 'AuditSetting'; Module = 'AuditSetting'; Role = 'dc' }
         @{ RuleType = 'Permission'; Module = 'ansible.windows.win_acl'; Role = 'dc' }
         @{ RuleType = 'RootCertificate'; Module = 'ansible.windows.win_certificate_info'; Role = 'dc' }
-        @{ RuleType = 'Service'; Module = 'ansible.windows.win_service_info'; Role = 'dc' }
+        @{ RuleType = 'Service'; Module = 'ansible.windows.win_service:'; Role = 'dc' }
         @{ RuleType = 'MimeType'; Module = 'IISMimeTypeMapping'; Role = 'iis' }
         @{ RuleType = 'WebConfigurationProperty'; Module = 'WebConfigProperty'; Role = 'iis' }
         @{ RuleType = 'WebAppPool'; Module = 'WebAppPool'; Role = 'site' }
@@ -139,7 +139,7 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
         @{ RuleType = 'Registry'; Module = 'ansible.windows.win_regedit'; Role = 'client10' }
         @{ RuleType = 'RootCertificate'; Module = 'ansible.windows.win_certificate_info'; Role = 'client10' }
         @{ RuleType = 'SecurityOption'; Module = 'community.windows.win_security_policy'; Role = 'client10' }
-        @{ RuleType = 'Service'; Module = 'ansible.windows.win_service_info'; Role = 'client10' }
+        @{ RuleType = 'Service'; Module = 'ansible.windows.win_service:'; Role = 'client10' }
         @{ RuleType = 'UserRight'; Module = 'ansible.windows.win_user_right'; Role = 'client10' }
         @{ RuleType = 'WindowsFeature'; Module = 'ansible.windows.win_feature'; Role = 'client10' }
         @{ RuleType = 'AccountPolicy'; Module = 'community.windows.win_security_policy'; Role = 'client11' }
@@ -149,7 +149,7 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
         @{ RuleType = 'Registry'; Module = 'ansible.windows.win_regedit'; Role = 'client11' }
         @{ RuleType = 'RootCertificate'; Module = 'ansible.windows.win_certificate_info'; Role = 'client11' }
         @{ RuleType = 'SecurityOption'; Module = 'community.windows.win_security_policy'; Role = 'client11' }
-        @{ RuleType = 'Service'; Module = 'ansible.windows.win_service_info'; Role = 'client11' }
+        @{ RuleType = 'Service'; Module = 'ansible.windows.win_service:'; Role = 'client11' }
         @{ RuleType = 'UserRight'; Module = 'ansible.windows.win_user_right'; Role = 'client11' }
         @{ RuleType = 'WindowsFeature'; Module = 'ansible.windows.win_feature'; Role = 'client11' }
         # Google-Chrome: both rule types the product carries, dispatched from real data. See #103.
@@ -344,11 +344,13 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
     # the role through dispatch rather than a hand-built test double.
     Context 'the two shapes the WindowsClient-10/-11 survey found disagreeing with the existing generators' {
 
-        It 'asserts <Role>''s service in its real Stopped state, not a hardcoded "started"' -ForEach @(
+        # Set, not only checked: V-253289 failed its old assert on a fresh install. See ADR 0022.
+        It 'disables and stops <Role>''s Secondary Logon in its real Stopped state' -ForEach @(
             @{ Role = 'client10' }
             @{ Role = 'client11' }
         ) {
-            (Get-Variable -Name $Role -ValueOnly).Tasks | Should-BeLikeString '*services`[0`].state == ''stopped''*'
+            (Get-Variable -Name $Role -ValueOnly).Tasks |
+                Should-MatchString 'ansible\.windows\.win_service:\s*\r?\n\s*name: seclogon\s*\r?\n\s*start_mode: disabled\s*\r?\n\s*state: stopped'
         }
 
         It 'recognises <Role>''s blank Identity as "nobody holds this right"' -ForEach @(
