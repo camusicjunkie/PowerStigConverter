@@ -205,6 +205,24 @@ function Get-AnsibleToggleName {
 
 <#
 .SYNOPSIS
+    The when: condition testing a rule's conditional toggle.
+.DESCRIPTION
+    Cast with bool because -e name=false hands the toggle over as a string, which ansible-core
+    2.19+ rejects as a conditional. See #196.
+#>
+function Get-AnsibleToggleCondition {
+    [CmdletBinding()]
+    [OutputType([string])]
+    param (
+        [Parameter(Mandatory)] [string] $TaskId,
+        [Parameter(Mandatory)] [string] $StigName
+    )
+
+    '{0} | bool' -f (Get-AnsibleToggleName @PSBoundParameters)
+}
+
+<#
+.SYNOPSIS
     The defaults/ line declaring a conditional toggle, on.
 #>
 function New-AnsibleToggleLine {

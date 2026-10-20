@@ -88,5 +88,13 @@ function New-AnsiblePlaybook {
         Write-Warning ('{0} does not import generated.yml, so the generated handlers will never run. Add an "ansible.builtin.import_tasks: generated.yml" entry to it.' -f $handlerMain)
     }
 
+    # tasks/main.yml is written once too, so a role scaffolded before #196 tests its severity
+    # toggles bare, and -e <toggle>=false fails there on ansible-core 2.19+ instead of skipping.
+    $taskMain = Join-Path $role.TaskPath 'main.yml'
+    $bareToggle = '(?m)^\s*when:\s*{0}_cat[123]\s*$' -f [regex]::Escape((Get-AnsibleVariablePrefix -StigName $StigName))
+    if ((Test-Path -Path $taskMain) -and (Get-Content -Path $taskMain -Raw) -match $bareToggle) {
+        Write-Warning ('{0} tests its severity toggles without "| bool", so -e <toggle>=false fails on ansible-core 2.19+ instead of skipping. Add "| bool" to each "when:" on the CAT imports.' -f $taskMain)
+    }
+
     $role
 }

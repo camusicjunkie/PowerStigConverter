@@ -143,7 +143,7 @@ Describe 'Build-AnsibleRegistryTask' {
         It 'still guards the task with the toggle for the rule' {
             $rule = New-RegistryRule -Ensure 'Absent' -ValueData '' -ValueType 'None'
 
-            (Get-RegistryTask -Rule $rule).when | Should-Be 'stig_server_2022_170_when'
+            (Get-RegistryTask -Rule $rule).when | Should-Be 'stig_server_2022_170_when | bool'
         }
 
         # ValueType None is Defender's spelling of 'nothing to type'; Chrome leaves ValueType
@@ -193,7 +193,7 @@ Describe 'Build-AnsibleRegistryTask' {
         }
 
         It 'guards the block with one toggle named for the base id' {
-            $grouped.Task.when | Should-Be 'stig_server_2022_171_when'
+            $grouped.Task.when | Should-Be 'stig_server_2022_171_when | bool'
         }
 
         # Registry keys are always backslash-delimited, whatever platform does the converting

@@ -113,7 +113,7 @@ Describe 'Build-AnsibleSqlDatabaseTask' {
 
             @($item).Count | Should-Be 1
             @($item.Task.block).Count | Should-Be 4
-            $item.Task.when | Should-Be 'stig_sqlserver_2016_instance_213954_when'
+            $item.Task.when | Should-Be 'stig_sqlserver_2016_instance_213954_when | bool'
         }
     }
 

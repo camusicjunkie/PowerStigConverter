@@ -187,7 +187,7 @@ Describe 'New-AnsiblePlaybook' {
         It 'guards the block with one toggle named for the base id, not the sub-rule ids' {
             $cat2 = Get-RoleFile 'tasks/cat2.yml'
 
-            $cat2 | Should-BeLikeString "*when: ${prefix}_103_when*"
+            $cat2 | Should-BeLikeString "*when: ${prefix}_103_when | bool*"
             $cat2 | Should-NotBeLikeString "*${prefix}_103_a_when*"
         }
     }
@@ -225,6 +225,37 @@ Describe 'New-AnsiblePlaybook' {
 
         It 'leaves the unsupported rule out of the task files' {
             Get-RoleFile 'tasks/cat2.yml' | Should-NotBeLikeString '*V-110*'
+        }
+    }
+
+    # tasks/main.yml is written once, so a role scaffolded before #196 keeps its bare severity
+    # toggles, which -e <toggle>=false breaks on ansible-core 2.19+.
+    Context 'a role whose tasks/main.yml predates the bool cast' {
+
+        BeforeAll {
+            function Get-StaleToggleWarning {
+                param ([string] $Name, [scriptblock] $Edit)
+
+                $output = Join-Path $TestDrive $Name
+                $null = New-AnsiblePlaybook -StigName $stigName -Path $fixtureRoot -OutputPath $output `
+                    -RoleName 'stale_role' -WarningAction SilentlyContinue 6>$null
+                $main = Join-Path $output 'stale_role/tasks/main.yml'
+                Set-Content -Path $main -Value (& $Edit (Get-Content -Path $main -Raw)) -NoNewline
+
+                New-AnsiblePlaybook -StigName $stigName -Path $fixtureRoot -OutputPath $output `
+                    -RoleName 'stale_role' 3>&1 6>$null |
+                    Where-Object { $_ -is [System.Management.Automation.WarningRecord] -and $_.Message -like '*| bool*' }
+            }
+        }
+
+        It 'warns that its severity toggles are not cast' {
+            $warning = Get-StaleToggleWarning -Name 'stale' -Edit { param ($text) $text.Replace(' | bool', '') }
+
+            $warning.Message | Should-BeLikeString '*tasks*main.yml*'
+        }
+
+        It 'says nothing about a role scaffolded with the cast' {
+            Get-StaleToggleWarning -Name 'current' -Edit { param ($text) $text } | Should-BeNull
         }
     }
 

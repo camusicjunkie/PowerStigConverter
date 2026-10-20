@@ -493,7 +493,7 @@ Describe 'New-AnsiblePlaybook for the rule types no other fixture carried' {
             @{ RuleType = 'WebConfigurationProperty'; Toggle = 'stig_iissite_10_0_218786_when' }
         ) {
             $site.Tasks | Should-BeLikeString '*IIS:\Sites\{{ item }}*'
-            $site.Tasks | Should-MatchString ("loop: '\{\{ stig_iissite_10_0_websites \}\}'\s*\r?\n\s*when: " + $Toggle)
+            $site.Tasks | Should-MatchString ("loop: '\{\{ stig_iissite_10_0_websites \}\}'\s*\r?\n\s*when: " + $Toggle + ' \| bool')
         }
 
         # The four rule types that reference a website now share one list, so the role answers the

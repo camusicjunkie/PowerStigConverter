@@ -24,15 +24,15 @@
 
 - name: Execute the CAT 1 tasks
   ansible.builtin.import_tasks: cat1.yml
-  when: <%= $PLASTER_PARAM_VariablePrefix %>_cat1
+  when: <%= $PLASTER_PARAM_VariablePrefix %>_cat1 | bool
   tags: cat1
 
 - name: Execute the CAT 2 tasks
   ansible.builtin.import_tasks: cat2.yml
-  when: <%= $PLASTER_PARAM_VariablePrefix %>_cat2
+  when: <%= $PLASTER_PARAM_VariablePrefix %>_cat2 | bool
   tags: cat2
 
 - name: Execute the CAT 3 tasks
   ansible.builtin.import_tasks: cat3.yml
-  when: <%= $PLASTER_PARAM_VariablePrefix %>_cat3
+  when: <%= $PLASTER_PARAM_VariablePrefix %>_cat3 | bool
   tags: cat3

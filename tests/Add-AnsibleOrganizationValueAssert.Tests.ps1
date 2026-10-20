@@ -54,12 +54,12 @@ Describe 'Add-AnsibleOrganizationValueAssert' {
         # The wrapping block is what the severity file toggles, so the conditional has to move
         # from the inner task onto it rather than staying behind on a task nobody sees directly.
         It 'carries the task''s when onto the wrapping block' {
-            $task = [ordered] @{ 'name' = 'V-100 | MEDIUM | Maximum password age'; 'when' = 'stig_server_2022_100_when' }
+            $task = [ordered] @{ 'name' = 'V-100 | MEDIUM | Maximum password age'; 'when' = 'stig_server_2022_100_when | bool' }
             $resolution = [pscustomobject] @{ Assert = New-Assert }
 
             $wrapped = Add-OrgAssert -Task $task -Resolution $resolution
 
-            $wrapped.when | Should-Be 'stig_server_2022_100_when'
+            $wrapped.when | Should-Be 'stig_server_2022_100_when | bool'
         }
 
         It 'adds no when key when the task carries none' {

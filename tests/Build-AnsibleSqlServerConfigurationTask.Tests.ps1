@@ -93,7 +93,7 @@ Describe 'Build-AnsibleSqlServerConfigurationTask' {
         }
 
         It 'guards the task with the rule''s own toggle, no block' {
-            $item.Task.when | Should-Be 'stig_sqlserver_2016_instance_214034_when'
+            $item.Task.when | Should-Be 'stig_sqlserver_2016_instance_214034_when | bool'
             $item.Task.block | Should-BeNull
         }
 

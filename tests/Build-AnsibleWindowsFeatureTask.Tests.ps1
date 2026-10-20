@@ -88,7 +88,7 @@ Describe 'Build-AnsibleWindowsFeatureTask' {
             $task = (Invoke-Generator -Generator 'Build-AnsibleWindowsFeatureTask' `
                 -Rule (New-WindowsFeatureRule) -StigName 'WindowsServer-2022-MS').Task
 
-            $task.when | Should-Be 'stig_server_2022_130_when'
+            $task.when | Should-Be 'stig_server_2022_130_when | bool'
         }
 
         It 'does not carry a toggle from the rule converted before it' {
@@ -100,7 +100,7 @@ Describe 'Build-AnsibleWindowsFeatureTask' {
                 $Rules | ConvertTo-AnsibleTask -RuleType 'WindowsFeature' -StigName 'WindowsServer-2022-MS'
             }
 
-            $tasks[1].Task.when | Should-Be 'stig_server_2022_131_when'
+            $tasks[1].Task.when | Should-Be 'stig_server_2022_131_when | bool'
         }
     }
 }
