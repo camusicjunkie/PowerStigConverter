@@ -35,6 +35,9 @@
         'Required' = @('Identity')
         # win_user_right takes a list of identities, so the variable holds one.
         'List' = @('Identity')
+        # PowerStig writes identities as prose ('Administrators.'), so an element is trimmed and loses
+        # its sentence period before it reaches the role. See #143.
+        'Sentence' = @('Identity')
         # PowerStig spells 'nobody holds this right' as the string NULL in one archived
         # revision (WindowsServer-2016-DC/-MS-2.9); every other revision leaves Identity blank
         # instead, which Resolve-AnsibleOrganizationValue also recognizes as this same 'Empty'

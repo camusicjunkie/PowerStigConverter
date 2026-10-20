@@ -71,7 +71,7 @@ function Resolve-AnsibleOrganizationValue {
                     # string and is written as a scalar rather than a sequence.
                     $default = if ($status -ne 'Answered') { $null }
                         elseif ($data['Derive'] -and $data['Derive'][$part]) { Split-AnsibleValuePart -Value $node.$field -Derivation $data['Derive'][$part] }
-                        elseif ($data['List'] -contains $field) { , ($node.$field -split ',') }
+                        elseif ($data['List'] -contains $field) { Split-AnsibleListValue -Value $node.$field -Data $data -Field $field }
                         # PowerStig quotes the values one consumer interpolates into a built
                         # scriptblock; the quotes are that consumer's syntax, not the value.
                         elseif ($data['Unquote'] -contains $field) { $node.$field -replace "^'(.*)'$", '$1' }
@@ -139,7 +139,7 @@ function Resolve-AnsibleOrganizationValue {
     elseif ($data['Empty'] -and ($Rule.($data['Value']) -eq $data['Empty'] -or [string]::IsNullOrEmpty($Rule.($data['Value'])))) { @() }
     # Split here so both halves hand back the same shape; the comma keeps one element an array.
     elseif ($data['List'] -contains $data['Value']) {
-        , ($Rule.($data['Value']) -split ',')
+        Split-AnsibleListValue -Value $Rule.($data['Value']) -Data $data -Field $data['Value']
     }
     else { $Rule.($data['Value']) }
 
@@ -201,9 +201,28 @@ function Get-AnsibleShapedValue {
     }
 
     if ($Data['List'] -contains $Source) {
-        if ($Rule.$Source) { return , ($Rule.$Source -split ',') }
+        if ($Rule.$Source) { return Split-AnsibleListValue -Value $Rule.$Source -Data $Data -Field $Source }
         return
     }
 
     $Rule.$Source
+}
+
+function Split-AnsibleListValue {
+    <#
+    .SYNOPSIS
+        One org value split into its list.
+    .DESCRIPTION
+        A field OrganizationData.psd1 names under 'Sentence' holds identities PowerStig wrote as
+        prose: ('Enterprise Admins., Domain Admins.'), so each element loses its padding and the
+        sentence period no account carries. The comma keeps one element an array. See #143.
+    #>
+    param ($Value, $Data, $Field)
+
+    $items = $Value -split ','
+    if ($Data['Sentence'] -contains $Field) {
+        $items = $items | ForEach-Object { $_.Trim() -replace '(?<=.)\.$' }
+    }
+
+    , @($items)
 }

@@ -466,6 +466,48 @@ Describe 'Resolve-AnsibleOrganizationValue: the organization variables it declar
                 Should-Be 'stig_server_2022_104_access_this_computer_from_the_network: [Administrators]'
         }
 
+        # PowerStig writes the identities of V-278184 as prose, and win_user_right cannot resolve
+        # 'Enterprise Admins.' or ' Domain Admins.'. The generator strips a literal list, but an
+        # organization value reaches the role through defaults/, so it is cleaned here.
+        It 'trims each identity of an org value and drops its sentence period' {
+            $rule = [pscustomobject] @{
+                Id = 'V-104'
+                DisplayName = 'Deny access to this computer from the network'
+                OrganizationValueRequired = $true
+            }
+            $setting = '<OrganizationalSetting id="V-104" Identity="Enterprise Admins., Domain Admins.,Local account and member of Administrators group,Guests." />'
+
+            $variable = (Resolve-OrgValue -Rule $rule -RuleType UserRight `
+                -OrganizationalSetting (New-TestOrgSetting $setting)).Variable
+
+            $variable.Declaration |
+                Should-Be 'stig_server_2022_104_deny_access_to_this_computer_from_the_network: [Enterprise Admins, Domain Admins, Local account and member of Administrators group, Guests]'
+        }
+
+        It 'cleans an identity list the rule carries itself the same way' {
+            $rule = [pscustomobject] @{
+                Id = 'V-104'
+                DisplayName = 'Deny log on as a batch job'
+                Identity = 'Enterprise Admins., Domain Admins.,Guests.'
+                OrganizationValueRequired = $false
+            }
+
+            (Resolve-OrgValue -Rule $rule -RuleType UserRight).Value -join '|' |
+                Should-Be 'Enterprise Admins|Domain Admins|Guests'
+        }
+
+        It 'leaves the elements of a list that is not an identity list alone' {
+            $rule = [pscustomobject] @{
+                Id = 'V-300'
+                LogFlags = 'Date, Time.'
+                LogTargetW3C = 'File'
+                OrganizationValueRequired = $false
+            }
+
+            $logging = (Resolve-OrgValue -Rule $rule -RuleType IisLogging -StigName 'IISServer-10.0').Value
+
+            $logging.LogFlags -join '|' | Should-Be 'Date| Time.'
+        }
         # WebAppPool is the one rule type PowerStig interpolates into a built scriptblock, so its
         # org values arrive quoted as PowerShell source. The quotes are that builder's syntax,
         # not part of the value - left on, DSC's [TimeSpan]::Parse throws. See #53.
