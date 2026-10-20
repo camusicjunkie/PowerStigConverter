@@ -58,6 +58,9 @@ declares, the ones the org settings file leaves unanswered, and the assert guard
 (`ContainsKey`) to skip rule types it says nothing about. Both read the file's keys rather than a
 copied list, so adding a rule type is one edit in one file. See `docs/adr/0004`.
 
+When PowerStig's data is wrong for a rule (a misparsed principal, a garbled org default), correct
+it in `Source/Files/RuleCorrection.psd1`, not with a heuristic in a generator. See `docs/adr/0020`.
+
 Only a rule that produced a task matters to the rest of a conversion. The incomplete-value gate
 and the `defaults/` exporter read the converted tasks, never the raw rules, so dispatch is the one
 place that decides what gets skipped. See `docs/adr/0016`.
