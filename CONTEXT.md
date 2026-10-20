@@ -152,3 +152,12 @@ generated variable name is built on. It names the product and, where sibling rel
 otherwise collide, the release — nothing else, so a STIG covering every release of its product
 contributes no release to it.
 _Avoid_: namespace, role prefix
+
+### Long-running rules
+
+**Long-running rule**:
+A STIG rule of a rule type whose lab-measured rules take 60 seconds or more in their slowest
+observed run, so an operator can leave it out of the regular run and schedule it separately.
+Classification is by rule type, not by individual rule: every rule of the type is long-running
+once any measured one reaches the cut-off, and a rule type with no measured rule over it is not.
+_Avoid_: slow rule, heavy rule, expensive rule
