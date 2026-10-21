@@ -94,7 +94,7 @@ Describe 'Build-AnsibleIisLoggingTask' {
         It 'names the toggle for the rule id' {
             $task = New-LoggingTask -Rule (New-LoggingRule)
 
-            $task.when | Should-Be 'stig_iisserver_10_0_300_when'
+            $task.when | Should-Be 'stig_iisserver_10_0_300_when | bool'
         }
     }
 

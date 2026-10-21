@@ -130,7 +130,7 @@ Describe 'Build-AnsibleWebConfigurationPropertyTask' {
         }
 
         It 'guards the block with one toggle named for the base id' {
-            $grouped.Task.when | Should-Be 'stig_iisserver_10_0_211_when'
+            $grouped.Task.when | Should-Be 'stig_iisserver_10_0_211_when | bool'
         }
 
         It 'names the block for the leaf of the shared config section' {

@@ -125,7 +125,7 @@ Describe 'Build-AnsibleMimeTypeTask' {
         }
 
         It 'guards the block with one toggle named for the base id' {
-            $grouped.Task.when | Should-Be 'stig_iisserver_10_0_201_when'
+            $grouped.Task.when | Should-Be 'stig_iisserver_10_0_201_when | bool'
         }
 
         It 'names the block for the leaf of the shared mime type' {

@@ -121,6 +121,22 @@ Describe 'New-AnsibleRoleScaffold' {
             $main | Should-NotBeLikeString '*regex_search*'
         }
 
+        # -e <toggle>=false passes a string, which ansible-core 2.19+ rejects uncast. See #196.
+        It 'casts the <OsFamily> severity toggles to booleans' -ForEach @(
+            @{ OsFamily = 'Windows'; StigName = 'WindowsServer-2022-MS' }
+            @{ OsFamily = 'RedHat'; StigName = 'RHEL-9' }
+        ) {
+            $root = Join-Path $TestDrive "severity_$OsFamily"
+            $null = New-Item -Path $root -ItemType Directory -Force
+            $scaffold = New-Scaffold -Path $root -RoleName 'severity_role' -StigName $StigName
+
+            $main = Get-Content -Path (Join-Path $scaffold.Path 'tasks/main.yml') -Raw
+
+            foreach ($category in 'cat1', 'cat2', 'cat3') {
+                $main | Should-MatchString ('(?m)^  when: \w+_{0} \| bool\r?$' -f $category)
+            }
+        }
+
         # INJECT_FACTS_AS_VARS goes away in ansible-core 2.24; see #150.
         It 'reads no fact as a top-level ansible_ variable (<OsFamily>)' -ForEach @(
             @{ OsFamily = 'Windows'; StigName = 'WindowsServer-2022-MS' }

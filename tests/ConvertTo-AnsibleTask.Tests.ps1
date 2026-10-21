@@ -22,7 +22,7 @@ BeforeAll {
 
         InModuleScope -ModuleName PowerStigConverter -Parameters @{ TaskId = $TaskId; StigName = $StigName } {
             param ($TaskId, $StigName)
-            Get-AnsibleToggleName -TaskId $TaskId -StigName $StigName
+            Get-AnsibleToggleCondition -TaskId $TaskId -StigName $StigName
         }
     }
 
@@ -150,6 +150,19 @@ Describe 'ConvertTo-AnsibleTask' {
                 -OrganizationalSetting (New-TestOrgSetting '<OrganizationalSetting id="V-180.b" Location="Cert:\LocalMachine\Root" />'))
 
             $result[0].Task.when | Should-Be (Get-ExpectedToggle -TaskId 'V-180')
+        }
+
+        # -e <toggle>=false passes the string "false", which ansible-core 2.19+ rejects as a
+        # conditional unless it is cast. See #196.
+        It 'casts the toggle to a boolean on the <Shape>' -ForEach @(
+            @{ Shape = 'ungrouped task'; Factory = { New-AccountPolicyRule }; RuleType = 'AccountPolicy' }
+            @{ Shape = 'grouped block'; Factory = { New-RootCertificateRule }; RuleType = 'RootCertificate' }
+            @{ Shape = 'block an organization-value assert wraps'; Factory = { New-AccountPolicyRule -OrganizationValueRequired $true }; RuleType = 'AccountPolicy' }
+        ) {
+            $result = @(Convert-Task -Rule (& $Factory) -RuleType $RuleType -OrganizationalSetting (New-RootStore))
+
+            $result[0].Task.Contains('block') | Should-Be ($Shape -ne 'ungrouped task')
+            $result[0].Task.when | Should-BeLikeString '*_when | bool'
         }
     }
 

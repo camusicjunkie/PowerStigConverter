@@ -97,7 +97,7 @@ function ConvertTo-AnsibleTask {
 
             # A rule of its own is toggled on its task, before the assert wraps it and takes the
             # toggle along. One assert per rule, on its first task - the one that consumes the value.
-            if (-not $group) { $tasks[0]['when'] = Get-AnsibleToggleName -TaskId $rule.Id -StigName $StigName }
+            if (-not $group) { $tasks[0]['when'] = Get-AnsibleToggleCondition -TaskId $rule.Id -StigName $StigName }
             if ($resolution) { $tasks[0] = Add-AnsibleOrganizationValueAssert -Task $tasks[0] -Resolution $resolution }
 
             $null = $converted.Add([pscustomobject] @{
@@ -161,7 +161,7 @@ function Merge-AnsibleRequirement {
         $output.Task = [ordered] @{
             'name' = '{0} | {1} | {2}' -f $first.BaseId, $first.Severity, (Get-AnsibleBlockDetail -Candidate $candidate)
             'block' = @(foreach ($member in $members) { $member.Task })
-            'when' = Get-AnsibleToggleName -TaskId $first.BaseId -StigName $StigName
+            'when' = Get-AnsibleToggleCondition -TaskId $first.BaseId -StigName $StigName
         }
         Write-Verbose "  TaskGroup: $($output.Task.name)"
         $output
