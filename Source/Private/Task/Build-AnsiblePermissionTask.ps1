@@ -1,7 +1,8 @@
 function Build-AnsiblePermissionTask {
     <#
     .SYNOPSIS
-        One win_acl task per access control entry on the rule.
+        One win_acl task per access control entry on the rule - or, on a key only SYSTEM can
+        read, a script setting the same entry.
     .DESCRIPTION
         A %Var% in the path resolves on the target, through the env fact the role's tasks/main.yml
         sets: win_acl takes its path literally, and the converting machine's environment is not
@@ -38,7 +39,27 @@ function Build-AnsiblePermissionTask {
     $filesName = Get-AnsibleRegisterName -TaskId $Rule.Id -StigName $StigName -Suffix 'files'
 
     # SECURITY and SAM are readable only by SYSTEM, and the rule's path says so (issue #147).
-    $systemOnly = $Rule.Path -match '^(HKLM:|HKEY_LOCAL_MACHINE)\\(SECURITY|SAM)(\\|$)'
+    $systemOnly = $Rule.Path -match '^(HKLM:|HKEY_LOCAL_MACHINE)\\(?<key>(SECURITY|SAM)(\\.*)?)$'
+    $systemKey = if ($systemOnly) { $Matches.key }
+
+    # Administrators hold only READ_CONTROL and WRITE_DAC there, which win_acl asks for more than,
+    # so the key is opened for those two alone. See docs/adr/0023.
+    $systemKeyScript = @(
+        '[CmdletBinding(SupportsShouldProcess)]'
+        'param ([string] $Key, [string] $Identity, [string] $Rights, [string] $Type, [string] $Inheritance, [string] $Propagation)'
+        '$access = [System.Security.AccessControl.RegistryRights] "ReadPermissions, ChangePermissions"'
+        '$handle = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey($Key, [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree, $access)'
+        'if (-not $handle) { throw "HKLM:\$Key does not exist" }'
+        'try {'
+        '    $acl = $handle.GetAccessControl()'
+        '    $before = $acl.Sddl'
+        '    $acl.AddAccessRule([System.Security.AccessControl.RegistryAccessRule]::new($Identity,'
+        '        [System.Security.AccessControl.RegistryRights] $Rights, [System.Security.AccessControl.InheritanceFlags] $Inheritance,'
+        '        [System.Security.AccessControl.PropagationFlags] $Propagation, [System.Security.AccessControl.AccessControlType] $Type))'
+        '    $Ansible.Changed = $acl.Sddl -ne $before'
+        '    if ($Ansible.Changed -and $PSCmdlet.ShouldProcess("HKLM:\$Key")) { $handle.SetAccessControl($acl) }'
+        '} finally { $handle.Close() }'
+    ) -join "`n"
 
     @{
         # Always a block, because one rule sets several entries on the same path.
@@ -65,29 +86,42 @@ function Build-AnsiblePermissionTask {
 
                 $principal = if ($servicePrincipal.ContainsKey($entry.Principal)) { $servicePrincipal[$entry.Principal] } else { $entry.Principal }
 
-                $task = @{
-                    Detail = 'Set {0} permissions for {1} on {2}' -f $entry.Rights, $entry.Principal, $Rule.Path
-                    Body = [ordered] @{
+                # A STIG that does not say otherwise is granting, not denying.
+                $type = if ([string]::IsNullOrEmpty($entry.Type)) { 'Allow' } else { $entry.Type }
+
+                $body = if ($systemOnly) {
+                    [ordered] @{
+                        'ansible.windows.win_powershell' = [ordered] @{
+                            'script' = $systemKeyScript
+                            'parameters' = [ordered] @{
+                                'Key' = $systemKey
+                                'Identity' = $principal
+                                'Rights' = $entry.Rights
+                                'Type' = $type
+                                'Inheritance' = [string] $flags.InheritanceFlag
+                                'Propagation' = [string] $flags.PropagationFlag
+                            }
+                        }
+                    }
+                }
+                else {
+                    [ordered] @{
                         'ansible.windows.win_acl' = [ordered] @{
                             'path' = if ($wildcard) { '{{ item.path }}' } else { $path }
                             'user' = $principal
                             'rights' = $entry.Rights
-                            # A STIG that does not say otherwise is granting, not denying.
-                            'type' = if ([string]::IsNullOrEmpty($entry.Type)) { 'Allow' } else { $entry.Type }
+                            'type' = $type
                             'inherit' = $flags.InheritanceFlag
                             'propagation' = $flags.PropagationFlag
                         }
                     }
                 }
-                if ($wildcard) { $task.Body['loop'] = '{{ ' + $filesName + '.files }}' }
-                # Runs as the account the key admits, with no credential (ADR 0006). The method is named
-                # because the default, sudo, is not supported on Windows.
-                if ($systemOnly) {
-                    $task.Body.become = $true
-                    $task.Body.become_user = 'SYSTEM'
-                    $task.Body.become_method = 'ansible.builtin.runas'
+                if ($wildcard) { $body['loop'] = '{{ ' + $filesName + '.files }}' }
+
+                @{
+                    Detail = 'Set {0} permissions for {1} on {2}' -f $entry.Rights, $entry.Principal, $Rule.Path
+                    Body = $body
                 }
-                $task
             }
         )
     }

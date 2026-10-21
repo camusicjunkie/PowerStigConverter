@@ -136,33 +136,87 @@ Describe 'Build-AnsiblePermissionTask' {
         # which every generator test now runs.
     }
 
-    # SECURITY and SAM admit only SYSTEM, so the task runs as it; other keys keep the connecting
-    # account (issue #147, ADR 0006).
-    Context 'a registry key only SYSTEM can open' {
+    # SECURITY and SAM admit only SYSTEM to read them, but Administrators to rewrite their DACL.
+    # win_acl asks for more than that, and runas to SYSTEM needs the Secondary Logon service a
+    # client STIG disables, so the entry is set by a script opening the key for the DACL alone.
+    # See #147, #200 and docs/adr/0023.
+    Context 'a registry key only SYSTEM can read' {
 
-        It 'runs the task as SYSTEM for <Path>' -ForEach @(
-            @{ Path = 'HKLM:\SECURITY' }
-            @{ Path = 'HKLM:\security\Policy' }
-            @{ Path = 'HKLM:\SAM\SAM' }
-            @{ Path = 'HKEY_LOCAL_MACHINE\SECURITY' }
-        ) {
-            $task = (Invoke-Generator -Generator 'Build-AnsiblePermissionTask' `
-                -Rule (New-PermissionRule -Path $Path) -StigName 'WindowsServer-2025-MS').Task
+        BeforeAll {
+            function Get-SystemKeyTask {
+                param ($Path, $Entries)
 
-            $task.block[0].become | Should-BeTrue
-            $task.block[0].become_user | Should-Be 'SYSTEM'
-            # Left to default it is sudo, which Windows rejects; seen on the lab VM.
-            $task.block[0].become_method | Should-Be 'ansible.builtin.runas'
+                $rule = New-PermissionRule -Path $Path -Entries $Entries
+                $rule.DscResource = 'RegistryAccessEntry'
+                (Invoke-Generator -Generator 'Build-AnsiblePermissionTask' -Rule $rule -StigName 'WindowsServer-2025-MS').Task
+            }
         }
 
-        It 'leaves <Path> to the connecting account' -ForEach @(
+        It 'sets the DACL of HKLM:\<Key> by script for <Path>' -ForEach @(
+            @{ Path = 'HKLM:\SECURITY'; Key = 'SECURITY' }
+            @{ Path = 'HKLM:\security\Policy'; Key = 'security\Policy' }
+            @{ Path = 'HKLM:\SAM\SAM'; Key = 'SAM\SAM' }
+            @{ Path = 'HKEY_LOCAL_MACHINE\SECURITY'; Key = 'SECURITY' }
+        ) {
+            $task = Get-SystemKeyTask -Path $Path
+
+            $task.block[0].Contains('ansible.windows.win_acl') | Should-BeFalse
+            $task.block[0].'ansible.windows.win_powershell'.parameters.Key | Should-Be $Key
+        }
+
+        It 'never switches to SYSTEM, which needs the Secondary Logon service' {
+            $task = Get-SystemKeyTask -Path 'HKLM:\SECURITY'
+
+            $task.block[0].Contains('become') | Should-BeFalse
+            $task.block[0].Contains('become_user') | Should-BeFalse
+        }
+
+        It 'hands the script the entry win_acl would have set' {
+            $parameters = (Get-SystemKeyTask -Path 'HKLM:\SECURITY' -Entries @(
+                    [pscustomobject] @{ Principal = 'SYSTEM'; Rights = 'FullControl'; Type = ''; Inheritance = 'This key and subkeys' }
+                )).block[0].'ansible.windows.win_powershell'.parameters
+
+            $parameters.Identity | Should-Be 'SYSTEM'
+            $parameters.Rights | Should-Be 'FullControl'
+            $parameters.Type | Should-Be 'Allow'
+            $parameters.Inheritance | Should-Be 'ContainerInherit'
+            $parameters.Propagation | Should-Be 'None'
+        }
+
+        It 'opens the key for READ_CONTROL and WRITE_DAC alone' {
+            $script = (Get-SystemKeyTask -Path 'HKLM:\SECURITY').block[0].'ansible.windows.win_powershell'.script
+
+            $script | Should-BeLikeString '*RegistryRights] "ReadPermissions, ChangePermissions"*'
+            $script | Should-BeLikeString '*OpenSubKey($Key, *, $access)*'
+        }
+
+        # win_powershell runs a script under --check only when it supports ShouldProcess.
+        It 'reports a change and writes only when ShouldProcess allows' {
+            $script = (Get-SystemKeyTask -Path 'HKLM:\SECURITY').block[0].'ansible.windows.win_powershell'.script
+
+            $script | Should-BeLikeString '`[CmdletBinding(SupportsShouldProcess)`]*'
+            $script | Should-BeLikeString '*$Ansible.Changed = $acl.Sddl -ne $before*'
+            $script | Should-BeLikeString '*$PSCmdlet.ShouldProcess(*)) { $handle.SetAccessControl($acl) }*'
+        }
+
+        # The script is fixed text the entry is handed to, so it has to parse as PowerShell.
+        It 'emits a script that parses' {
+            $script = (Get-SystemKeyTask -Path 'HKLM:\SECURITY').block[0].'ansible.windows.win_powershell'.script
+            $errors = $null
+
+            $null = [System.Management.Automation.Language.Parser]::ParseInput($script, [ref] $null, [ref] $errors)
+
+            @($errors).Count | Should-Be 0
+        }
+
+        It 'leaves <Path> to win_acl' -ForEach @(
             @{ Path = 'HKLM:\SOFTWARE\Microsoft' }
             @{ Path = 'HKLM:\SECURITYX' }
             @{ Path = '%SystemRoot%\System32\config' }
         ) {
-            $task = (Invoke-Generator -Generator 'Build-AnsiblePermissionTask' `
-                -Rule (New-PermissionRule -Path $Path) -StigName 'WindowsServer-2025-MS').Task
+            $task = Get-SystemKeyTask -Path $Path
 
+            $task.block[0].Contains('ansible.windows.win_acl') | Should-BeTrue
             $task.block[0].Contains('become') | Should-BeFalse
         }
     }
