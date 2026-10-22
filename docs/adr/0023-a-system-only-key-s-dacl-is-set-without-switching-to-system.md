@@ -51,6 +51,18 @@ it was the fallback had the DACL not been writable by Administrators.
 **Order V-253431 ahead of the Secondary Logon rule.** Rejected: it depends on the order severity
 files and rule ids happen to give, and breaks silently when either changes.
 
+**AccessControlDsc's `RegistryAccessEntry`, the resource PowerStig itself applies these rules
+with.** The DSC engine runs it as SYSTEM, and on the lab host it set SECURITY's DACL with
+`seclogon` disabled. It cannot go through `win_dsc`: `win_dsc` takes a property's allowed values
+from the MOF's `Values` display strings and passes them through unmapped, while the resource's code
+reads only the `ValueMap` keys, so no `Inheritance` value works (`This Key and Subkeys` reaches the
+resource as a null flag; `KeySubkeys` is refused by `win_dsc`). A compiled configuration maps one to
+the other, which is why the project's own examples work. That leaves `Invoke-DscResource` from
+`win_powershell` with the `ValueMap` key — as much a script as this decision, plus AccessControlDsc
+on every target and, on Windows 10 and 11, an execution policy loosened from `Restricted` before
+the engine will load the resource. Rejected for those two costs. See
+`docs/research/0200-accesscontroldsc-registryaccessentry.md`.
+
 **A scheduled task, or `community.windows.win_psexec`, running as SYSTEM.** Rejected: the outcome is
 whatever the scheduled process reports back, `--check` cannot preview it, an interrupted run leaves
 the task behind, and it needs SYSTEM for a change Administrators may already make.
