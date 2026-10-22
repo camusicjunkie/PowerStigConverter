@@ -67,9 +67,12 @@ place that decides what gets skipped. See `docs/adr/0016`.
 
 ## Live test host
 
-`lab/` builds a Windows Server VirtualBox VM and applies generated roles to it from WSL's
-Ansible, with no console steps: `lab/New-StigLabVm.ps1` once, then `lab/Invoke-StigLabRun.ps1`
-per run. Credentials and run output live in the gitignored `lab/.local/`. See `lab/README.md`.
+The VirtualBox lab lives in the VmLab module (`D:\PowerShell\Modules\VmLab`), not here. Its
+`examples/PowerStigConverter/Invoke-StigLabRun.ps1` restores a VmLab VM to its baseline, generates
+roles from this clone and applies them from WSL's Ansible; the lab's answers to blank organization
+values (`LabOrganizationValues.psd1`) sit beside it. VM state and run output live under
+`%LOCALAPPDATA%\VmLab\<Name>\`. Older runs remain in the gitignored `lab/.local/`, which
+`docs/timings/Measure-TaskTiming.ps1` still reads by default.
 
 ## Agent skills
 
