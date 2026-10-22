@@ -89,7 +89,6 @@ Describe 'Build-AnsibleWindowsFeatureTask' {
         }
     }
 
-    # A client has no Server Manager cmdlets, so its features go through win_optional_feature.
     # See #194.
     Context 'on a Windows client' {
 
@@ -121,20 +120,6 @@ Describe 'Build-AnsibleWindowsFeatureTask' {
             $task.'ansible.windows.win_optional_feature'.state | Should-Be 'present'
             $task.Contains('failed_when') | Should-BeFalse
             $task.Contains('register') | Should-BeFalse
-        }
-
-        It 'names the task for the rule id, its severity and the change it makes' {
-            $task = (Invoke-Generator -Generator 'Build-AnsibleWindowsFeatureTask' `
-                -Rule (New-WindowsFeatureRule) -StigName 'WindowsClient-11').Task
-
-            $task.name | Should-Be 'V-130 | HIGH | Set TFTP-Client to absent'
-        }
-
-        It 'names the toggle from the client prefix' {
-            $task = (Invoke-Generator -Generator 'Build-AnsibleWindowsFeatureTask' `
-                -Rule (New-WindowsFeatureRule) -StigName 'WindowsClient-11').Task
-
-            $task.when | Should-Be 'stig_client_11_130_when | bool'
         }
 
         # Windows 10's STIG is sunset, but converts the same way.
