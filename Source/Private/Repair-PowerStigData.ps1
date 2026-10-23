@@ -48,27 +48,28 @@ function Repair-PowerStigData {
             foreach ($entry in $entries) { [void] $entry.ParentNode.RemoveChild($entry) }
         }
 
+        # Field swaps a whole child element; ReplaceInRawString a substring the check text holds exactly once.
         $fieldChanges = if ($correction.Field) { $correction.Field } else { @{} }
-        foreach ($name in $fieldChanges.Keys) {
-            $change = $fieldChanges[$name]
-            $field = if ($rules.ContainsKey($id)) { $rules[$id].SelectSingleNode($name) }
+        $textEdits = @(
+            foreach ($name in $fieldChanges.Keys) { @{ Name = $name; Change = $fieldChanges[$name]; Whole = $true } }
+            foreach ($change in @($correction.ReplaceInRawString | Where-Object { $_ })) { @{ Name = 'RawString'; Change = $change; Whole = $false } }
+        )
+        foreach ($edit in $textEdits) {
+            $from = $edit.Change.From
+            $node = if ($rules.ContainsKey($id)) { $rules[$id].SelectSingleNode($edit.Name) }
+            $text = if ($null -ne $node) { $node.InnerText }
 
-            if ($null -eq $field -or $field.InnerText -cne $change.From) {
+            # String.Replace is ordinal, so the length lost to removing From counts its occurrences.
+            $count = if ($null -eq $text) { 0 }
+                elseif ($edit.Whole) { [int] ($text -ceq $from) }
+                elseif ($from) { ($text.Length - $text.Replace($from, '').Length) / $from.Length }
+                else { 0 }
+
+            if ($count -ne 1) {
                 Write-Warning $stale
                 continue
             }
-            $field.InnerText = $change.To
-        }
-
-        # Ordinal, case-sensitive substring replacement within the rule's check text.
-        foreach ($change in @($correction.RawString | Where-Object { $_ })) {
-            $node = if ($rules.ContainsKey($id)) { $rules[$id].SelectSingleNode('RawString') }
-
-            if ($null -eq $node -or -not $node.InnerText.Contains($change.From)) {
-                Write-Warning $stale
-                continue
-            }
-            $node.InnerText = $node.InnerText.Replace($change.From, $change.To)
+            $node.InnerText = if ($edit.Whole) { $edit.Change.To } else { $text.Replace($from, $edit.Change.To) }
         }
 
         $settingChanges = if ($correction.OrganizationalSetting) { $correction.OrganizationalSetting } else { @{} }

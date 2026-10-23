@@ -21,7 +21,7 @@ leading `- ` bullet is ignored, and an `Identity` entry, after its sentence peri
 `Enterprise Admins group` and `Local account (see Note below)`.
 
 **An entry in neither section, or in both, fails the conversion**, naming the STIG and rule. The fix
-is a `RuleCorrection.psd1` entry (ADR 0020), which can now replace text in a rule's `RawString`:
+is a `RuleCorrection.psd1` entry (ADR 0020), whose `ReplaceInRawString` kind replaces text in a rule's `RawString`:
 V-253492 and V-220969 write `Enterprise Admin Group` for `Enterprise Admins`.
 
 **The task is emitted by the split's shape**, with `action` still taken from `Force`:
