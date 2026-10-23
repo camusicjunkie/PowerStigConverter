@@ -11,6 +11,9 @@ function ConvertTo-AnsibleTask {
         Build-Ansible<Type>Task supplies only what differs - the ansible module and the fields
         mapped into it. Nothing here branches on rule type; if it ever needs to, the adapter
         contract is the thing that is wrong.
+
+        An adapter may put a when in a standalone task's Body; the toggle is ANDed in front of it
+        as a when list.
     #>
     [CmdletBinding()]
     param (
@@ -97,7 +100,8 @@ function ConvertTo-AnsibleTask {
 
             # A rule of its own is toggled on its task, before the assert wraps it and takes the
             # toggle along. One assert per rule, on its first task - the one that consumes the value.
-            # A condition the adapter set is kept, ANDed after the toggle as a when list.
+            # A condition the adapter set is kept, ANDed after the toggle as a when list. A grouped
+            # rule carries its toggle on the block instead.
             if (-not $group) {
                 $toggle = Get-AnsibleToggleCondition -TaskId $rule.Id -StigName $StigName
                 $tasks[0]['when'] = if ($tasks[0].Contains('when')) { @($toggle) + @($tasks[0]['when']) } else { $toggle }
