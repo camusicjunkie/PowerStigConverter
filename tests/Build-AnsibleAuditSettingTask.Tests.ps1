@@ -7,71 +7,146 @@ BeforeAll {
     . $PSScriptRoot/GeneratorContract.ps1
 
     function New-AuditSettingRule {
-        param ($Id = 'V-120', $Namespace = 'root/cimv2')
+        param (
+            $Id = 'V-120', $Namespace = 'root/cimv2', $Query = 'SELECT * FROM Win32_LogicalDisk',
+            $Property = 'FileSystem', $DesiredValue = 'NTFS', $Operator = '-eq'
+        )
 
         [pscustomobject] @{
             Id = $Id
             Severity = 'low'
             DuplicateOf = ''
-            Query = 'SELECT * FROM Win32_LogicalDisk'
-            Property = 'FileSystem'
-            DesiredValue = 'NTFS'
-            Operator = 'eq'
+            Query = $Query
+            Property = $Property
+            DesiredValue = $DesiredValue
+            Operator = $Operator
             Namespace = $Namespace
         }
     }
+
+    function Get-AuditSettingTask {
+        param ($Rule = (New-AuditSettingRule))
+
+        (Invoke-Generator -Generator 'Build-AnsibleAuditSettingTask' -Rule $Rule -StigName 'WindowsServer-2022-MS').Task
+    }
+
+    function Get-Gather {
+        param ($Task)
+        ($Task.block | Where-Object { $_.Contains('ansible.windows.win_powershell') }).'ansible.windows.win_powershell'
+    }
 }
 
-# There is no ansible module covering a WMI audit, so this one goes through win_dsc.
+# The rule's own query, run by a fixed script; win_dsc is out (docs/adr/0024).
 Describe 'Build-AnsibleAuditSettingTask' {
 
     Add-GeneratorContractTests -Generator 'Build-AnsibleAuditSettingTask' `
-        -Module 'ansible.windows.win_dsc' `
+        -Module 'ansible.windows.win_powershell' `
         -Factory { New-AuditSettingRule }
 
     Context 'the task it builds' {
 
-        It 'uses the AuditSetting DSC resource' {
-            $task = (Invoke-Generator -Generator 'Build-AnsibleAuditSettingTask' `
-                -Rule (New-AuditSettingRule) -StigName 'WindowsServer-2022-MS').Task
-
-            $task.'ansible.windows.win_dsc'.resource_name | Should-Be 'AuditSetting'
+        It 'passes the query, property, operator and desired value as parameters' {
+            (Get-Gather (Get-AuditSettingTask)).parameters | Should-BeEquivalent ([ordered] @{
+                Query = 'SELECT * FROM Win32_LogicalDisk'
+                Property = 'FileSystem'
+                Operator = '-eq'
+                DesiredValue = 'NTFS'
+                Namespace = 'root/cimv2'
+            })
         }
 
-        It 'carries the query, property, desired value and operator' {
-            $dsc = (Invoke-Generator -Generator 'Build-AnsibleAuditSettingTask' `
-                -Rule (New-AuditSettingRule) -StigName 'WindowsServer-2022-MS').Task.'ansible.windows.win_dsc'
+        It 'runs the same script for two different rules' {
+            $other = New-AuditSettingRule -Id 'V-121' -Namespace '' -Query 'SELECT * FROM Win32_OperatingSystem' `
+                -Property 'Version' -DesiredValue '10.0.22621' -Operator '-le'
 
-            $dsc.Query | Should-Be 'SELECT * FROM Win32_LogicalDisk'
-            $dsc.Property | Should-Be 'FileSystem'
-            $dsc.DesiredValue | Should-Be 'NTFS'
-            $dsc.Operator | Should-Be 'eq'
+            (Get-Gather (Get-AuditSettingTask -Rule $other)).script | Should-Be (Get-Gather (Get-AuditSettingTask)).script
         }
 
-        It 'names the task for the assertion it makes' {
-            $task = (Invoke-Generator -Generator 'Build-AnsibleAuditSettingTask' `
-                -Rule (New-AuditSettingRule) -StigName 'WindowsServer-2022-MS').Task
+        It 'asserts the gather it registered found nothing out of compliance' {
+            $task = Get-AuditSettingTask
+            $register = ($task.block | Where-Object { $_.Contains('ansible.windows.win_powershell') }).register
+            $assert = ($task.block | Where-Object { $_.Contains('ansible.builtin.assert') }).'ansible.builtin.assert'
 
-            $task.name | Should-Be 'V-120 | LOW | Audit that FileSystem eq NTFS'
+            $register | Should-Be (Get-ExpectedRegisterName -TaskId 'V-120' -StigName 'WindowsServer-2022-MS' -Suffix 'noncompliant')
+            $assert.that | Should-Be "$register.output | length == 0"
+        }
+
+        It 'names the property, operator and desired value in the failure, with the values found' {
+            $assert = ((Get-AuditSettingTask).block | Where-Object { $_.Contains('ansible.builtin.assert') }).'ansible.builtin.assert'
+
+            $assert.fail_msg | Should-BeLikeString '*NTFS -eq FileSystem*'
+            $assert.fail_msg | Should-BeLikeString '*.output | join(*'
+        }
+
+        # The comparison is evaluated desired value first, so the names read that way too.
+        It 'names the tasks with the desired value before the operator and property' {
+            $rule = New-AuditSettingRule -Query 'SELECT * FROM Win32_OperatingSystem' -Property 'Version' `
+                -DesiredValue '10.0.22621' -Operator '-le'
+            $task = Get-AuditSettingTask -Rule $rule
+
+            $task.name | Should-Be 'V-120 | LOW | Audit 10.0.22621 -le Version'
+            $task.block.name | Should-BeCollection @('Gather 10.0.22621 -le Version', 'Assert 10.0.22621 -le Version')
         }
     }
 
-    # The DSC resource defaults the namespace itself, so sending an empty one would be worse than
-    # sending none at all.
+    # The script body run here against a stub Get-CimInstance, as win_powershell would run it.
+    Context 'the script it runs' {
+
+        BeforeAll {
+            function Invoke-AuditScript {
+                param ($Rule, $Instance)
+
+                $gather = Get-Gather (Get-AuditSettingTask -Rule $Rule)
+                $parameters = @{} + $gather.parameters
+                $Ansible = [pscustomobject] @{ Changed = $true }
+                $stub = $Instance
+                function Get-CimInstance { $stub }
+
+                $output = & ([scriptblock]::Create($gather.script)) @parameters
+                [pscustomobject] @{ Output = @($output); Changed = $Ansible.Changed }
+            }
+        }
+
+        It 'outputs nothing for an instance that complies, and reports no change' {
+            $result = Invoke-AuditScript -Rule (New-AuditSettingRule) -Instance ([pscustomobject] @{ FileSystem = 'NTFS' })
+
+            $result.Output.Count | Should-Be 0
+            $result.Changed | Should-BeFalse
+        }
+
+        It 'outputs the actual value of each instance that does not comply' {
+            $result = Invoke-AuditScript -Rule (New-AuditSettingRule) -Instance @(
+                [pscustomobject] @{ FileSystem = 'NTFS' }
+                [pscustomobject] @{ FileSystem = 'FAT32' }
+            )
+
+            $result.Output | Should-BeCollection @('FAT32')
+        }
+
+        # The desired value is on the left, which is the order PowerStig's data is written for (#209).
+        It 'puts the desired value on the left of the comparison' {
+            $rule = New-AuditSettingRule -Namespace '' -Query 'SELECT * FROM Win32_OperatingSystem' -Property 'Version' `
+                -DesiredValue '10.0.22621' -Operator '-le'
+
+            (Invoke-AuditScript -Rule $rule -Instance ([pscustomobject] @{ Version = '10.0.26300' })).Output.Count | Should-Be 0
+            (Invoke-AuditScript -Rule $rule -Instance ([pscustomobject] @{ Version = '10.0.19045' })).Output |
+                Should-BeCollection @('10.0.19045')
+        }
+
+        It 'throws on an operator it does not know, naming it' {
+            $rule = New-AuditSettingRule -Operator 'eq'
+
+            { Invoke-AuditScript -Rule $rule -Instance ([pscustomobject] @{ FileSystem = 'NTFS' }) } |
+                Should-Throw -ExceptionMessage "*'eq'*"
+        }
+    }
+
+    # Get-CimInstance defaults the namespace itself, so sending an empty one is worse than none.
     Context 'a rule that does not name a namespace' {
 
         It 'leaves Namespace out rather than sending it empty' {
-            $dsc = (Invoke-Generator -Generator 'Build-AnsibleAuditSettingTask' `
-                -Rule (New-AuditSettingRule -Namespace '') -StigName 'WindowsServer-2022-MS').Task.'ansible.windows.win_dsc'
-
-            $dsc.Contains('Namespace') | Should-BeFalse
-        }
-
-        It 'includes Namespace when the rule does name one' {
-            $dsc = (Invoke-Generator -Generator 'Build-AnsibleAuditSettingTask' `
-                -Rule (New-AuditSettingRule) -StigName 'WindowsServer-2022-MS').Task.'ansible.windows.win_dsc'
-
-            $dsc.Namespace | Should-Be 'root/cimv2'
+            (Get-Gather (Get-AuditSettingTask -Rule (New-AuditSettingRule -Namespace ''))).parameters.Contains('Namespace') |
+                Should-BeFalse
         }
     }
 }
