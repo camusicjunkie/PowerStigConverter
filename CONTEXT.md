@@ -44,6 +44,13 @@ unparsed when upstream improves — OracleLinux-8 went from 54 to none between r
 2.4.
 _Avoid_: unsupported rule, manual rule, None rule
 
+**Domain-only identity**:
+An identity a STIG requires a user right to name only on a domain-joined host. DISA lists these
+under `Domain Systems Only:`, beside the `All Systems:` ones, and PowerStig flattens both into one
+`Identity`; the task adds a domain-only identity only when the target is a domain member. It is
+the rule that makes an identity domain-only, not its name: `Local account` is on some rights.
+_Avoid_: domain account, domain group
+
 ### Organization values
 
 **Organization value**:

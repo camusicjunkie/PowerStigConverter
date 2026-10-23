@@ -33,8 +33,10 @@ Install-Module -Name powershell-yaml, Plaster -Scope CurrentUser
 
 ### On the hosts a generated role runs against
 
-The generated tasks call `ansible.windows.win_dsc`, so the DSC resource modules they name have to
-be installed on the target. A **SQL Server** role additionally needs
+The **IIS** and **SQL Server** tasks call `ansible.windows.win_dsc`, so the DSC resource modules
+they name have to be installed on the target. `win_dsc` loads resource modules under the target's
+execution policy, which must allow them (`RemoteSigned`, Server's default). A **SQL Server** role
+additionally needs
 [`SqlServerDsc`](https://www.powershellgallery.com/packages/SqlServerDsc) **17.0.0 or later**:
 `SqlScriptQuery`'s `Id` property is a Key from 17.x onward and does not exist on 15.x or 16.x, and
 `win_dsc` treats a Key as a required option — so an older module fails the task with *missing

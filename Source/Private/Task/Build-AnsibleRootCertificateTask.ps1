@@ -39,7 +39,7 @@ function Build-AnsibleRootCertificateTask {
                 Body = [ordered] @{
                     'ansible.builtin.assert' = [ordered] @{
                         'that' = "$registerName.certificates | length > 0"
-                        'fail_msg' = '{0} does not exist in the {1} certificate store' -f $Rule.CertificateName, $store.StoreName
+                        'fail_msg' = "{0} (thumbprint {1}) is not in the {2} store. This role checks for the certificate but does not place it; DISA's InstallRoot does." -f $Rule.CertificateName, $Rule.Thumbprint, $store.StoreName
                     }
                 }
             }

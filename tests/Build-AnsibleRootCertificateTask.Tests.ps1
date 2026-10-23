@@ -57,6 +57,16 @@ Describe 'Build-AnsibleRootCertificateTask' {
             $assert.'ansible.builtin.assert'.fail_msg | Should-BeLikeString '*DoD Root CA 3*'
         }
 
+        It 'names the thumbprint and says the role does not place the certificate' {
+            $task = Get-RootCertificateTask -Rule (New-RootCertificateRule) -OrganizationalSetting (New-RootStore)
+            $assert = $task.block | Where-Object { $_.name -like 'Assert *' }
+            $failMsg = $assert.'ansible.builtin.assert'.fail_msg
+
+            $failMsg | Should-BeLikeString '*D73CA91102A2204A36459ED32213B467D7CE97FB*'
+            $failMsg | Should-BeLikeString '*does not place it*'
+            $failMsg | Should-BeLikeString '*InstallRoot*'
+        }
+
         # Text-compared tests let invalid Jinja through (#145); this one is checked against a real evaluator.
         It 'asserts on whether the gather returned any certificate' {
             $task = Get-RootCertificateTask -Rule (New-RootCertificateRule) -OrganizationalSetting (New-RootStore)

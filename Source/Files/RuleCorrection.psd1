@@ -1,11 +1,73 @@
-# Corrections to PowerStig's processed data, applied before conversion. Keyed by processed file
-# (name and revision), then rule id. PowerStig fixes this kind of error with a .log beside each
-# source STIG; these are the ones its data still carries. See docs/adr/0020.
+# Corrections to PowerStig's processed data, applied before conversion, keyed by processed file
+# (name and revision) then rule id. See docs/adr/0020. A correction that finds nothing to change warns.
 #
-# RemoveEntry drops the access control entries whose fields all match. OrganizationalSetting
-# replaces an attribute of the org setting, only while it still holds From. A correction that
-# finds nothing to change warns, so one the data has outgrown is noticed and removed.
+# RemoveEntry: drops the access control entries whose fields all match.
+# Field: replaces a rule's child element while it still holds From.
+# ReplaceInRawString: replaces From with To in the check text while From occurs there exactly once.
+# OrganizationalSetting: replaces an org setting attribute while it still holds From.
 @{
+    'WindowsClient-10-3.5' = @{
+        'V-220969' = @{
+            Reason = "DISA's check text names 'Enterprise Admin Group' and 'Domain Admin Group', which no Identity entry prefixes, so the domain-only split (ADR 0025) cannot place them."
+            ReplaceInRawString = @(
+                @{ From = 'Enterprise Admin Group'; To = 'Enterprise Admins Group' }
+                @{ From = 'Domain Admin Group'; To = 'Domain Admins Group' }
+            )
+        }
+    }
+    'WindowsClient-10-3.6' = @{
+        'V-220969' = @{
+            Reason = "DISA's check text names 'Enterprise Admin Group' and 'Domain Admin Group', which no Identity entry prefixes, so the domain-only split (ADR 0025) cannot place them."
+            ReplaceInRawString = @(
+                @{ From = 'Enterprise Admin Group'; To = 'Enterprise Admins Group' }
+                @{ From = 'Domain Admin Group'; To = 'Domain Admins Group' }
+            )
+        }
+    }
+    'WindowsClient-11-2.6' = @{
+        'V-253430.b' = @{
+            Reason = "PowerStig split the raw string 'US DOD CCEB Interoperability Root CA 2,Thumbprint: 9B74...' in the wrong place, leaving the thumbprint's label on the thumbprint and its first digit on the name."
+            Field = @{
+                Thumbprint = @{
+                    From = 'Thumbprint: 9B74964506C7ED9138070D08D5F8B969866560C8'
+                    To = '9B74964506C7ED9138070D08D5F8B969866560C8'
+                }
+                CertificateName = @{
+                    From = 'US DOD CCEB Interoperability Root CA 2,Thumbprint: 9'
+                    To = 'US DOD CCEB Interoperability Root CA 2'
+                }
+            }
+        }
+        'V-253492' = @{
+            Reason = "DISA's check text names 'Enterprise Admin Group' and 'Domain Admin Group', which no Identity entry prefixes, so the domain-only split (ADR 0025) cannot place them."
+            ReplaceInRawString = @(
+                @{ From = 'Enterprise Admin Group'; To = 'Enterprise Admins Group' }
+                @{ From = 'Domain Admin Group'; To = 'Domain Admins Group' }
+            )
+        }
+    }
+    'WindowsClient-11-2.7' = @{
+        'V-253430.b' = @{
+            Reason = "PowerStig split the raw string 'US DOD CCEB Interoperability Root CA 2,Thumbprint: 9B74...' in the wrong place, leaving the thumbprint's label on the thumbprint and its first digit on the name."
+            Field = @{
+                Thumbprint = @{
+                    From = 'Thumbprint: 9B74964506C7ED9138070D08D5F8B969866560C8'
+                    To = '9B74964506C7ED9138070D08D5F8B969866560C8'
+                }
+                CertificateName = @{
+                    From = 'US DOD CCEB Interoperability Root CA 2,Thumbprint: 9'
+                    To = 'US DOD CCEB Interoperability Root CA 2'
+                }
+            }
+        }
+        'V-253492' = @{
+            Reason = "DISA's check text names 'Enterprise Admin Group' and 'Domain Admin Group', which no Identity entry prefixes, so the domain-only split (ADR 0025) cannot place them."
+            ReplaceInRawString = @(
+                @{ From = 'Enterprise Admin Group'; To = 'Enterprise Admins Group' }
+                @{ From = 'Domain Admin Group'; To = 'Domain Admins Group' }
+            )
+        }
+    }
     'WindowsServer-2016-MS-2.10' = @{
         'V-225015' = @{
             Reason = "PowerStig left DISA's check text as the default: a regex alternation, 'Review the text file.' and the SIDs."

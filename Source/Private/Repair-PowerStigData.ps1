@@ -48,6 +48,30 @@ function Repair-PowerStigData {
             foreach ($entry in $entries) { [void] $entry.ParentNode.RemoveChild($entry) }
         }
 
+        # Field swaps a whole child element; ReplaceInRawString a substring the check text holds exactly once.
+        $fieldChanges = if ($correction.Field) { $correction.Field } else { @{} }
+        $textEdits = @(
+            foreach ($name in $fieldChanges.Keys) { @{ Name = $name; Change = $fieldChanges[$name]; Whole = $true } }
+            foreach ($change in @($correction.ReplaceInRawString | Where-Object { $_ })) { @{ Name = 'RawString'; Change = $change; Whole = $false } }
+        )
+        foreach ($edit in $textEdits) {
+            $from = $edit.Change.From
+            $node = if ($rules.ContainsKey($id)) { $rules[$id].SelectSingleNode($edit.Name) }
+            $text = if ($null -ne $node) { $node.InnerText }
+
+            # String.Replace is ordinal, so the length lost to removing From counts its occurrences.
+            $count = if ($null -eq $text) { 0 }
+                elseif ($edit.Whole) { [int] ($text -ceq $from) }
+                elseif ($from) { ($text.Length - $text.Replace($from, '').Length) / $from.Length }
+                else { 0 }
+
+            if ($count -ne 1) {
+                Write-Warning $stale
+                continue
+            }
+            $node.InnerText = if ($edit.Whole) { $edit.Change.To } else { $text.Replace($from, $edit.Change.To) }
+        }
+
         $settingChanges = if ($correction.OrganizationalSetting) { $correction.OrganizationalSetting } else { @{} }
         foreach ($attribute in $settingChanges.Keys) {
             $change = $settingChanges[$attribute]
