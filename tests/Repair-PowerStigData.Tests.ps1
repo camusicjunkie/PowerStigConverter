@@ -30,6 +30,14 @@ BeforeAll {
       </AccessControlEntry>
     </Rule>
   </PermissionRule>
+  <UserRightRule>
+    <Rule id="V-3" dscresource="UserRightsAssignment">
+      <Identity>Enterprise Admins,Domain Admins</Identity>
+      <RawString>Domain Systems Only:
+Enterprise Admin Group
+Domain Admin Group</RawString>
+    </Rule>
+  </UserRightRule>
 </DISASTIG>
 '@
     }
@@ -109,6 +117,31 @@ Describe 'Repair-PowerStigData' {
             }
 
             $result.Setting['V-2'].Identity | Should-Be 'Administrators'
+            $result.Warning.Count | Should-Be 1
+        }
+    }
+
+    # DISA's check text can misname an identity the rule carries, which ADR 0025's split relies on.
+    Context 'replacing text in the check text' {
+
+        It 'replaces each piece of text the correction names' {
+            $result = Invoke-Repair -Correction @{
+                'V-3' = @{ Reason = 'x'; RawString = @(
+                    @{ From = 'Enterprise Admin Group'; To = 'Enterprise Admins Group' }
+                    @{ From = 'Domain Admin Group'; To = 'Domain Admins Group' }
+                ) }
+            }
+
+            $result.Xml.DISASTIG.UserRightRule.Rule.RawString -split '\r?\n' |
+                Should-BeCollection @('Domain Systems Only:', 'Enterprise Admins Group', 'Domain Admins Group')
+            $result.Warning.Count | Should-Be 0
+        }
+
+        It 'warns when the text is no longer there' {
+            $result = Invoke-Repair -Correction @{
+                'V-3' = @{ Reason = 'x'; RawString = @(@{ From = 'Schema Admin Group'; To = 'Schema Admins Group' }) }
+            }
+
             $result.Warning.Count | Should-Be 1
         }
     }
@@ -195,7 +228,7 @@ Describe 'RuleCorrection.psd1' {
             foreach ($id in $corrections[$stigFile].Keys) {
                 $correction = $corrections[$stigFile][$id]
                 $correction.Reason | Should-NotBeNull
-                ($correction.RemoveEntry -or $correction.OrganizationalSetting -or $correction.Field) | Should-BeTrue
+                ($correction.RemoveEntry -or $correction.OrganizationalSetting -or $correction.Field -or $correction.RawString) | Should-BeTrue
             }
         }
     }

@@ -60,7 +60,18 @@ function Repair-PowerStigData {
             $field.InnerText = $change.To
         }
 
-        $settingChanges =if ($correction.OrganizationalSetting) { $correction.OrganizationalSetting } else { @{} }
+        # Ordinal, case-sensitive substring replacement within the rule's check text.
+        foreach ($change in @($correction.RawString | Where-Object { $_ })) {
+            $node = if ($rules.ContainsKey($id)) { $rules[$id].SelectSingleNode('RawString') }
+
+            if ($null -eq $node -or -not $node.InnerText.Contains($change.From)) {
+                Write-Warning $stale
+                continue
+            }
+            $node.InnerText = $node.InnerText.Replace($change.From, $change.To)
+        }
+
+        $settingChanges = if ($correction.OrganizationalSetting) { $correction.OrganizationalSetting } else { @{} }
         foreach ($attribute in $settingChanges.Keys) {
             $change = $settingChanges[$attribute]
             $node = $OrganizationalSetting[$id]

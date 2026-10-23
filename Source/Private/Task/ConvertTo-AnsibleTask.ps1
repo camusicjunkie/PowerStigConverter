@@ -97,7 +97,11 @@ function ConvertTo-AnsibleTask {
 
             # A rule of its own is toggled on its task, before the assert wraps it and takes the
             # toggle along. One assert per rule, on its first task - the one that consumes the value.
-            if (-not $group) { $tasks[0]['when'] = Get-AnsibleToggleCondition -TaskId $rule.Id -StigName $StigName }
+            # A condition the adapter set is kept, ANDed after the toggle as a when list.
+            if (-not $group) {
+                $toggle = Get-AnsibleToggleCondition -TaskId $rule.Id -StigName $StigName
+                $tasks[0]['when'] = if ($tasks[0].Contains('when')) { @($toggle) + @($tasks[0]['when']) } else { $toggle }
+            }
             if ($resolution) { $tasks[0] = Add-AnsibleOrganizationValueAssert -Task $tasks[0] -Resolution $resolution }
 
             $null = $converted.Add([pscustomobject] @{

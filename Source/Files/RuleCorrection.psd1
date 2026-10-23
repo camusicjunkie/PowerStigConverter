@@ -4,9 +4,28 @@
 #
 # RemoveEntry drops the access control entries whose fields all match. Field replaces a rule's
 # child element, and OrganizationalSetting an attribute of the org setting, each only while it
-# still holds From. A correction that finds nothing to change warns, so one the data has outgrown
-# is noticed and removed.
+# still holds From. RawString replaces each From with its To within the rule's check text, only
+# while the text contains it. A correction that finds nothing to change warns, so one the data has
+# outgrown is noticed and removed.
 @{
+    'WindowsClient-10-3.5' = @{
+        'V-220969' = @{
+            Reason = "DISA's check text names 'Enterprise Admin Group' and 'Domain Admin Group', which no Identity entry prefixes, so the domain-only split (ADR 0025) cannot place them."
+            RawString = @(
+                @{ From = 'Enterprise Admin Group'; To = 'Enterprise Admins Group' }
+                @{ From = 'Domain Admin Group'; To = 'Domain Admins Group' }
+            )
+        }
+    }
+    'WindowsClient-10-3.6' = @{
+        'V-220969' = @{
+            Reason = "DISA's check text names 'Enterprise Admin Group' and 'Domain Admin Group', which no Identity entry prefixes, so the domain-only split (ADR 0025) cannot place them."
+            RawString = @(
+                @{ From = 'Enterprise Admin Group'; To = 'Enterprise Admins Group' }
+                @{ From = 'Domain Admin Group'; To = 'Domain Admins Group' }
+            )
+        }
+    }
     'WindowsClient-11-2.6' = @{
         'V-253430.b' = @{
             Reason = "PowerStig split the raw string 'US DOD CCEB Interoperability Root CA 2,Thumbprint: 9B74...' in the wrong place, leaving the thumbprint's label on the thumbprint and its first digit on the name."
@@ -20,6 +39,13 @@
                     To = 'US DOD CCEB Interoperability Root CA 2'
                 }
             }
+        }
+        'V-253492' = @{
+            Reason = "DISA's check text names 'Enterprise Admin Group' and 'Domain Admin Group', which no Identity entry prefixes, so the domain-only split (ADR 0025) cannot place them."
+            RawString = @(
+                @{ From = 'Enterprise Admin Group'; To = 'Enterprise Admins Group' }
+                @{ From = 'Domain Admin Group'; To = 'Domain Admins Group' }
+            )
         }
     }
     'WindowsClient-11-2.7' = @{
@@ -35,6 +61,13 @@
                     To = 'US DOD CCEB Interoperability Root CA 2'
                 }
             }
+        }
+        'V-253492' = @{
+            Reason = "DISA's check text names 'Enterprise Admin Group' and 'Domain Admin Group', which no Identity entry prefixes, so the domain-only split (ADR 0025) cannot place them."
+            RawString = @(
+                @{ From = 'Enterprise Admin Group'; To = 'Enterprise Admins Group' }
+                @{ From = 'Domain Admin Group'; To = 'Domain Admins Group' }
+            )
         }
     }
     'WindowsServer-2016-MS-2.10' = @{

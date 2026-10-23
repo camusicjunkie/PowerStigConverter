@@ -7,7 +7,8 @@ BeforeAll {
     . $PSScriptRoot/GeneratorContract.ps1
 
     function New-UserRightRule {
-        param ($Id = 'V-150', $Identity = 'Administrators,Guests', $Force = 'False', $OrganizationValueRequired = $false)
+        param ($Id = 'V-150', $Identity = 'Administrators,Guests', $Force = 'False', $OrganizationValueRequired = $false,
+            $RawString = 'If any groups or accounts other than the following are granted the right, this is a finding.')
 
         [pscustomobject] @{
             Id = $Id
@@ -18,7 +19,28 @@ BeforeAll {
             Identity = $Identity
             Force = $Force
             OrganizationValueRequired = $OrganizationValueRequired
+            RawString = $RawString
         }
+    }
+
+    # DISA's check text for a deny right, as V-253491 carries it.
+    function New-SplitRawString {
+        param ([string[]] $Domain, [string[]] $All)
+
+        $text = @(
+            'If the following groups or accounts are not defined for the "Deny access to this computer from the network" right, this is a finding:'
+            ''
+            if ($Domain) { 'Domain Systems Only:'; $Domain; '' }
+            if ($All) { 'All Systems:'; $All; '' }
+            'Privileged Access Workstations (PAWs) dedicated to the management of Active Directory are exempt from denying the Enterprise Admins and Domain Admins groups.'
+        )
+        $text -join "`n"
+    }
+
+    function Get-UserRightTask {
+        param ($Rule)
+
+        (Invoke-Generator -Generator 'Build-AnsibleUserRightTask' -Rule $Rule -StigName 'WindowsClient-11').Task
     }
 }
 
@@ -117,6 +139,61 @@ Describe 'Build-AnsibleUserRightTask' {
             ($block | ConvertTo-Json -Depth 6) -match '"users":\s*\[\s*\]' | Should-BeFalse
         }
     }
+    # DISA splits a right's identities into Domain Systems Only and All Systems; PowerStig flattens
+    # them, so the task decides from the target's domain membership. See docs/adr/0025.
+    Context 'a domain-only identity' {
+
+        It 'emits the literal list unconditioned when the check text has no Domain Systems Only heading' {
+            $task = Get-UserRightTask -Rule (New-UserRightRule)
+
+            $task.'ansible.windows.win_user_right'.users -join '|' | Should-Be 'Administrators|Guests'
+            ($task | ConvertTo-Json -Depth 6) | Should-NotBeLikeString '*windows_domain_member*'
+        }
+
+        It 'adds the domain-only identities to the all-systems ones only on a domain member' {
+            $rule = New-UserRightRule -Identity 'Enterprise Admins,Domain Admins,Local account,Guests' -RawString (
+                New-SplitRawString -Domain 'Enterprise Admins group', 'Domain Admins group', 'Local account (see Note below)' -All 'Guests group')
+
+            $task = Get-UserRightTask -Rule $rule
+
+            $task.'ansible.windows.win_user_right'.users |
+                Should-Be "{{ ['Guests'] + (['Enterprise Admins', 'Domain Admins', 'Local account'] if ansible_facts['windows_domain_member'] else []) }}"
+            $task.when | Should-Be 'stig_client_11_150_when | bool'
+        }
+
+        # Not #143's remove-every-holder path: the STIG does not say no one may hold the right.
+        It 'skips a rule whose identities are all domain-only off a domain, alongside its toggle' {
+            $rule = New-UserRightRule -Identity 'Enterprise Admins,Domain Admins' -RawString (
+                New-SplitRawString -Domain 'Enterprise Admins Group', 'Domain Admins Group')
+
+            $task = Get-UserRightTask -Rule $rule
+
+            $task.'ansible.windows.win_user_right'.users | Should-BeCollection @('Enterprise Admins', 'Domain Admins')
+            $task.when | Should-BeCollection @('stig_client_11_150_when | bool', "ansible_facts['windows_domain_member']")
+        }
+
+        # WindowsServer-2025-MS V-278188, bullets and sentence periods included.
+        It 'matches an identity PowerStig ended with a period to its bulleted check text line' {
+            $rule = New-UserRightRule -Identity 'Enterprise Admins.,Domain Admins.,Local account .,Guests.' -RawString (
+                New-SplitRawString -Domain '- Enterprise Admins group.', '- Domain Admins group.', '- Local account (see Note below).' -All '- Guests group.')
+
+            $task = Get-UserRightTask -Rule $rule
+
+            $task.'ansible.windows.win_user_right'.users |
+                Should-Be "{{ ['Guests'] + (['Enterprise Admins', 'Domain Admins', 'Local account'] if ansible_facts['windows_domain_member'] else []) }}"
+        }
+
+        It 'fails the conversion, naming the rule, when an identity is under <Case>' -ForEach @(
+            @{ Case = 'neither heading'; Domain = @('Enterprise Admin Group', 'Domain Admins Group'); All = @() }
+            @{ Case = 'both headings'; Domain = @('Enterprise Admins Group', 'Domain Admins Group'); All = @('Domain Admins Group') }
+        ) {
+            $rule = New-UserRightRule -Id 'V-253492' -Identity 'Enterprise Admins,Domain Admins' -RawString (
+                New-SplitRawString -Domain $Domain -All $All)
+
+            { Get-UserRightTask -Rule $rule } | Should-Throw -ExceptionMessage '*V-253492*RuleCorrection.psd1*'
+        }
+    }
+
     Context 'a value the organization decides' {
 
         It 'interpolates the organization variable rather than inlining a list' {
