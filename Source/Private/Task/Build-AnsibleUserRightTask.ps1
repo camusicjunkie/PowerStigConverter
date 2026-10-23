@@ -107,10 +107,11 @@ function Build-AnsibleUserRightTask {
 function Split-AnsibleUserRightIdentity {
     param ($Rule, [string[]] $Identity, [string] $StigName)
 
+    $domainHeading, $allHeading = 'Domain Systems Only:', 'All Systems:'
     $lines = @(([string] $Rule.RawString) -split '\r?\n' | ForEach-Object { $_.Trim() })
-    if ($lines -notcontains 'Domain Systems Only:') { return }
+    if ($lines -notcontains $domainHeading) { return }
 
-    $section = @{ 'Domain Systems Only:' = @(); 'All Systems:' = @() }
+    $section = @{ $domainHeading = @(); $allHeading = @() }
     $current = $null
     foreach ($line in $lines) {
         if ($section.ContainsKey($line)) { $current = $line; continue }
@@ -121,13 +122,14 @@ function Split-AnsibleUserRightIdentity {
 
     $domain = @(); $all = @()
     foreach ($name in $Identity) {
-        $inDomain = @($section['Domain Systems Only:'] | Where-Object { $_.StartsWith($name, [StringComparison]::OrdinalIgnoreCase) }).Count -gt 0
-        $inAll = @($section['All Systems:'] | Where-Object { $_.StartsWith($name, [StringComparison]::OrdinalIgnoreCase) }).Count -gt 0
+        $inDomain, $inAll = foreach ($heading in $domainHeading, $allHeading) {
+            @($section[$heading] | Where-Object { $_.StartsWith($name, [StringComparison]::OrdinalIgnoreCase) }).Count -gt 0
+        }
 
         if ($inDomain -eq $inAll) {
             $where = if ($inDomain) { 'both' } else { 'neither' }
-            throw ("{0} {1}: identity '{2}' is under {3} of the check text's 'Domain Systems Only:' and 'All Systems:' headings. Correct the rule in RuleCorrection.psd1 (docs/adr/0020)." -f
-                $StigName, $Rule.Id, $name, $where)
+            throw ("{0} {1}: identity '{2}' is under {3} of the check text's '{4}' and '{5}' headings. Correct the rule in RuleCorrection.psd1 (docs/adr/0020)." -f
+                $StigName, $Rule.Id, $name, $where, $domainHeading, $allHeading)
         }
         if ($inDomain) { $domain += $name } else { $all += $name }
     }
