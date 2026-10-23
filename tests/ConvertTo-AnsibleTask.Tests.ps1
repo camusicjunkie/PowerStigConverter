@@ -247,6 +247,41 @@ Describe 'ConvertTo-AnsibleTask handler channel' {
     }
 }
 
+# A generator may condition a standalone task itself (ADR 0025's domain-only rule); dispatch keeps
+# that condition and ANDs the toggle in front of it.
+Describe 'ConvertTo-AnsibleTask merging a generator''s when' {
+
+    BeforeAll {
+        function Convert-WhenProbeTask {
+            param ($When)
+
+            $rule = [pscustomobject] @{ Id = 'V-310'; Severity = 'medium'; DuplicateOf = '' }
+            InModuleScope -ModuleName PowerStigConverter -Parameters @{ Rule = $rule; When = $When } {
+                param ($Rule, $When)
+
+                function Build-AnsibleWhenProbeTask {
+                    param ($Rule, $StigName, $StigId, $Resolution)
+                    @{ Task = @{ Detail = 'set it'; Body = [ordered] @{ 'ansible.windows.win_dsc' = @{}; 'when' = $When } } }
+                }
+
+                @($Rule | ConvertTo-AnsibleTask -RuleType 'WhenProbe' -StigName 'WindowsServer-2022-MS')
+            }
+        }
+    }
+
+    It 'puts the toggle first and the generator''s <Shape> after it, as a list' -ForEach @(
+        @{ Shape = 'condition'; When = "ansible_facts['windows_domain_member']"; Expected = @("ansible_facts['windows_domain_member']") }
+        @{ Shape = 'list of conditions'; When = @('a is defined', 'b is defined'); Expected = @('a is defined', 'b is defined') }
+    ) {
+        $task = (Convert-WhenProbeTask -When $When).Task
+
+        $task.Contains('block') | Should-BeFalse
+        $task.when -is [array] | Should-BeTrue
+        $task.when[0] | Should-Be (Get-ExpectedToggle -TaskId 'V-310')
+        $task.when[1..($task.when.Count - 1)] | Should-BeCollection $Expected
+    }
+}
+
 # ADR-0015: a generator offers the candidates its sub-rules might agree on, strongest first, and
 # the block is named from the strongest they all agree on. Driven through a probe adapter rather
 # than through Registry, so what is under test is the naming and not that generator's candidates.

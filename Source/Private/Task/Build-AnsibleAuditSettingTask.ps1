@@ -65,7 +65,7 @@ function Build-AnsibleAuditSettingTask {
                 Body = [ordered] @{
                     'ansible.builtin.assert' = [ordered] @{
                         'that' = "$registerName.output | length == 0"
-                        'fail_msg' = '{0} is false for {1}: {{{{ {2}.output | join('', '') }}}}' -f $comparison, $Rule.Property, $registerName
+                        'fail_msg' = '{0} is false for: {{{{ {1}.output | join('', '') }}}}' -f $comparison, $registerName
                     }
                 }
             }

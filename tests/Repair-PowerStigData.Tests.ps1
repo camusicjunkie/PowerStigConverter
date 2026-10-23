@@ -126,7 +126,7 @@ Describe 'Repair-PowerStigData' {
 
         It 'replaces each piece of text the correction names' {
             $result = Invoke-Repair -Correction @{
-                'V-3' = @{ Reason = 'x'; RawString = @(
+                'V-3' = @{ Reason = 'x'; ReplaceInRawString = @(
                     @{ From = 'Enterprise Admin Group'; To = 'Enterprise Admins Group' }
                     @{ From = 'Domain Admin Group'; To = 'Domain Admins Group' }
                 ) }
@@ -139,10 +139,22 @@ Describe 'Repair-PowerStigData' {
 
         It 'warns when the text is no longer there' {
             $result = Invoke-Repair -Correction @{
-                'V-3' = @{ Reason = 'x'; RawString = @(@{ From = 'Schema Admin Group'; To = 'Schema Admins Group' }) }
+                'V-3' = @{ Reason = 'x'; ReplaceInRawString = @(@{ From = 'Schema Admin Group'; To = 'Schema Admins Group' }) }
             }
 
             $result.Warning.Count | Should-Be 1
+        }
+
+        # More than one match means the text moved on in a way the correction never saw.
+        It 'leaves text that occurs more than once alone, and warns' {
+            $result = Invoke-Repair -Correction @{
+                'V-3' = @{ Reason = 'x'; ReplaceInRawString = @(@{ From = 'Admin Group'; To = 'Admins Group' }) }
+            }
+
+            $result.Xml.DISASTIG.UserRightRule.Rule.RawString -split '\r?\n' |
+                Should-BeCollection @('Domain Systems Only:', 'Enterprise Admin Group', 'Domain Admin Group')
+            $result.Warning.Count | Should-Be 1
+            $result.Warning[0].Message | Should-BeLikeString '*Test-1.0 V-3*no longer matches*'
         }
     }
 
@@ -228,7 +240,7 @@ Describe 'RuleCorrection.psd1' {
             foreach ($id in $corrections[$stigFile].Keys) {
                 $correction = $corrections[$stigFile][$id]
                 $correction.Reason | Should-NotBeNull
-                ($correction.RemoveEntry -or $correction.OrganizationalSetting -or $correction.Field -or $correction.RawString) | Should-BeTrue
+                ($correction.RemoveEntry -or $correction.OrganizationalSetting -or $correction.Field -or $correction.ReplaceInRawString) | Should-BeTrue
             }
         }
     }

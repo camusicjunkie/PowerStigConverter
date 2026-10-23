@@ -74,8 +74,8 @@ Describe 'Build-AnsibleAuditSettingTask' {
         It 'names the property, operator and desired value in the failure, with the values found' {
             $assert = ((Get-AuditSettingTask).block | Where-Object { $_.Contains('ansible.builtin.assert') }).'ansible.builtin.assert'
 
-            $assert.fail_msg | Should-BeLikeString '*NTFS -eq FileSystem*'
-            $assert.fail_msg | Should-BeLikeString '*.output | join(*'
+            $register = Get-ExpectedRegisterName -TaskId 'V-120' -StigName 'WindowsServer-2022-MS' -Suffix 'noncompliant'
+            $assert.fail_msg | Should-Be "NTFS -eq FileSystem is false for: {{ $register.output | join(', ') }}"
         }
 
         # The comparison is evaluated desired value first, so the names read that way too.

@@ -1,17 +1,15 @@
-# Corrections to PowerStig's processed data, applied before conversion. Keyed by processed file
-# (name and revision), then rule id. PowerStig fixes this kind of error with a .log beside each
-# source STIG; these are the ones its data still carries. See docs/adr/0020.
+# Corrections to PowerStig's processed data, applied before conversion, keyed by processed file
+# (name and revision) then rule id. See docs/adr/0020. A correction that finds nothing to change warns.
 #
-# RemoveEntry drops the access control entries whose fields all match. Field replaces a rule's
-# child element, and OrganizationalSetting an attribute of the org setting, each only while it
-# still holds From. RawString replaces each From with its To within the rule's check text, only
-# while the text contains it. A correction that finds nothing to change warns, so one the data has
-# outgrown is noticed and removed.
+# RemoveEntry: drops the access control entries whose fields all match.
+# Field: replaces a rule's child element while it still holds From.
+# ReplaceInRawString: replaces From with To in the check text while From occurs there exactly once.
+# OrganizationalSetting: replaces an org setting attribute while it still holds From.
 @{
     'WindowsClient-10-3.5' = @{
         'V-220969' = @{
             Reason = "DISA's check text names 'Enterprise Admin Group' and 'Domain Admin Group', which no Identity entry prefixes, so the domain-only split (ADR 0025) cannot place them."
-            RawString = @(
+            ReplaceInRawString = @(
                 @{ From = 'Enterprise Admin Group'; To = 'Enterprise Admins Group' }
                 @{ From = 'Domain Admin Group'; To = 'Domain Admins Group' }
             )
@@ -20,7 +18,7 @@
     'WindowsClient-10-3.6' = @{
         'V-220969' = @{
             Reason = "DISA's check text names 'Enterprise Admin Group' and 'Domain Admin Group', which no Identity entry prefixes, so the domain-only split (ADR 0025) cannot place them."
-            RawString = @(
+            ReplaceInRawString = @(
                 @{ From = 'Enterprise Admin Group'; To = 'Enterprise Admins Group' }
                 @{ From = 'Domain Admin Group'; To = 'Domain Admins Group' }
             )
@@ -42,7 +40,7 @@
         }
         'V-253492' = @{
             Reason = "DISA's check text names 'Enterprise Admin Group' and 'Domain Admin Group', which no Identity entry prefixes, so the domain-only split (ADR 0025) cannot place them."
-            RawString = @(
+            ReplaceInRawString = @(
                 @{ From = 'Enterprise Admin Group'; To = 'Enterprise Admins Group' }
                 @{ From = 'Domain Admin Group'; To = 'Domain Admins Group' }
             )
@@ -64,7 +62,7 @@
         }
         'V-253492' = @{
             Reason = "DISA's check text names 'Enterprise Admin Group' and 'Domain Admin Group', which no Identity entry prefixes, so the domain-only split (ADR 0025) cannot place them."
-            RawString = @(
+            ReplaceInRawString = @(
                 @{ From = 'Enterprise Admin Group'; To = 'Enterprise Admins Group' }
                 @{ From = 'Domain Admin Group'; To = 'Domain Admins Group' }
             )
