@@ -26,7 +26,7 @@
     }
     'WindowsClient-11-2.6' = @{
         'V-253430.b' = @{
-            Reason = "Sub-rule .b repeats .a's US DOD CCEB Interoperability Root CA 2 (9B74...), which .a already checks."
+            Reason = "PowerStig gives V-253430 two sub-rules for the same US DOD CCEB Interoperability Root CA 2 (9B74...); .a already checks it."
             Field = @{
                 DuplicateOf = @{ From = ''; To = 'V-253430.a' }
             }
@@ -41,7 +41,7 @@
     }
     'WindowsClient-11-2.7' = @{
         'V-253430.b' = @{
-            Reason = "Sub-rule .b repeats .a's US DOD CCEB Interoperability Root CA 2 (9B74...), which .a already checks."
+            Reason = "PowerStig gives V-253430 two sub-rules for the same US DOD CCEB Interoperability Root CA 2 (9B74...); .a already checks it."
             Field = @{
                 DuplicateOf = @{ From = ''; To = 'V-253430.a' }
             }

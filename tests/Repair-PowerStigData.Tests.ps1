@@ -277,12 +277,17 @@ Describe 'RuleCorrection.psd1' {
         $task = InModuleScope -ModuleName PowerStigConverter -Parameters @{ Xml = $xml; Store = $store; StigFile = $StigFile } {
             param ($Xml, $Store, $StigFile)
             Repair-PowerStigData -Xml $Xml -OrganizationalSetting @{} -StigFile $StigFile 3>$null
-            $Xml.DISASTIG.RootCertificateRule.Rule | Where-Object id -like 'V-253430.*' |
-                ConvertTo-AnsibleTask -RuleType RootCertificate -StigName 'WindowsClient-11' -OrganizationalSetting $Store
+            $rules = $Xml.DISASTIG.RootCertificateRule.Rule | Where-Object id -like 'V-253430.*'
+            @{
+                All = $rules | ConvertTo-AnsibleTask -RuleType RootCertificate -StigName 'WindowsClient-11' -OrganizationalSetting $Store
+                B = $rules | Where-Object id -eq 'V-253430.b' |
+                    ConvertTo-AnsibleTask -RuleType RootCertificate -StigName 'WindowsClient-11' -OrganizationalSetting $Store
+            }
         }
-        $thumbprints = @($task.Task.block | Where-Object { $_.Contains('ansible.windows.win_certificate_info') }) |
+        $thumbprints = @($task.All.Task.block | Where-Object { $_.Contains('ansible.windows.win_certificate_info') }) |
             ForEach-Object { $_.'ansible.windows.win_certificate_info'.thumbprint }
 
+        $task.B | Should-BeNull
         $thumbprints | Should-BeEquivalent @('9B74964506C7ED9138070D08D5F8B969866560C8', 'D471CA32F7A692CE6CBB6196BD3377FE4DBCD106')
     }
 }
