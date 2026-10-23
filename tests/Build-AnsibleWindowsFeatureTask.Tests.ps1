@@ -21,9 +21,18 @@ BeforeAll {
 
 Describe 'Build-AnsibleWindowsFeatureTask' {
 
-    Add-GeneratorContractTests -Generator 'Build-AnsibleWindowsFeatureTask' `
-        -Module 'ansible.windows.win_feature' `
-        -Factory { New-WindowsFeatureRule }
+    Context 'for a Windows Server STIG' {
+        Add-GeneratorContractTests -Generator 'Build-AnsibleWindowsFeatureTask' `
+            -Module 'ansible.windows.win_feature' `
+            -Factory { New-WindowsFeatureRule }
+    }
+
+    Context 'for a Windows client STIG' {
+        Add-GeneratorContractTests -Generator 'Build-AnsibleWindowsFeatureTask' `
+            -Module 'ansible.windows.win_optional_feature' `
+            -StigName 'WindowsClient-11' `
+            -Factory { New-WindowsFeatureRule }
+    }
 
     Context 'the task it builds' {
 
@@ -77,6 +86,48 @@ Describe 'Build-AnsibleWindowsFeatureTask' {
                 -Rule (New-WindowsFeatureRule) -StigName 'WindowsServer-2022-MS').Task
 
             $task.name | Should-Be 'V-130 | HIGH | Set TFTP-Client to absent'
+        }
+    }
+
+    # See #194.
+    Context 'on a Windows client' {
+
+        It 'sets the feature named on the rule through win_optional_feature' {
+            $task = (Invoke-Generator -Generator 'Build-AnsibleWindowsFeatureTask' `
+                -Rule (New-WindowsFeatureRule) -StigName 'WindowsClient-11').Task
+
+            $task.Contains('ansible.windows.win_feature') | Should-BeFalse
+            $feature = $task.'ansible.windows.win_optional_feature'
+            $feature.name | Should-Be 'TFTP-Client'
+            $feature.state | Should-Be 'absent'
+        }
+
+        # win_optional_feature fails an unknown name even when removing it; on 24H2+ that is
+        # PowerShell V2, which the OS no longer ships.
+        It 'tolerates only the failed-to-find failure when removing a feature' {
+            $task = (Invoke-Generator -Generator 'Build-AnsibleWindowsFeatureTask' `
+                -Rule (New-WindowsFeatureRule) -StigName 'WindowsClient-11').Task
+
+            $register = Get-ExpectedRegisterName -TaskId 'V-130' -StigName 'WindowsClient-11' -Suffix 'feature_result'
+            $task.register | Should-Be $register
+            $task.failed_when | Should-Be "$register is failed and 'Failed to find feature' not in ($register.msg | default(''))"
+        }
+
+        It 'leaves installing a feature to fail on any error' {
+            $task = (Invoke-Generator -Generator 'Build-AnsibleWindowsFeatureTask' `
+                -Rule (New-WindowsFeatureRule -Ensure 'Present') -StigName 'WindowsClient-11').Task
+
+            $task.'ansible.windows.win_optional_feature'.state | Should-Be 'present'
+            $task.Contains('failed_when') | Should-BeFalse
+            $task.Contains('register') | Should-BeFalse
+        }
+
+        # Windows 10's STIG is sunset, but converts the same way.
+        It 'takes win_optional_feature for every Windows client STIG' {
+            $task = (Invoke-Generator -Generator 'Build-AnsibleWindowsFeatureTask' `
+                -Rule (New-WindowsFeatureRule) -StigName 'WindowsClient-10').Task
+
+            $task.Contains('ansible.windows.win_optional_feature') | Should-BeTrue
         }
     }
 
