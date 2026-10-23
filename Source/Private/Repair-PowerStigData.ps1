@@ -48,7 +48,19 @@ function Repair-PowerStigData {
             foreach ($entry in $entries) { [void] $entry.ParentNode.RemoveChild($entry) }
         }
 
-        $settingChanges = if ($correction.OrganizationalSetting) { $correction.OrganizationalSetting } else { @{} }
+        $fieldChanges = if ($correction.Field) { $correction.Field } else { @{} }
+        foreach ($name in $fieldChanges.Keys) {
+            $change = $fieldChanges[$name]
+            $field = if ($rules.ContainsKey($id)) { $rules[$id].SelectSingleNode($name) }
+
+            if ($null -eq $field -or $field.InnerText -cne $change.From) {
+                Write-Warning $stale
+                continue
+            }
+            $field.InnerText = $change.To
+        }
+
+        $settingChanges =if ($correction.OrganizationalSetting) { $correction.OrganizationalSetting } else { @{} }
         foreach ($attribute in $settingChanges.Keys) {
             $change = $settingChanges[$attribute]
             $node = $OrganizationalSetting[$id]
