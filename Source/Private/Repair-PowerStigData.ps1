@@ -48,6 +48,18 @@ function Repair-PowerStigData {
             foreach ($entry in $entries) { [void] $entry.ParentNode.RemoveChild($entry) }
         }
 
+        $fieldChanges = if ($correction.Field) { $correction.Field } else { @{} }
+        foreach ($name in $fieldChanges.Keys) {
+            $change = $fieldChanges[$name]
+            $field = if ($rules.ContainsKey($id)) { $rules[$id].SelectSingleNode($name) }
+
+            if ($null -eq $field -or $field.InnerText -cne $change.From) {
+                Write-Warning $stale
+                continue
+            }
+            $field.InnerText = $change.To
+        }
+
         # Ordinal, case-sensitive substring replacement within the rule's check text.
         foreach ($change in @($correction.RawString | Where-Object { $_ })) {
             $node = if ($rules.ContainsKey($id)) { $rules[$id].SelectSingleNode('RawString') }
@@ -59,7 +71,7 @@ function Repair-PowerStigData {
             $node.InnerText = $node.InnerText.Replace($change.From, $change.To)
         }
 
-        $settingChanges =if ($correction.OrganizationalSetting) { $correction.OrganizationalSetting } else { @{} }
+        $settingChanges = if ($correction.OrganizationalSetting) { $correction.OrganizationalSetting } else { @{} }
         foreach ($attribute in $settingChanges.Keys) {
             $change = $settingChanges[$attribute]
             $node = $OrganizationalSetting[$id]
