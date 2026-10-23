@@ -263,22 +263,26 @@ Describe 'RuleCorrection.psd1' {
         @($warnings | Where-Object { $_ -is [System.Management.Automation.WarningRecord] }).Message | Should-BeNull
     }
 
-    # PowerStig split V-253430.b's raw string at the wrong place; the gather has to get the bare hex.
-    It 'gathers V-253430.b of <StigFile> by its bare thumbprint' -ForEach $clientFiles {
+    # V-253430.b repeats .a's certificate; checking it once is enough.
+    It 'gathers each V-253430 certificate of <StigFile> once' -ForEach $clientFiles {
         if (-not $Present) { Set-ItResult -Skipped -Because "$StigFile is not in the local PowerStig data" ; return }
 
         [xml] $xml = Get-Content (Join-Path $processed "$StigFile.xml")
-        $store = New-ContractOrgSetting '<OrganizationalSetting id="V-253430.b" Location="Cert:\LocalMachine\Disallowed" />'
+        $store = New-ContractOrgSetting (-join @(
+            foreach ($id in 'V-253430.a', 'V-253430.b', 'V-253430.c') {
+                '<OrganizationalSetting id="{0}" Location="Cert:\LocalMachine\Disallowed" />' -f $id
+            }
+        ))
 
         $task = InModuleScope -ModuleName PowerStigConverter -Parameters @{ Xml = $xml; Store = $store; StigFile = $StigFile } {
             param ($Xml, $Store, $StigFile)
             Repair-PowerStigData -Xml $Xml -OrganizationalSetting @{} -StigFile $StigFile 3>$null
-            $Xml.DISASTIG.RootCertificateRule.Rule | Where-Object id -eq 'V-253430.b' |
+            $Xml.DISASTIG.RootCertificateRule.Rule | Where-Object id -like 'V-253430.*' |
                 ConvertTo-AnsibleTask -RuleType RootCertificate -StigName 'WindowsClient-11' -OrganizationalSetting $Store
         }
-        $gather = $task.Task.block | Where-Object { $_.Contains('ansible.windows.win_certificate_info') }
+        $thumbprints = @($task.Task.block | Where-Object { $_.Contains('ansible.windows.win_certificate_info') }) |
+            ForEach-Object { $_.'ansible.windows.win_certificate_info'.thumbprint }
 
-        $gather.'ansible.windows.win_certificate_info'.thumbprint | Should-Be '9B74964506C7ED9138070D08D5F8B969866560C8'
-        $gather.name | Should-Be 'Gather info for US DOD CCEB Interoperability Root CA 2'
+        $thumbprints | Should-BeEquivalent @('9B74964506C7ED9138070D08D5F8B969866560C8', 'D471CA32F7A692CE6CBB6196BD3377FE4DBCD106')
     }
 }
