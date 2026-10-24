@@ -42,6 +42,19 @@ additionally needs
 `win_dsc` treats a Key as a required option — so an older module fails the task with *missing
 required arguments: Id*. PowerStig's own minimum is 15.1.1, which a host on 17.x also satisfies.
 
+**Connect as a domain account, not a local administrator.** A Windows role sets
+`LocalAccountTokenFilterPolicy` to 0 (V-253357 on Windows 11, V-254429 on Server 2022 MS), after
+which a local administrator gets a filtered token over the network. WinRM then refuses it, and
+every later task fails with *the specified credentials were rejected by the server*. The built-in
+Administrator is no exception, because the same STIGs turn on its Admin Approval Mode
+(`FilterAdministratorToken`). A domain account in the target's local Administrators group keeps a
+full token. It must not be a Domain or Enterprise Admin, because on a domain member the STIG also
+denies those groups network logon (V-253491, V-278184), alongside `Local account`.
+
+On a host that isn't domain-joined the STIG marks the rule not applicable. The role still applies it
+there for now, though, which ends the run, so switch it off with its toggle
+(`-e stig_client_11_253357_when=false`).
+
 ## Installation
 
 The module is laid out as source and assembled with
