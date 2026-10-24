@@ -35,6 +35,42 @@ function Repair-PowerStigData {
         $correction = $corrections[$id]
         $stale = '{0} {1}: the correction in RuleCorrection.psd1 no longer matches the data. Check it and update or remove it.' -f $StigFile, $id
 
+        # Moves a rule PowerStig could not parse to the type its .log would have hard-coded, while
+        # it is still of the type the correction expects.
+        if ($correction.HardCodedRule) {
+            $hardCoded = $correction.HardCodedRule
+            $rule = $rules[$id]
+
+            if ($null -eq $rule -or $rule.ParentNode.LocalName -cne $hardCoded.From) {
+                Write-Warning $stale
+            }
+            else {
+                $target = $Xml.DISASTIG.SelectSingleNode($hardCoded.To)
+                if ($null -eq $target) { $target = $Xml.DISASTIG.AppendChild($Xml.CreateElement($hardCoded.To)) }
+                [void] $target.AppendChild($rule.ParentNode.RemoveChild($rule))
+
+                foreach ($name in $hardCoded.Field.Keys) {
+                    # PowerStig keeps dscresource as an attribute and every other field as an element.
+                    $attribute = $rule.Attributes | Where-Object Name -eq $name
+                    if ($attribute) { $attribute.Value = $hardCoded.Field[$name]; continue }
+
+                    $node = $rule.SelectSingleNode($name)
+                    if ($null -eq $node) { $node = $rule.AppendChild($Xml.CreateElement($name)) }
+                    $node.InnerText = $hardCoded.Field[$name]
+                }
+
+                # An entry the file already has is the organization's answer, or PowerStig's default.
+                if ($hardCoded.OrganizationalSetting -and -not $OrganizationalSetting.ContainsKey($id)) {
+                    $node = ([xml] '<OrganizationalSettings />').CreateElement('OrganizationalSetting')
+                    $node.SetAttribute('id', $id)
+                    foreach ($attribute in $hardCoded.OrganizationalSetting.Keys) {
+                        $node.SetAttribute($attribute, $hardCoded.OrganizationalSetting[$attribute])
+                    }
+                    $OrganizationalSetting[$id] = $node
+                }
+            }
+        }
+
         if ($correction.RemoveEntry) {
             $match = $correction.RemoveEntry
             $entries = @(if ($rules.ContainsKey($id)) {

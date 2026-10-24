@@ -5,6 +5,9 @@
 # Field: replaces a rule's child element while it still holds From.
 # ReplaceInRawString: replaces From with To in the check text while From occurs there exactly once.
 # OrganizationalSetting: replaces an org setting attribute while it still holds From.
+# HardCodedRule: moves a rule from type From to type To while it is still a From, setting its
+#   Field values (DscResource is the attribute) and adding its OrganizationalSetting where the
+#   org settings have no entry. PowerStig's own .log does the same as HardCodedRule(...).
 @{
     'WindowsClient-10-3.5' = @{
         'V-220969' = @{
@@ -81,12 +84,76 @@
         }
     }
     'WindowsServer-2025-DC-1.1' = @{
+        'V-278085' = @{
+            Reason = "DISA's check text drops the colons after its labels ('Value NameNoNameReleaseOnDemand'), so PowerStig left it a ManualRule. 2022's V-254338 is the same value."
+            HardCodedRule = @{
+                From = 'ManualRule'; To = 'RegistryRule'
+                Field = @{ DscResource = 'RegistryPolicyFile'; Ensure = 'Present'; Key = 'HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Netbt\Parameters'; ValueName = 'NoNameReleaseOnDemand'; ValueType = 'Dword'; ValueData = '1' }
+            }
+        }
+        'V-278101' = @{
+            Reason = "DISA's check text drops the colon after 'Registry Path', so PowerStig left it a ManualRule. 2022's V-254354 is the same value."
+            HardCodedRule = @{
+                From = 'ManualRule'; To = 'RegistryRule'
+                Field = @{ DscResource = 'RegistryPolicyFile'; Ensure = 'Present'; Key = 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\policies\Explorer'; ValueName = 'NoDriveTypeAutoRun'; ValueType = 'Dword'; ValueData = '255' }
+            }
+        }
         'V-278139' = @{
             Reason = "PowerStig read '(RX)' in the check text as an account. It names no principal, and the rule's real entries were not parsed."
             RemoveEntry = @{ Principal = '(RX)' }
         }
+        'V-278212' = @{
+            Reason = "DISA's check text drops the colons after its labels ('Value NameEnablePlainTextPassword'), so PowerStig left it a ManualRule. 2022's V-254462 is the same value."
+            HardCodedRule = @{
+                From = 'ManualRule'; To = 'RegistryRule'
+                Field = @{ DscResource = 'Registry'; Ensure = 'Present'; Key = 'HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\LanmanWorkstation\Parameters'; ValueName = 'EnablePlainTextPassword'; ValueType = 'Dword'; ValueData = '0' }
+            }
+        }
     }
     'WindowsServer-2025-MS-1.1' = @{
+        'V-278085' = @{
+            Reason = "DISA's check text drops the colons after its labels ('Value NameNoNameReleaseOnDemand'), so PowerStig left it a ManualRule. 2022's V-254338 is the same value."
+            HardCodedRule = @{
+                From = 'ManualRule'; To = 'RegistryRule'
+                Field = @{ DscResource = 'RegistryPolicyFile'; Ensure = 'Present'; Key = 'HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Netbt\Parameters'; ValueName = 'NoNameReleaseOnDemand'; ValueType = 'Dword'; ValueData = '1' }
+            }
+        }
+        'V-278101' = @{
+            Reason = "DISA's check text drops the colon after 'Registry Path', so PowerStig left it a ManualRule. 2022's V-254354 is the same value."
+            HardCodedRule = @{
+                From = 'ManualRule'; To = 'RegistryRule'
+                Field = @{ DscResource = 'RegistryPolicyFile'; Ensure = 'Present'; Key = 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\policies\Explorer'; ValueName = 'NoDriveTypeAutoRun'; ValueType = 'Dword'; ValueData = '255' }
+            }
+        }
+        'V-278178' = @{
+            Reason = "DISA's check text drops the colons after its labels ('Value NameLocalAccountTokenFilterPolicy'), so PowerStig left it a ManualRule. 2022's V-254429 is the same value."
+            HardCodedRule = @{
+                From = 'ManualRule'; To = 'RegistryRule'
+                Field = @{ DscResource = 'RegistryPolicyFile'; Ensure = 'Present'; Key = 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System'; ValueName = 'LocalAccountTokenFilterPolicy'; ValueType = 'Dword'; ValueData = '0' }
+            }
+        }
+        'V-278180' = @{
+            Reason = "DISA's check text drops the colons after its labels ('Value NameRestrictRemoteClients'), so PowerStig left it a ManualRule. 2022's V-254431 is the same value."
+            HardCodedRule = @{
+                From = 'ManualRule'; To = 'RegistryRule'
+                Field = @{ DscResource = 'RegistryPolicyFile'; Ensure = 'Present'; Key = 'HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows NT\Rpc'; ValueName = 'RestrictRemoteClients'; ValueType = 'Dword'; ValueData = '1' }
+            }
+        }
+        'V-278181' = @{
+            Reason = "DISA's check text drops the colons after its labels ('Value NameCachedLogonsCount'), so PowerStig left it a ManualRule. As 2022's V-254432, '4 (or less)' is the organization's, defaulting to 4."
+            HardCodedRule = @{
+                From = 'ManualRule'; To = 'RegistryRule'
+                Field = @{ DscResource = 'Registry'; Ensure = 'Present'; Key = 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon'; ValueName = 'CachedLogonsCount'; ValueType = 'String'; ValueData = ''; OrganizationValueRequired = 'True'; OrganizationValueTestString = "'{0}' -le '4'" }
+                OrganizationalSetting = @{ ValueData = '4' }
+            }
+        }
+        'V-278212' = @{
+            Reason = "DISA's check text drops the colons after its labels ('Value NameEnablePlainTextPassword'), so PowerStig left it a ManualRule. 2022's V-254462 is the same value."
+            HardCodedRule = @{
+                From = 'ManualRule'; To = 'RegistryRule'
+                Field = @{ DscResource = 'Registry'; Ensure = 'Present'; Key = 'HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\LanmanWorkstation\Parameters'; ValueName = 'EnablePlainTextPassword'; ValueType = 'Dword'; ValueData = '0' }
+            }
+        }
         'V-278001.c' = @{
             Reason = "Server Operators exists only on a domain controller. PowerStig's 2022 .log removes the same entry from V-254254."
             RemoveEntry = @{ Principal = 'Server Operators' }

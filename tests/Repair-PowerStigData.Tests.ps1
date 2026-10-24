@@ -10,6 +10,10 @@ BeforeDiscovery {
     $script:clientFiles = 'WindowsClient-11-2.6', 'WindowsClient-11-2.7' | ForEach-Object {
         @{ StigFile = $_; Present = Test-Path (Join-Path $processed "$_.xml") }
     }
+    $script:server2025Files = @(
+        @{ StigFile = 'WindowsServer-2025-MS-1.1'; Ids = 'V-278085', 'V-278101', 'V-278178', 'V-278180', 'V-278181', 'V-278212'; DomainOnly = 'V-278178', 'V-278181' }
+        @{ StigFile = 'WindowsServer-2025-DC-1.1'; Ids = 'V-278085', 'V-278101', 'V-278212'; DomainOnly = @() }
+    ) | ForEach-Object { $_ + @{ Present = Test-Path (Join-Path $processed "$($_.StigFile).xml") } }
 }
 
 BeforeAll {
@@ -215,6 +219,92 @@ Describe 'Repair-PowerStigData' {
         }
     }
 
+    # PowerStig's parser leaves a rule it cannot read as a ManualRule; its own .log hard-codes such a
+    # rule's type and fields, and so does this. See docs/adr/0020.
+    Context 'hard-coding a rule PowerStig could not parse' {
+
+        BeforeAll {
+            function New-ManualXml {
+                [xml] @'
+<DISASTIG stigid="TEST">
+  <ManualRule>
+    <Rule id="V-4" severity="medium" dscresource="None">
+      <DuplicateOf />
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <OrganizationValueTestString />
+      <RawString>Value NameCachedLogonsCount</RawString>
+    </Rule>
+    <Rule id="V-5" severity="medium" dscresource="None"><RawString>x</RawString></Rule>
+  </ManualRule>
+</DISASTIG>
+'@
+            }
+
+            $script:hardCoded = @{
+                'V-4' = @{ Reason = 'x'; HardCodedRule = @{
+                    From = 'ManualRule'; To = 'RegistryRule'
+                    Field = @{
+                        DscResource = 'Registry'; Ensure = 'Present'
+                        Key = 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon'
+                        ValueName = 'CachedLogonsCount'; ValueType = 'String'; ValueData = ''
+                        OrganizationValueRequired = 'True'; OrganizationValueTestString = "'{0}' -le '4'"
+                    }
+                    OrganizationalSetting = @{ ValueData = '4' }
+                } }
+            }
+        }
+
+        It 'moves the rule to the type the correction names, with its fields' {
+            $result = Invoke-Repair -Xml (New-ManualXml) -Setting @{} -Correction $hardCoded
+            $rule = $result.Xml.DISASTIG.RegistryRule.Rule
+
+            $rule.id | Should-Be 'V-4'
+            $rule.dscresource | Should-Be 'Registry'
+            $rule.Key | Should-Be 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon'
+            $rule.ValueName | Should-Be 'CachedLogonsCount'
+            $rule.ValueType | Should-Be 'String'
+            $rule.OrganizationValueRequired | Should-Be 'True'
+            $rule.OrganizationValueTestString | Should-Be "'{0}' -le '4'"
+            @($result.Xml.DISASTIG.ManualRule.Rule.id) | Should-BeCollection @('V-5')
+            $result.Warning.Count | Should-Be 0
+        }
+
+        It 'adds the org setting the file has no entry for' {
+            $result = Invoke-Repair -Xml (New-ManualXml) -Setting @{} -Correction $hardCoded
+
+            $result.Setting['V-4'].id | Should-Be 'V-4'
+            $result.Setting['V-4'].ValueData | Should-Be '4'
+        }
+
+        # An entry already there is the organization's answer, or PowerStig's own default.
+        It 'keeps an org setting the file already has' {
+            [xml] $org = '<OrganizationalSettings><OrganizationalSetting id="V-4" ValueData="2" /></OrganizationalSettings>'
+            $result = Invoke-Repair -Xml (New-ManualXml) -Setting @{ 'V-4' = $org.OrganizationalSettings.OrganizationalSetting } -Correction $hardCoded
+
+            $result.Setting['V-4'].ValueData | Should-Be '2'
+            $result.Warning.Count | Should-Be 0
+        }
+
+        # Once PowerStig parses the rule itself, the correction has nothing left to do.
+        It 'leaves a rule that is no longer of the type it expects alone, and warns' {
+            $xml = New-ManualXml
+            $registry = $xml.DISASTIG.AppendChild($xml.CreateElement('RegistryRule'))
+            [void] $registry.AppendChild($xml.DISASTIG.ManualRule.RemoveChild($xml.DISASTIG.ManualRule.Rule[0]))
+            $result = Invoke-Repair -Xml $xml -Setting @{} -Correction $hardCoded
+
+            $result.Xml.DISASTIG.RegistryRule.Rule.dscresource | Should-Be 'None'
+            $result.Setting.ContainsKey('V-4') | Should-BeFalse
+            $result.Warning.Count | Should-Be 1
+            $result.Warning[0].Message | Should-BeLikeString '*Test-1.0 V-4*no longer matches*'
+        }
+
+        It 'warns when the rule is not in the data' {
+            $result = Invoke-Repair -Xml (New-ManualXml) -Setting @{} -Correction @{ 'V-9' = $hardCoded['V-4'] }
+
+            $result.Warning.Count | Should-Be 1
+        }
+    }
+
     Context 'a STIG with no corrections' {
 
         It 'changes nothing and warns about nothing' {
@@ -240,7 +330,7 @@ Describe 'RuleCorrection.psd1' {
             foreach ($id in $corrections[$stigFile].Keys) {
                 $correction = $corrections[$stigFile][$id]
                 $correction.Reason | Should-NotBeNull
-                ($correction.RemoveEntry -or $correction.OrganizationalSetting -or $correction.Field -or $correction.ReplaceInRawString) | Should-BeTrue
+                ($correction.RemoveEntry -or $correction.OrganizationalSetting -or $correction.Field -or $correction.ReplaceInRawString -or $correction.HardCodedRule) | Should-BeTrue
             }
         }
     }
@@ -261,6 +351,35 @@ Describe 'RuleCorrection.psd1' {
         }
 
         @($warnings | Where-Object { $_ -is [System.Management.Automation.WarningRecord] }).Message | Should-BeNull
+    }
+
+    # DISA's 2025 check text drops the colons after its labels, so PowerStig left these ManualRules (#227).
+    It 'sets each hard-coded registry value of <StigFile>' -ForEach $server2025Files {
+        if (-not $Present) { Set-ItResult -Skipped -Because "$StigFile is not in the local PowerStig data" ; return }
+
+        [xml] $xml = Get-Content (Join-Path $processed "$StigFile.xml")
+        [xml] $org = Get-Content (Join-Path $processed "$StigFile.org.default.xml")
+        $settings = @{}
+        foreach ($node in $org.OrganizationalSettings.OrganizationalSetting) { if ($node) { $settings[$node.id] = $node } }
+
+        $tasks = InModuleScope -ModuleName PowerStigConverter -Parameters @{ Xml = $xml; Settings = $settings; StigFile = $StigFile; Ids = $Ids } {
+            param ($Xml, $Settings, $StigFile, $Ids)
+            Repair-PowerStigData -Xml $Xml -OrganizationalSetting $Settings -StigFile $StigFile 3>$null
+            $Xml.DISASTIG.RegistryRule.Rule | Where-Object id -in $Ids |
+                ConvertTo-AnsibleTask -RuleType Registry -StigName ($StigFile -replace '-[\d.]+$') -OrganizationalSetting $Settings
+        }
+
+        @($tasks | ForEach-Object { $_.Rule.id }) | Should-BeEquivalent $Ids
+        foreach ($task in $tasks) {
+            $task.Task.Contains('ansible.windows.win_regedit') | Should-BeTrue
+            $gated = @($task.Task.when) -contains "ansible_facts['windows_domain_member']"
+            $gated | Should-Be ($task.Rule.id -in $DomainOnly)
+            $task.Incomplete | Should-BeNull
+        }
+        # An organization value the corrected org settings answer with DISA's 4.
+        if ('V-278181' -in $Ids) {
+            ($tasks | Where-Object { $_.Rule.id -eq 'V-278181' }).Declaration | Should-MatchString 'cachedlogonscount: .?4.?$'
+        }
     }
 
     # V-253430.b repeats .a's certificate; checking it once is enough.

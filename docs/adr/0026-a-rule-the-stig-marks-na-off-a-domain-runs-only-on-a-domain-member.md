@@ -57,7 +57,8 @@ says one thing and means another.
   without it relies on dispatch's tests of the known wording.
 - A generator's own domain condition inside a block is not deduplicated against the block's; no
   grouped rule sets one today.
-- ManualRule and DocumentRule entries with the same wording (Server 2025 MS's V-278178, #227)
-  produce no task, so nothing is conditioned for them until they convert.
+- ManualRule and DocumentRule entries with the same wording produce no task, so nothing is
+  conditioned for them. Server 2025 MS's V-278178 and V-278181 were among them until a correction
+  hard-coded them as RegistryRules (ADR 0020, #227); they are now conditioned like the rest.
 
 Decided in [#226](https://github.com/camusicjunkie/PowerStigConverter/issues/226).

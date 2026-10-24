@@ -41,7 +41,8 @@ in a rule type PowerStig automates elsewhere. It carries no parsed fields, only 
 no generator can build a task from it. Distinct from the `Manual` and `Document` rule types,
 where DISA says a human must act; here PowerStig simply failed to parse. A rule can stop being
 unparsed when upstream improves — OracleLinux-8 went from 54 to none between revisions 2.3 and
-2.4.
+2.4. PowerStig can also file a rule it failed to parse as a `ManualRule` (Server 2025's registry
+rules whose labels lost their colons); a `HardCodedRule` correction gives it its real type (ADR 0020).
 _Avoid_: unsupported rule, manual rule, None rule
 
 **Domain-only identity**:
