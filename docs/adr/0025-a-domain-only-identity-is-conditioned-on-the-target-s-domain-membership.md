@@ -34,7 +34,10 @@ V-253492 and V-220969 write `Enterprise Admin Group` for `Enterprise Admins`.
   path, since the STIG does not say no one may hold the right.
 
 **Organization values are untouched.** The split applies only to the literal list a rule carries
-itself; a value `Resolve-AnsibleOrganizationValue` reads from org settings is a reference.
+itself; a value `Resolve-AnsibleOrganizationValue` reads from org settings is a reference. An
+organization's answer can still name a domain-only group, as Server 2025 MS's V-278184 default
+does, and on a workgroup host that fails as before; checking it is the adopter's job, as the README
+says.
 
 ## Alternatives considered
 
