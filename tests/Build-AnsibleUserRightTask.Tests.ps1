@@ -2,6 +2,15 @@
 
 . $PSScriptRoot/GeneratorContract.ps1
 
+BeforeDiscovery {
+    $processed = Join-Path $env:LOCALAPPDATA 'PowerStig/source/StigData/Processed'
+    $script:stigFiles = @(Get-ChildItem $processed -Filter *.xml -ErrorAction SilentlyContinue |
+        Where-Object Name -notlike '*.org.default.xml' |
+        ForEach-Object { @{ StigFile = $_.BaseName; Path = $_.FullName } })
+    # Pester refuses an empty -ForEach; one placeholder reports the data as missing instead.
+    if ($stigFiles.Count -eq 0) { $script:stigFiles = @(@{ StigFile = 'the local PowerStig data'; Path = $null }) }
+}
+
 BeforeAll {
     . $PSScriptRoot/Initialize-TestModule.ps1
     . $PSScriptRoot/GeneratorContract.ps1
@@ -194,6 +203,110 @@ Describe 'Build-AnsibleUserRightTask' {
         }
     }
 
+    # Deny log on as a service lists its domain-only identities after a sentence rather than a
+    # heading, and says no one may hold the right off a domain. See docs/adr/0025 and #230.
+    Context 'a right no one may hold off a domain' {
+
+        BeforeAll {
+            # WindowsServer-2025-MS V-278186; 2016's V-225017 ends the first sentence with a period
+            # and leaves a blank line before the bullets.
+            function New-DomainJoinedRawString {
+                param ([switch] $Server2016, [switch] $NoNondomain, [switch] $NoDomainJoined)
+
+                $right = 'Deny log on as a service'
+                @(
+                    'This applies to member servers and stand-alone or nondomain-joined systems. A separate version applies to domain controllers.'
+                    ''
+                    if (-not $NoDomainJoined) {
+                        if ($Server2016) {
+                            "If the following accounts or groups are not defined for the `"$right`" user right on domain-joined systems, this is a finding."
+                            ''
+                            '- Enterprise Admins Group'
+                            '- Domain Admins Group'
+                        }
+                        else {
+                            "If the following accounts or groups are not defined for the `"$right`" user right on domain-joined systems, this is a finding:"
+                            '- Enterprise Admins Group.'
+                            '- Domain Admins Group.'
+                        }
+                        ''
+                    }
+                    if (-not $NoNondomain) { "If any accounts or groups are defined for the `"$right`" user right on nondomain-joined systems, this is a finding." }
+                ) -join "`n"
+            }
+
+            function New-DenyServiceRule {
+                param ($RawString = (New-DomainJoinedRawString))
+
+                $rule = New-UserRightRule -Id 'V-278186' -Identity 'Enterprise Admins.,Domain Admins.' -Force 'True' -RawString $RawString
+                $rule.DisplayName = 'Deny log on as a service'
+                $rule.Constant = 'SeDenyServiceLogonRight'
+                $rule
+            }
+
+            function Get-DenyServiceOutput {
+                param ($Rule)
+                Invoke-Generator -Generator 'Build-AnsibleUserRightTask' -Rule $Rule -StigName 'WindowsServer-2025-MS'
+            }
+        }
+
+        It 'sets the domain-only identities on a domain member' {
+            $set = (Get-DenyServiceOutput -Rule (New-DenyServiceRule)).Task.block[0]
+
+            $set.name | Should-Be 'Set Deny log on as a service on a domain member'
+            $set.'ansible.windows.win_user_right'.name | Should-Be 'SeDenyServiceLogonRight'
+            $set.'ansible.windows.win_user_right'.action | Should-Be 'set'
+            $set.'ansible.windows.win_user_right'.users | Should-BeCollection @('Enterprise Admins', 'Domain Admins')
+            $set.when | Should-Be "ansible_facts['windows_domain_member']"
+        }
+
+        It 'removes every holder off a domain' {
+            $block = (Get-DenyServiceOutput -Rule (New-DenyServiceRule)).Task.block
+            $gather, $remove = $block[1], $block[2]
+
+            $block.Count | Should-Be 3
+            $gather.'ansible.windows.win_powershell'.script | Should-BeLikeString '*SeDenyServiceLogonRight*'
+            $gather.when | Should-Be "not ansible_facts['windows_domain_member']"
+            $remove.'ansible.windows.win_user_right'.action | Should-Be 'remove'
+            $remove.when | Should-BeCollection @("not ansible_facts['windows_domain_member']", "$($gather.register).result | length > 0")
+        }
+
+        It 'carries the toggle on the block' {
+            $output = Get-DenyServiceOutput -Rule (New-DenyServiceRule)
+
+            $output.Task.name | Should-Be 'V-278186 | MEDIUM | Deny log on as a service'
+            $output.Task.when | Should-Be 'stig_server_2025_278186_when | bool'
+        }
+
+        It "reads 2016's wording, with its period and blank line" {
+            $set = (Get-DenyServiceOutput -Rule (New-DenyServiceRule -RawString (New-DomainJoinedRawString -Server2016))).Task.block[0]
+
+            $set.'ansible.windows.win_user_right'.users | Should-BeCollection @('Enterprise Admins', 'Domain Admins')
+        }
+
+        # Without the nondomain-joined sentence the STIG says nothing about other hosts, so the rule
+        # is only skipped there, as a Domain Systems Only list is.
+        It 'skips a rule off a domain when the check text does not say no one may hold the right there' {
+            $task = (Get-DenyServiceOutput -Rule (New-DenyServiceRule -RawString (New-DomainJoinedRawString -NoNondomain))).Task
+
+            $task.'ansible.windows.win_user_right'.users | Should-BeCollection @('Enterprise Admins', 'Domain Admins')
+            $task.when | Should-BeCollection @('stig_server_2025_278186_when | bool', "ansible_facts['windows_domain_member']")
+        }
+
+        It 'fails the conversion, naming the rule, when the check text names no domain-only identities' {
+            $rule = New-DenyServiceRule -RawString (New-DomainJoinedRawString -NoDomainJoined)
+
+            { Get-DenyServiceOutput -Rule $rule } | Should-Throw -ExceptionMessage '*V-278186*names no domain-only identities*'
+        }
+
+        It 'fails the conversion, naming the rule, when an identity is not in the domain-joined list' {
+            $rule = New-DenyServiceRule
+            $rule.Identity = 'Enterprise Admins.,Schema Admins.'
+
+            { Get-DenyServiceOutput -Rule $rule } | Should-Throw -ExceptionMessage '*V-278186*Schema Admins*'
+        }
+    }
+
     Context 'a value the organization decides' {
 
         It 'interpolates the organization variable rather than inlining a list' {
@@ -216,6 +329,75 @@ Describe 'Build-AnsibleUserRightTask' {
                 -StigName 'WindowsServer-2022-MS' -OrganizationalSetting $orgSetting).Task.'ansible.windows.win_user_right'
 
             @($right.users).Count | Should-Be 1
+        }
+    }
+}
+
+# Domain-only identities are read from DISA's prose, so a wording not seen before must fail here
+# rather than leave a domain group set on a workgroup host. See docs/adr/0025.
+Describe 'User rights in PowerStig''s data' {
+
+    BeforeAll {
+        $script:pattern = InModuleScope -ModuleName PowerStigConverter {
+            @{ DomainJoined = $script:userRightDomainJoined; NondomainJoined = $script:userRightNondomainJoined }
+        }
+
+        function Get-UserRightRule {
+            param ($Path)
+            [xml] $xml = Get-Content $Path -Raw
+            @($xml.DISASTIG.UserRightRule.Rule | Where-Object { $_ -and -not $_.DuplicateOf })
+        }
+
+        # A line naming domain membership is a Domain Systems Only heading, the domain-joined or
+        # nondomain-joined sentence, NA off a domain (ADR 0026), or a member-server/DC split.
+        function Get-UnclassifiedDomainLine {
+            param ($Path)
+
+            foreach ($rule in (Get-UserRightRule -Path $Path)) {
+                foreach ($line in (([string] $rule.RawString) -split '\r?\n' | ForEach-Object { $_.Trim() })) {
+                    if ($line -notmatch 'domain-joined|domain member|Domain Systems') { continue }
+                    if ($line -eq 'Domain Systems Only:' -or $line -match $pattern.DomainJoined -or $line -match $pattern.NondomainJoined) { continue }
+                    if ($line -match '^This applies to member servers\b') { continue }
+
+                    $condition = InModuleScope -ModuleName PowerStigConverter -Parameters @{ Line = $line } {
+                        param ($Line)
+                        Get-AnsibleApplicabilityCondition -Rule ([pscustomobject] @{ RawString = $Line })
+                    }
+                    if (-not $condition) { '{0}: {1}' -f $rule.id, $line }
+                }
+            }
+        }
+    }
+
+    It 'classifies every domain line of <StigFile>' -ForEach $stigFiles {
+        if (-not $Path) { Set-ItResult -Skipped -Because 'PowerStig''s data has not been fetched'; return }
+
+        Get-UnclassifiedDomainLine -Path $Path | Should-BeNull
+    }
+
+    It 'reports a domain line it cannot classify' {
+        $fixture = Join-Path $TestDrive 'unclassified.xml'
+        Set-Content -Path $fixture -Value @'
+<DISASTIG><UserRightRule><Rule id="V-1"><DuplicateOf /><RawString>Domain Systems Only:
+- Enterprise Admins Group
+On domain-joined systems, deny Schema Admins as well.</RawString></Rule></UserRightRule></DISASTIG>
+'@
+
+        Get-UnclassifiedDomainLine -Path $fixture | Should-Be 'V-1: On domain-joined systems, deny Schema Admins as well.'
+    }
+
+    It 'empties every right <StigFile> says no one may hold off a domain' -ForEach $stigFiles {
+        if (-not $Path) { Set-ItResult -Skipped -Because 'PowerStig''s data has not been fetched'; return }
+
+        $rules = @(Get-UserRightRule -Path $Path | Where-Object { ([string] $_.RawString) -split '\r?\n' -match $pattern.NondomainJoined })
+        if ($rules.Count -eq 0) { Set-ItResult -Skipped -Because "$StigFile has no such right"; return }
+
+        foreach ($rule in $rules) {
+            $block = (Invoke-Generator -Generator 'Build-AnsibleUserRightTask' -Rule $rule -StigName ($StigFile -replace '-[\d.]+$')).Task.block
+
+            $block[0].when | Should-Be "ansible_facts['windows_domain_member']"
+            $block[0].'ansible.windows.win_user_right'.users | Should-BeCollection @('Enterprise Admins', 'Domain Admins')
+            $block[-1].'ansible.windows.win_user_right'.action | Should-Be 'remove'
         }
     }
 }
