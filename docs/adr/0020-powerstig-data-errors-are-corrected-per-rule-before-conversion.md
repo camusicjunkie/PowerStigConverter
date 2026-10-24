@@ -7,8 +7,8 @@ status: accepted
 PowerStig's processed data carries parsing errors: `(RX)` read as an account (V-278139, V-254392),
 a DC-only `Server Operators` entry in a member-server rule (V-278001.c), identities written as
 prose with sentence periods (V-278184), in 2016-MS an org default that is DISA's regex test
-string, beside another rule given the wrong rule's list, in Windows 11 a certificate rule whose
-thumbprint kept its `Thumbprint: ` label (V-253430.b), and a singular `Enterprise Admin Group` and
+string, beside another rule given the wrong rule's list, in Windows 11 a certificate sub-rule
+repeating .a's certificate (V-253430.b), and a singular `Enterprise Admin Group` and
 `Domain Admin Group` in V-253492 and V-220969. That last is not a PowerStig misparse but DISA's
 check-text wording, which a generator now reads (the UserRight split, ADR 0025) and cannot match
 to the rule's `Enterprise Admins`. PowerStig fixes its own errors with a `.log` beside each source

@@ -26,16 +26,9 @@
     }
     'WindowsClient-11-2.6' = @{
         'V-253430.b' = @{
-            Reason = "PowerStig split the raw string 'US DOD CCEB Interoperability Root CA 2,Thumbprint: 9B74...' in the wrong place, leaving the thumbprint's label on the thumbprint and its first digit on the name."
+            Reason = "PowerStig gives V-253430 two sub-rules for the same US DOD CCEB Interoperability Root CA 2 (9B74...); .a already checks it."
             Field = @{
-                Thumbprint = @{
-                    From = 'Thumbprint: 9B74964506C7ED9138070D08D5F8B969866560C8'
-                    To = '9B74964506C7ED9138070D08D5F8B969866560C8'
-                }
-                CertificateName = @{
-                    From = 'US DOD CCEB Interoperability Root CA 2,Thumbprint: 9'
-                    To = 'US DOD CCEB Interoperability Root CA 2'
-                }
+                DuplicateOf = @{ From = ''; To = 'V-253430.a' }
             }
         }
         'V-253492' = @{
@@ -48,16 +41,9 @@
     }
     'WindowsClient-11-2.7' = @{
         'V-253430.b' = @{
-            Reason = "PowerStig split the raw string 'US DOD CCEB Interoperability Root CA 2,Thumbprint: 9B74...' in the wrong place, leaving the thumbprint's label on the thumbprint and its first digit on the name."
+            Reason = "PowerStig gives V-253430 two sub-rules for the same US DOD CCEB Interoperability Root CA 2 (9B74...); .a already checks it."
             Field = @{
-                Thumbprint = @{
-                    From = 'Thumbprint: 9B74964506C7ED9138070D08D5F8B969866560C8'
-                    To = '9B74964506C7ED9138070D08D5F8B969866560C8'
-                }
-                CertificateName = @{
-                    From = 'US DOD CCEB Interoperability Root CA 2,Thumbprint: 9'
-                    To = 'US DOD CCEB Interoperability Root CA 2'
-                }
+                DuplicateOf = @{ From = ''; To = 'V-253430.a' }
             }
         }
         'V-253492' = @{
