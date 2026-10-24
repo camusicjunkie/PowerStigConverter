@@ -51,9 +51,9 @@ Administrator is no exception, because the same STIGs turn on its Admin Approval
 full token. It must not be a Domain or Enterprise Admin, because on a domain member the STIG also
 denies those groups network logon (V-253491, V-278184), alongside `Local account`.
 
-A workgroup host has no such account, so the run ends when the rule applies. To apply the rest of
-the role, switch the rule off with its toggle (`-e stig_client_11_253357_when=false`), and apply it
-by itself last, on purpose.
+On a host that isn't domain-joined the STIG marks the rule not applicable. The role still applies it
+there for now, though, which ends the run, so switch it off with its toggle
+(`-e stig_client_11_253357_when=false`).
 
 ## Installation
 
