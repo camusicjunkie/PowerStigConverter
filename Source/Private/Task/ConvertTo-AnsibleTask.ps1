@@ -5,8 +5,9 @@ function ConvertTo-AnsibleTask {
         differs.
     .DESCRIPTION
         Owns everything every rule type does the same way: the duplicate skip, resolving the
-        organization value, naming, the conditional toggle, grouping sub-rules, attaching the
-        assert and the shape handed on to the exporters.
+        organization value, naming, the conditional toggle, the condition a rule's check text puts
+        on where it applies (docs/adr/0026), grouping sub-rules, attaching the assert and the
+        shape handed on to the exporters.
 
         Build-Ansible<Type>Task supplies only what differs - the ansible module and the fields
         mapped into it. Nothing here branches on rule type; if it ever needs to, the adapter
@@ -103,8 +104,7 @@ function ConvertTo-AnsibleTask {
             # A condition the adapter set is kept, ANDed after the toggle as a when list. A grouped
             # rule carries its toggle on the block instead.
             if (-not $group) {
-                $toggle = Get-AnsibleToggleCondition -TaskId $rule.Id -StigName $StigName
-                $tasks[0]['when'] = if ($tasks[0].Contains('when')) { @($toggle) + @($tasks[0]['when']) } else { $toggle }
+                $tasks[0]['when'] = Get-AnsibleRequirementCondition -TaskId $rule.Id -Rule $rule -StigName $StigName -Existing $tasks[0]['when']
             }
             if ($resolution) { $tasks[0] = Add-AnsibleOrganizationValueAssert -Task $tasks[0] -Resolution $resolution }
 
@@ -166,14 +166,30 @@ function Merge-AnsibleRequirement {
         $candidate = [System.Collections.Generic.List[object]]::new()
         foreach ($member in $members) { $candidate.Add(@($member.GroupDetail)) }
 
+        # Sub-rules share their base rule's check text, so the first speaks for the block.
         $output.Task = [ordered] @{
             'name' = '{0} | {1} | {2}' -f $first.BaseId, $first.Severity, (Get-AnsibleBlockDetail -Candidate $candidate)
             'block' = @(foreach ($member in $members) { $member.Task })
-            'when' = Get-AnsibleToggleCondition -TaskId $first.BaseId -StigName $StigName
+            'when' = Get-AnsibleRequirementCondition -TaskId $first.BaseId -Rule $first.Rule -StigName $StigName
         }
         Write-Verbose "  TaskGroup: $($output.Task.name)"
         $output
     }
+}
+
+<#
+.SYNOPSIS
+    A requirement's when: its toggle, then where its check text says it applies (ADR 0026), then
+    any condition the adapter set, a scalar when only the toggle remains.
+#>
+function Get-AnsibleRequirementCondition {
+    param ([string] $TaskId, $Rule, [string] $StigName, $Existing)
+
+    $when = @(Get-AnsibleToggleCondition -TaskId $TaskId -StigName $StigName) + @(Get-AnsibleApplicabilityCondition -Rule $Rule)
+    # ADR 0025's split may already have conditioned the task on the same fact.
+    $when += @($Existing) | Where-Object { $null -ne $_ -and $when -notcontains $_ }
+
+    if ($when.Count -eq 1) { $when[0] } else { $when }
 }
 
 <#

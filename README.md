@@ -51,9 +51,10 @@ Administrator is no exception, because the same STIGs turn on its Admin Approval
 full token. It must not be a Domain or Enterprise Admin, because on a domain member the STIG also
 denies those groups network logon (V-253491, V-278184), alongside `Local account`.
 
-On a host that isn't domain-joined the STIG marks the rule not applicable. The role still applies it
-there for now, though, which ends the run, so switch it off with its toggle
-(`-e stig_client_11_253357_when=false`).
+On a host that isn't domain-joined the STIG marks the rule not applicable, and the role skips it
+there. The same goes for every rule whose check text
+says it is NA off a domain: its task runs only when `ansible_facts['windows_domain_member']` is true
+(`docs/adr/0026`).
 
 ## Installation
 
