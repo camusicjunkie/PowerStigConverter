@@ -160,6 +160,14 @@ New-AnsiblePlaybook -StigName WindowsServer-2022-MS
 A rule the org settings file has no entry for at all is reported separately, because that usually
 means the file does not match the STIG version in hand rather than that anything needs filling in.
 
+PowerStig's answered defaults assume a domain-joined host, so check them against yours rather than
+accepting them. A rule the STIG fixes itself is already handled: its domain-only identities apply
+only on a domain member (`docs/adr/0025`). An organization value is not, because the role uses
+your answer as given. Server 2025 MS's V-278184, for one, defaults to `Enterprise Admins`,
+`Domain Admins`, `Local account and member of Administrators group` and `Guests`. On a workgroup
+host that fails with *Failed to translate the account 'Enterprise Admins'* and denies no one,
+Guests included, so answer it there without the domain groups.
+
 ### Values the STIG cannot answer
 
 Some values no org settings file feeds at all, because they name things on the target rather than
