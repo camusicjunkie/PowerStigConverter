@@ -459,6 +459,55 @@ Describe 'New-AnsiblePlaybook' {
         }
     }
 
+    # A correction can move a rule out of ManualRule (#227), so the rules are gathered by type only
+    # after it runs. See docs/adr/0020.
+    Context 'a rule a correction hard-codes' {
+
+        BeforeAll {
+            $hardRoot = Join-Path $TestDrive 'hard_source'
+            $processed = Join-Path $hardRoot 'source/StigData/Processed'
+            $null = New-Item -ItemType Directory -Path $processed -Force
+
+            Set-Content -Path (Join-Path $processed 'WindowsServer-2025-MS-9.9.xml') -Value @'
+<?xml version="1.0" encoding="utf-8"?>
+<DISASTIG version="9" stigid="MS_Windows_Server_2025_MS_STIG" title="Windows Server 2025" fullversion="9.9">
+  <ManualRule dscresourcemodule="None">
+    <Rule id="V-910" severity="medium" conversionstatus="pass" title="SRG" dscresource="None">
+      <DuplicateOf />
+      <OrganizationValueRequired>False</OrganizationValueRequired>
+      <RawString>Value NameHardCodedValue</RawString>
+    </Rule>
+  </ManualRule>
+</DISASTIG>
+'@
+            Set-Content -Path (Join-Path $processed 'WindowsServer-2025-MS-9.9.org.default.xml') -Value @'
+<?xml version="1.0" encoding="utf-8"?>
+<OrganizationalSettings fullversion="9.9" />
+'@
+
+            $script:hardCodedRole = InModuleScope -ModuleName PowerStigConverter -Parameters @{
+                Root = $hardRoot; OutputPath = (Join-Path $TestDrive 'hard_coded')
+            } {
+                param ($Root, $OutputPath)
+                $saved = $script:ruleCorrection
+                $script:ruleCorrection = @{ 'WindowsServer-2025-MS-9.9' = @{ 'V-910' = @{ Reason = 'x'; HardCodedRule = @{
+                    From = 'ManualRule'; To = 'RegistryRule'
+                    Field = @{ DscResource = 'Registry'; Ensure = 'Present'; Key = 'HKEY_LOCAL_MACHINE\SOFTWARE\Test'; ValueName = 'HardCodedValue'; ValueType = 'Dword'; ValueData = '1' }
+                } } } }
+                try {
+                    New-AnsiblePlaybook -StigName 'WindowsServer-2025-MS' -Path $Root -OutputPath $OutputPath `
+                        -RoleName 'hard_coded_role' -WarningAction SilentlyContinue 6>$null
+                }
+                finally { $script:ruleCorrection = $saved }
+            }
+        }
+
+        It 'sets the value the correction hard-codes' {
+            Get-Content -Path (Join-Path $hardCodedRole.TaskPath 'cat2.yml') -Raw |
+                Should-BeLikeString '*V-910*win_regedit*HardCodedValue*'
+        }
+    }
+
     # Generating over a part-filled org settings file must not produce a role that quietly sets
     # an empty value, so the unanswered ones are guarded on the host as well. See docs/adr/0003.
     Context 'what -AllowIncompleteOrganizationValue produces' {
