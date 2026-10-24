@@ -282,6 +282,107 @@ Describe 'ConvertTo-AnsibleTask merging a generator''s when' {
     }
 }
 
+# A rule whose check text says it is NA off a domain runs only on a domain member. See docs/adr/0026.
+Describe 'ConvertTo-AnsibleTask conditioning a rule the STIG marks NA off a domain' {
+
+    BeforeAll {
+        $script:member = "ansible_facts['windows_domain_member']"
+
+        function Add-RawString {
+            param ($Rule, $RawString)
+            $Rule | Add-Member -NotePropertyName RawString -NotePropertyValue $RawString -PassThru
+        }
+    }
+
+    It 'ANDs domain membership after the toggle on a standalone task' {
+        $rule = Add-RawString (New-AccountPolicyRule) "Verify the value.`n`nIf the system is not a member of a domain, this is NA."
+
+        $task = @(Convert-Task -Rule $rule -RuleType 'AccountPolicy')[0].Task
+
+        $task.when | Should-BeCollection @((Get-ExpectedToggle -TaskId 'V-100'), $member)
+    }
+
+    # DISA's wording, as each STIG writes it.
+    It 'recognises <Stig>''s wording' -ForEach @(
+        @{ Stig = 'Windows 11 V-253357'; Text = 'If the system is not a member of a domain, this is NA.' }
+        @{ Stig = 'Windows 10 V-220946'; Text = 'If the system is not a member of a domain, this is Not Applicable.' }
+        @{ Stig = 'Windows 11 V-253377'; Text = 'This requirement is applicable to domain-joined systems, for standalone systems this is NA.' }
+        @{ Stig = 'Windows 10 V-220818'; Text = 'This requirement is applicable to domain-joined systems. For standalone or nondomain-joined systems, this is NA.' }
+        @{ Stig = 'Server 2022 MS V-254429'; Text = 'This applies to member servers. For domain controllers and standalone or nondomain-joined systems, this is NA.' }
+        @{ Stig = 'Server 2025 MS V-278179'; Text = 'This applies to member servers. For domain controllers and stand-alone or nondomain-joined systems, this is NA.' }
+        @{ Stig = 'Server 2025 MS V-278190'; Text = 'For domain controllers and stand-alone or nondomain-joined systems, this is not applicable.' }
+    ) {
+        $rule = Add-RawString (New-AccountPolicyRule) "Verify the value.`n`n$Text"
+
+        $task = @(Convert-Task -Rule $rule -RuleType 'AccountPolicy')[0].Task
+
+        $task.when | Should-BeCollection @((Get-ExpectedToggle -TaskId 'V-100'), $member)
+    }
+
+    # Sub-rules carry their base rule's check text, so the condition belongs on the block.
+    It 'ANDs domain membership after the toggle on a block of sub-rules' {
+        $rules = 'V-100.a', 'V-100.b' | ForEach-Object {
+            Add-RawString (New-AccountPolicyRule -Id $_) 'If the system is not a member of a domain, this is NA.'
+        }
+
+        $result = @(Convert-Task -Rule $rules -RuleType 'AccountPolicy')
+
+        $result.Count | Should-Be 1
+        $result[0].Task.when | Should-BeCollection @((Get-ExpectedToggle -TaskId 'V-100'), $member)
+        $result[0].Task.block | ForEach-Object { $_.Contains('when') | Should-BeFalse }
+    }
+
+    It 'ANDs domain membership after the toggle on a rule the adapter builds as a block' {
+        $rule = Add-RawString (New-RootCertificateRule) 'If the system is not a member of a domain, this is NA.'
+
+        $task = @(Convert-Task -Rule $rule -RuleType 'RootCertificate' -OrganizationalSetting (New-RootStore))[0].Task
+
+        $task.when | Should-BeCollection @((Get-ExpectedToggle -TaskId 'V-180'), $member)
+    }
+
+    # The assert wraps the task in a block, which must still skip off a domain.
+    It 'keeps domain membership on the block an organization-value assert wraps' {
+        $rule = Add-RawString (New-AccountPolicyRule -OrganizationValueRequired $true) 'If the system is not a member of a domain, this is NA.'
+
+        $task = @(Convert-Task -Rule $rule -RuleType 'AccountPolicy')[0].Task
+
+        $task.Contains('block') | Should-BeTrue
+        $task.when | Should-BeCollection @((Get-ExpectedToggle -TaskId 'V-100'), $member)
+    }
+
+    # ADR 0025's split conditions a domain-only user right itself; Windows 11's V-253492 is both.
+    It 'does not repeat a domain-membership condition the generator already set' {
+        $rule = [pscustomobject] @{
+            Id = 'V-310'; Severity = 'medium'; DuplicateOf = ''
+            RawString = 'This requirement is applicable to domain-joined systems, for standalone systems this is NA.'
+        }
+        $task = InModuleScope -ModuleName PowerStigConverter -Parameters @{ Rule = $rule; Member = $member } {
+            param ($Rule, $Member)
+
+            function Build-AnsibleMemberProbeTask {
+                param ($Rule, $StigName, $StigId, $Resolution)
+                @{ Task = @{ Detail = 'set it'; Body = [ordered] @{ 'ansible.windows.win_dsc' = @{}; 'when' = $Member } } }
+            }
+
+            @($Rule | ConvertTo-AnsibleTask -RuleType 'MemberProbe' -StigName 'WindowsServer-2022-MS')[0].Task
+        }
+
+        $task.when | Should-BeCollection @((Get-ExpectedToggle -TaskId 'V-310'), $member)
+    }
+
+    It 'leaves a rule for <Case> unconditioned' -ForEach @(
+        @{ Case = 'every system'; Text = 'Verify the value.' }
+        @{ Case = 'domain controllers alone'; Text = 'This applies to domain controllers. It is NA for other systems.' }
+        @{ Case = 'any system but a domain controller'; Text = 'This applies to member servers and standalone or nondomain-joined systems. It is NA for domain controllers.' }
+    ) {
+        $rule = Add-RawString (New-AccountPolicyRule) $Text
+
+        $task = @(Convert-Task -Rule $rule -RuleType 'AccountPolicy')[0].Task
+
+        $task.when | Should-Be (Get-ExpectedToggle -TaskId 'V-100')
+    }
+}
+
 # ADR-0015: a generator offers the candidates its sub-rules might agree on, strongest first, and
 # the block is named from the strongest they all agree on. Driven through a probe adapter rather
 # than through Registry, so what is under test is the naming and not that generator's candidates.

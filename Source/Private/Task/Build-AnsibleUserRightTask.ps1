@@ -75,7 +75,7 @@ function Build-AnsibleUserRightTask {
     # Only a literal list is split; an organization value is a reference. See docs/adr/0025.
     $split = if ($users -is [array]) { Split-AnsibleUserRightIdentity -Rule $Rule -Identity $users -StigName $StigName }
     if ($split -and $split.Domain.Count -gt 0) {
-        $member = "ansible_facts['windows_domain_member']"
+        $member = $script:domainMemberCondition
         if ($split.All.Count -gt 0) {
             $body['ansible.windows.win_user_right']['users'] = '{{{{ {0} + ({1} if {2} else []) }}}}' -f
                 (ConvertTo-AnsibleJinjaList $split.All), (ConvertTo-AnsibleJinjaList $split.Domain), $member
