@@ -5,6 +5,8 @@ BeforeDiscovery {
     $script:stigFiles = @(Get-ChildItem $processed -Filter *.xml -ErrorAction SilentlyContinue |
         Where-Object Name -notlike '*.org.default.xml' |
         ForEach-Object { @{ StigFile = $_.BaseName; Path = $_.FullName } })
+    # Pester refuses an empty -ForEach; one placeholder reports the data as missing instead.
+    if ($stigFiles.Count -eq 0) { $script:stigFiles = @(@{ StigFile = 'the local PowerStig data'; Path = $null }) }
 }
 
 BeforeAll {
@@ -22,6 +24,8 @@ Describe 'Get-AnsibleApplicabilityCondition' {
     # controllers from member servers, which the separate DC and MS STIGs already do. Only
     # checkable where PowerStig's data has been fetched; dispatch's tests cover the wording itself.
     It 'classifies every NA-by-domain line of <StigFile>' -ForEach $stigFiles {
+        if (-not $Path) { Set-ItResult -Skipped -Because 'PowerStig''s data has not been fetched'; return }
+
         [xml] $xml = Get-Content $Path -Raw
         $dcSplit = '(NA|not applicable) for (domain controllers|other systems|member servers)'
 
