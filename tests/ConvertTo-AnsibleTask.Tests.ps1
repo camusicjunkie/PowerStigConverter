@@ -6,8 +6,10 @@ BeforeAll {
     # A single-item result collapses to a scalar crossing the function boundary either way, so
     # every call site below wraps the call itself in @() rather than relying on this to preserve
     # the array shape.
+    # A DC STIG, because outside one an AccountPolicy rule carries a domain-member condition of its
+    # own (#232), and these tests are about what dispatch adds.
     function Convert-Task {
-        param ($Rule, $RuleType, $StigName = 'WindowsServer-2022-MS', $OrganizationalSetting = @{})
+        param ($Rule, $RuleType, $StigName = 'WindowsServer-2022-DC', $OrganizationalSetting = @{})
 
         InModuleScope -ModuleName PowerStigConverter -Parameters @{
             Rule = $Rule; RuleType = $RuleType; StigName = $StigName; OrganizationalSetting = $OrganizationalSetting
@@ -18,7 +20,7 @@ BeforeAll {
     }
 
     function Get-ExpectedToggle {
-        param ($TaskId, $StigName = 'WindowsServer-2022-MS')
+        param ($TaskId, $StigName = 'WindowsServer-2022-DC')
 
         InModuleScope -ModuleName PowerStigConverter -Parameters @{ TaskId = $TaskId; StigName = $StigName } {
             param ($TaskId, $StigName)

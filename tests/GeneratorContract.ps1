@@ -72,7 +72,8 @@ function Add-GeneratorContractTests {
         It 'guards the task with the conditional toggle for the rule' -ForEach $case {
             $item = Invoke-Generator -Generator $Generator -Rule (& $Factory) -StigName $StigName -ExtraParams $ExtraParams
 
-            $item.Task.when | Should-BeLikeString '*_when | bool'
+            # The toggle comes first; an adapter's own condition may follow it in a when list.
+            @($item.Task.when)[0] | Should-BeLikeString '*_when | bool'
         }
 
         # A duplicate is covered by the rule it points at, so it must produce no task at all -

@@ -46,6 +46,23 @@ Describe 'Group-AnsibleBySeverity' {
         }
     }
 
+    # The lockout threshold has to be set before duration and reset exist to be set. See #232.
+    Context 'an item marked First' {
+
+        It 'comes ahead of the rest of its category, which stay in id order' {
+            $grouped = Group-BySeverity -Items @(
+                @{ Id = 'V-1'; Severity = 'medium'; Value = 'duration' }
+                @{ Id = 'V-3'; Severity = 'medium'; Value = 'reset' }
+                @{ Id = 'V-2'; Severity = 'medium'; Value = 'threshold'; First = $true }
+                @{ Id = 'V-0'; Severity = 'high'; Value = 'other' }
+            )
+
+            @($grouped.cat2.Item.Values) | Should-BeCollection @('threshold', 'duration', 'reset')
+            $grouped.cat2.Item['V-2'] | Should-Be 'threshold'
+            @($grouped.cat1.Item.Values) | Should-BeCollection @('other')
+        }
+    }
+
     Context 'an id that appears more than once' {
 
         It 'keeps the first value' {
