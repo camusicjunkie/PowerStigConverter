@@ -48,6 +48,7 @@ rule and writes the threshold twice.
 - A domain member's account policy is the domain's to get right; its role reports `skipping`.
 - On a DC, writing `[System Access]` changes the Default Domain Policy. A rule's `_when` toggle is
   the opt-out for an organization that manages that policy by hand.
-- `[Kerberos Policy]` behaves differently on a DC: a local write does not take. That is #234.
+- `[Kerberos Policy]` behaves differently on a DC: a local write does not take. ADR 0028 sets it
+  in the Default Domain Policy instead.
 
 Decided in [#232](https://github.com/camusicjunkie/PowerStigConverter/issues/232).

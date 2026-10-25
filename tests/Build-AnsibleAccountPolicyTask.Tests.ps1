@@ -130,6 +130,42 @@ Describe 'Build-AnsibleAccountPolicyTask' {
         }
     }
 
+    # A local write of Kerberos policy on a DC does not take, so it goes into the Default Domain
+    # Policy's template. See docs/adr/0028.
+    Context 'Kerberos policy on a domain controller' {
+
+        It 'sets <name> in the Default Domain Policy' -ForEach @(
+            @{ name = 'Maximum lifetime for user ticket'; value = '10'; key = 'MaxTicketAge'; expected = 10 }
+            @{ name = 'Enforce user logon restrictions'; value = 'Enabled'; key = 'TicketValidateClient'; expected = 1 }
+        ) {
+            $rule = New-AccountPolicyRule -PolicyName $name -PolicyValue $value
+            $task = (Invoke-Generator -Generator 'Build-AnsibleAccountPolicyTask' -Rule $rule -StigName 'WindowsServer-2025-DC').Task
+
+            $task.Contains('community.windows.win_security_policy') | Should-BeFalse
+            $powershell = $task.'ansible.windows.win_powershell'
+            $powershell.script | Should-BeLikeString '*31B2F340-016D-11D2-945F-00C04FB984F9*'
+            $powershell.parameters.Section | Should-Be 'Kerberos Policy'
+            $powershell.parameters.Key | Should-Be $key
+            $powershell.parameters.Value | Should-Be $expected
+        }
+
+        It 'passes an organization value through as its variable' {
+            $rule = New-AccountPolicyRule -PolicyName 'Maximum lifetime for user ticket' -PolicyValue '' -OrganizationValueRequired $true
+            $orgSetting = New-ContractOrgSetting '<OrganizationalSetting id="V-100" PolicyValue="10" />'
+
+            $task = (Invoke-Generator -Generator 'Build-AnsibleAccountPolicyTask' -Rule $rule `
+                -StigName 'WindowsServer-2025-DC' -OrganizationalSetting $orgSetting).Task
+
+            $task.'ansible.windows.win_powershell'.parameters.Value | Should-Be '{{ stig_server_2025_100_maximum_lifetime_for_user_ticket }}'
+        }
+
+        It 'leaves [System Access] on a domain controller to secedit' {
+            $task = (Invoke-Generator -Generator 'Build-AnsibleAccountPolicyTask' -Rule (New-AccountPolicyRule) -StigName 'WindowsServer-2025-DC').Task
+
+            $task.'community.windows.win_security_policy'.section | Should-Be 'System Access'
+        }
+    }
+
     # secedit lists LockoutDuration and ResetLockoutCount only while the threshold is above 0.
     Context 'the lockout threshold' {
 

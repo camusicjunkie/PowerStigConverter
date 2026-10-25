@@ -98,6 +98,13 @@
                 Field = @{ DscResource = 'RegistryPolicyFile'; Ensure = 'Present'; Key = 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\policies\Explorer'; ValueName = 'NoDriveTypeAutoRun'; ValueType = 'Dword'; ValueData = '255' }
             }
         }
+        'V-278133' = @{
+            Reason = "PowerStig's 4.30.0 .log forces it to a ManualRule ('::*::.'), giving no reason. DISA checks Enforce user logon restrictions is Enabled in the Default Domain Policy's Kerberos policy, as V-278134-V-278137 beside it check theirs."
+            HardCodedRule = @{
+                From = 'ManualRule'; To = 'AccountPolicyRule'
+                Field = @{ DscResource = 'AccountPolicy'; PolicyName = 'Enforce user logon restrictions'; PolicyValue = 'Enabled' }
+            }
+        }
         'V-278139' = @{
             Reason = "PowerStig read '(RX)' in the check text as an account. It names no principal, and the rule's real entries were not parsed."
             RemoveEntry = @{ Principal = '(RX)' }
