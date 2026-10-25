@@ -382,6 +382,32 @@ Describe 'RuleCorrection.psd1' {
         }
     }
 
+    # PowerStig's 2025 DC .log forces V-278133 to a ManualRule (#234). It and the four Kerberos
+    # lifetimes beside it are set in the Default Domain Policy (docs/adr/0028).
+    It 'sets every Kerberos policy of WindowsServer-2025-DC-1.1 in the Default Domain Policy' {
+        $path = Join-Path $processed 'WindowsServer-2025-DC-1.1.xml'
+        if (-not (Test-Path $path)) { Set-ItResult -Skipped -Because 'WindowsServer-2025-DC-1.1 is not in the local PowerStig data'; return }
+
+        [xml] $xml = Get-Content $path
+        [xml] $org = Get-Content (Join-Path $processed 'WindowsServer-2025-DC-1.1.org.default.xml')
+        $settings = @{}
+        foreach ($node in $org.OrganizationalSettings.OrganizationalSetting) { if ($node) { $settings[$node.id] = $node } }
+
+        $tasks = InModuleScope -ModuleName PowerStigConverter -Parameters @{ Xml = $xml; Settings = $settings } {
+            param ($Xml, $Settings)
+            Repair-PowerStigData -Xml $Xml -OrganizationalSetting $Settings -StigFile 'WindowsServer-2025-DC-1.1' 3>$null
+            $Xml.DISASTIG.AccountPolicyRule.Rule | Where-Object id -in 'V-278133', 'V-278134', 'V-278135', 'V-278136', 'V-278137' |
+                ConvertTo-AnsibleTask -RuleType AccountPolicy -StigName 'WindowsServer-2025-DC' -OrganizationalSetting $Settings
+        }
+
+        @($tasks | ForEach-Object { $_.Rule.id }) | Should-BeEquivalent @('V-278133', 'V-278134', 'V-278135', 'V-278136', 'V-278137')
+        foreach ($task in $tasks) {
+            $task.Task.'ansible.windows.win_powershell'.parameters.Section | Should-Be 'Kerberos Policy'
+        }
+        ($tasks | Where-Object { $_.Rule.id -eq 'V-278133' }).Task.'ansible.windows.win_powershell'.parameters |
+            Should-BeEquivalent ([ordered] @{ Section = 'Kerberos Policy'; Key = 'TicketValidateClient'; Value = 1 })
+    }
+
     # V-253430.b repeats .a's certificate; checking it once is enough.
     It 'gathers each V-253430 certificate of <StigFile> once' -ForEach $clientFiles {
         if (-not $Present) { Set-ItResult -Skipped -Because "$StigFile is not in the local PowerStig data" ; return }

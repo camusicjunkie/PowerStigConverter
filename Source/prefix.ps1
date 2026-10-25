@@ -12,6 +12,8 @@ $script:ruleTypeOsFamily = Import-PowerShellDataFile -Path $PSScriptRoot\Files\R
 $script:accountPolicyData = Import-PowerShellDataFile -Path $PSScriptRoot\Files\AccountPolicyData.psd1
 $script:securityOptionData = Import-PowerShellDataFile -Path $PSScriptRoot\Files\SecurityOptionData.psd1
 $script:ruleCorrection = Import-PowerShellDataFile -Path $PSScriptRoot\Files\RuleCorrection.psd1
+# A DC's Kerberos policy task runs this as its script. See docs/adr/0028.
+$script:defaultDomainPolicyScript = Get-Content -Path $PSScriptRoot\Files\Set-DefaultDomainPolicyValue.ps1 -Raw
 
 # The fact a domain-only condition reads. See docs/adr/0025 and 0026.
 $script:domainMemberCondition = "ansible_facts['windows_domain_member']"
