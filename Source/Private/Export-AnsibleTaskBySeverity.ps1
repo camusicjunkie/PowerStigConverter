@@ -22,6 +22,7 @@ function Export-AnsibleTaskBySeverity {
             Id = $Task.Rule.Id
             Severity = $Task.Rule.Severity
             Value = $Task.Task
+            First = $Task.First
         })
 
         foreach ($variable in @($Task.RoleVariable)) {

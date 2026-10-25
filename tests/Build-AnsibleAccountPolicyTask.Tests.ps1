@@ -4,6 +4,15 @@
 # Add-GeneratorContractTests has to exist before Describe runs.
 . $PSScriptRoot/GeneratorContract.ps1
 
+BeforeDiscovery {
+    $processed = Join-Path $env:LOCALAPPDATA 'PowerStig/source/StigData/Processed'
+    $script:stigFiles = @(Get-ChildItem $processed -Filter 'Windows*.xml' -ErrorAction SilentlyContinue |
+        Where-Object Name -notlike '*.org.default.xml' |
+        ForEach-Object { @{ StigFile = $_.BaseName; Path = $_.FullName } })
+    # Pester refuses an empty -ForEach; one placeholder reports the data as missing instead.
+    if ($stigFiles.Count -eq 0) { $script:stigFiles = @(@{ StigFile = 'the local PowerStig data'; Path = $null }) }
+}
+
 BeforeAll {
     . $PSScriptRoot/Initialize-TestModule.ps1
     # Again at run time, because It bodies execute in a scope that only sees what BeforeAll set
@@ -87,38 +96,80 @@ Describe 'Build-AnsibleAccountPolicyTask' {
         }
     }
 
-    # secedit does not take a domain's lockout policy, so on a domain controller those two rules
-    # set the Default Domain Policy instead (issue #175).
-    Context 'a lockout rule on a domain controller' {
+    # The domain owns account policy on a domain member, so a local write there changes nothing or
+    # is overwritten. See #232.
+    Context 'where the rule runs' {
 
-        It 'sets <name> through the Default Domain Policy' -ForEach @(
-            @{ name = 'Account lockout duration'; parameter = 'LockoutDuration' }
-            @{ name = 'Reset account lockout counter after'; parameter = 'LockoutObservationWindow' }
+        It 'runs off a domain only, after its toggle, outside a domain controller (<StigName>)' -ForEach @(
+            @{ StigName = 'WindowsServer-2025-MS' }
+            @{ StigName = 'WindowsClient-11' }
+        ) {
+            $task = (Invoke-Generator -Generator 'Build-AnsibleAccountPolicyTask' -Rule (New-AccountPolicyRule) -StigName $StigName).Task
+
+            @($task.when)[-1] | Should-Be "not ansible_facts['windows_domain_member']"
+            @($task.when)[0] | Should-BeLikeString '*_when | bool'
+        }
+
+        # On a domain controller secedit's write is the domain's policy, so it runs there.
+        It 'runs on a domain controller whatever its membership' {
+            $task = (Invoke-Generator -Generator 'Build-AnsibleAccountPolicyTask' -Rule (New-AccountPolicyRule) -StigName 'WindowsServer-2025-DC').Task
+
+            ($task | ConvertTo-Json -Depth 6) | Should-NotBeLikeString '*windows_domain_member*'
+        }
+
+        # #175 set these through Set-ADDefaultDomainPasswordPolicy; the threshold-0 gap was the cause.
+        It 'sets <name> on a domain controller with secedit' -ForEach @(
+            @{ name = 'Account lockout duration'; key = 'LockoutDuration' }
+            @{ name = 'Reset account lockout counter after'; key = 'ResetLockoutCount' }
         ) {
             $rule = New-AccountPolicyRule -PolicyName $name -PolicyValue '15'
-            $task = (Invoke-Generator -Generator 'Build-AnsibleAccountPolicyTask' -Rule $rule `
-                -StigName 'WindowsServer-2025-DC').Task
+            $task = (Invoke-Generator -Generator 'Build-AnsibleAccountPolicyTask' -Rule $rule -StigName 'WindowsServer-2025-DC').Task
 
-            $task.Contains('community.windows.win_security_policy') | Should-BeFalse
-            $powershell = $task.'ansible.windows.win_powershell'
-            $powershell.script.Contains("-$parameter") | Should-BeTrue
-            $powershell.parameters.Minutes | Should-Be 15
+            $task.'community.windows.win_security_policy'.key | Should-Be $key
+            $task.'community.windows.win_security_policy'.value | Should-Be 15
+        }
+    }
+
+    # secedit lists LockoutDuration and ResetLockoutCount only while the threshold is above 0.
+    Context 'the lockout threshold' {
+
+        It 'is marked to run ahead of the rest of its severity' {
+            $output = Invoke-Generator -Generator 'Build-AnsibleAccountPolicyTask' `
+                -Rule (New-AccountPolicyRule -PolicyName 'Account lockout threshold' -PolicyValue '3') -StigName 'WindowsServer-2025-MS'
+
+            $output.First | Should-BeTrue
         }
 
-        It 'leaves the other lockout rule to secedit' {
-            $rule = New-AccountPolicyRule -PolicyName 'Account lockout threshold' -PolicyValue '3'
-            $task = (Invoke-Generator -Generator 'Build-AnsibleAccountPolicyTask' -Rule $rule `
-                -StigName 'WindowsServer-2025-DC').Task
+        It 'leaves every other policy unmarked' {
+            $output = Invoke-Generator -Generator 'Build-AnsibleAccountPolicyTask' -Rule (New-AccountPolicyRule) -StigName 'WindowsServer-2025-MS'
 
-            $task.'community.windows.win_security_policy'.key | Should-Be 'LockoutBadCount'
+            $output.First | Should-BeFalse
+        }
+    }
+}
+
+# Every Windows STIG but 2019 lists lockout duration before the threshold. See #232.
+Describe 'Account policy in PowerStig''s data' {
+
+    It 'sets the lockout threshold before duration and reset in <StigFile>' -ForEach $stigFiles {
+        if (-not $Path) { Set-ItResult -Skipped -Because 'PowerStig''s data has not been fetched'; return }
+
+        [xml] $xml = Get-Content $Path -Raw
+        $rules = @($xml.DISASTIG.AccountPolicyRule.Rule | Where-Object { $_ })
+        if (-not ($rules | Where-Object PolicyName -eq 'Account lockout threshold')) {
+            Set-ItResult -Skipped -Because "$StigFile has no lockout threshold"; return
         }
 
-        It 'leaves the same rule on a member server to secedit' {
-            $rule = New-AccountPolicyRule -PolicyName 'Account lockout duration' -PolicyValue '15'
-            $task = (Invoke-Generator -Generator 'Build-AnsibleAccountPolicyTask' -Rule $rule `
-                -StigName 'WindowsServer-2025-MS').Task
+        $yaml = InModuleScope -ModuleName PowerStigConverter -Parameters @{ Rules = $rules; StigName = ($StigFile -replace '-[\d.]+$') } {
+            param ($Rules, $StigName)
+            $files = $Rules | ConvertTo-AnsibleTask -RuleType AccountPolicy -StigName $StigName | Export-AnsibleTaskBySeverity -StigName $StigName
+            ($files.cat1, $files.cat2, $files.cat3 | ForEach-Object { $_ }) -join "`n"
+        }
 
-            $task.'community.windows.win_security_policy'.key | Should-Be 'LockoutDuration'
+        $threshold = $yaml.IndexOf('key: LockoutBadCount')
+        foreach ($key in 'LockoutDuration', 'ResetLockoutCount') {
+            $at = $yaml.IndexOf("key: $key")
+            if ($at -ge 0) { $threshold | Should-BeLessThan $at }
         }
     }
 }

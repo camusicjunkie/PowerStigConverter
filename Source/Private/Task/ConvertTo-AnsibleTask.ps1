@@ -14,7 +14,8 @@ function ConvertTo-AnsibleTask {
         contract is the thing that is wrong.
 
         An adapter may put a when in a standalone task's Body; the toggle is ANDed in front of it
-        as a when list.
+        as a when list. An adapter returning First puts its rule ahead of the rest of its severity
+        file (#232).
     #>
     [CmdletBinding()]
     param (
@@ -115,6 +116,7 @@ function ConvertTo-AnsibleTask {
                 GroupDetail = $built.GroupDetail
                 Task = $tasks
                 Group = $group
+                First = [bool] $built.First
                 # What the rule hands on beside its task, combined across a block.
                 Carried = @{ Handler = $handlers; RoleVariable = $roleVariables; Declaration = $declaration; Incomplete = $incomplete }
             })
@@ -151,7 +153,7 @@ function Merge-AnsibleRequirement {
 
     foreach ($members in $requirements) {
         $first = $members[0]
-        $output = @{ Rule = $first.Rule }
+        $output = @{ Rule = $first.Rule; First = [bool] ($members | Where-Object First) }
         # Flattened by hand: member enumeration over one member hands back its empty array whole.
         foreach ($key in $first.Carried.Keys) {
             $output[$key] = @(foreach ($member in $members) { foreach ($value in $member.Carried[$key]) { $value } })

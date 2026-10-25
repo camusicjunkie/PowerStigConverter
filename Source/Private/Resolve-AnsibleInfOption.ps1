@@ -9,7 +9,8 @@ function Resolve-AnsibleInfOption {
         generator and Resolve-AnsibleOrganizationValue can each ask it instead of keeping their
         own copy.
     .OUTPUTS
-        A single object carrying Section, Key and Value. Value is the entry's Option mapped for
+        A single object carrying Section, Key, Value and First (set ahead of the rest of its
+        severity, #232). Value is the entry's Option mapped for
         whatever -Value was asked for - a Registry Values entry keeps it a string, since '4,1' cast
         to [int] reads the comma as a thousands separator and yields 41; every other section's
         entry is [int]. Value is $null when -Value was not passed, or the entry holds no option
@@ -38,5 +39,6 @@ function Resolve-AnsibleInfOption {
         Section = $entry['Section']
         Key = $entry['Value']
         Value = $mappedValue
+        First = $entry -and $entry['First'] -eq $true
     }
 }

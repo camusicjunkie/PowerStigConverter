@@ -58,9 +58,12 @@
         }
     }
 
+    # First: set ahead of the rest of its severity. secedit lists LockoutDuration and
+    # ResetLockoutCount only while the threshold is above 0, so they cannot be set before it. See #232.
     "Account_lockout_threshold" = @{
         Value   = 'LockoutBadCount'
         Section = 'System Access'
+        First   = $true
         Option  = @{
             String = ''
         }
