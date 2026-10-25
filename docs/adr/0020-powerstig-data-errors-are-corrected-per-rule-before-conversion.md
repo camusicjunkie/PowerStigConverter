@@ -11,9 +11,10 @@ string, beside another rule given the wrong rule's list, in Windows 11 a certifi
 repeating .a's certificate (V-253430.b), and a singular `Enterprise Admin Group` and
 `Domain Admin Group` in V-253492 and V-220969. That last is not a PowerStig misparse but DISA's
 check-text wording, which a generator now reads (the UserRight split, ADR 0025) and cannot match
-to the rule's `Enterprise Admins`. Server 2025's check text drops the colons after its registry
-labels (`Value NameLocalAccountTokenFilterPolicy`), so PowerStig left six registry rules as
-ManualRules (#227). PowerStig fixes its own errors with a `.log` beside each source
+to the rule's `Enterprise Admins`. And PowerStig's 4.30.0 `.log` for Server 2025 replaces six
+registry rules' whole check text with `.` (`V-278178::*::.`), which makes them ManualRules, without
+saying why (#227); DISA's text for them runs its labels into their values
+(`Value NameLocalAccountTokenFilterPolicy`), a likely reason. PowerStig fixes its own errors with a `.log` beside each source
 STIG (`RuleId::old text::new text`); its 2022 logs remove the same `Server Operators` entry, but its 2025 logs were never given those corrections.
 
 These were first fixed with heuristics in the generators: drop any parenthesised principal, drop
@@ -28,7 +29,7 @@ correction expects, or replaces a substring of a rule's `RawString` while it occ
 once. Any field may be named: the expected value, not an allowlist, is what keeps
 a correction from overwriting data PowerStig has since fixed. Each carries the reason.
 
-A rule PowerStig could not parse at all is hard-coded, as PowerStig's own `.log` does with
+A rule PowerStig left without parsed fields is hard-coded, as PowerStig's own `.log` does with
 `HardCodedRule(RegistryRule)@{...}`: a `HardCodedRule` correction moves it from the type it was
 left as to the one named, while it is still of the first, and sets every field the generator reads,
 `DscResource` included. An organization value it needs is added to the org settings only where they
@@ -43,7 +44,7 @@ Fixing PowerStig upstream is not part of this: the correction lives here regardl
   pattern, and the guess applies to rules that never needed it.
 - **Leave it to the organization** — rejected: the value is not the organization's to decide;
   the STIG is clear and PowerStig misread it.
-- **Parse a ManualRule's check text here** — rejected for a rule PowerStig could not parse: it is
+- **Parse a ManualRule's check text here** — rejected for a rule PowerStig left manual: it is
   a heuristic over DISA's prose, and the six rules' values are fixed and already known from 2022.
 
 ## Consequences

@@ -35,7 +35,7 @@ function Repair-PowerStigData {
         $correction = $corrections[$id]
         $stale = '{0} {1}: the correction in RuleCorrection.psd1 no longer matches the data. Check it and update or remove it.' -f $StigFile, $id
 
-        # Moves a rule PowerStig could not parse to the type its .log would have hard-coded, while
+        # Moves a rule PowerStig left manual to the type its .log would have hard-coded, while
         # it is still of the type the correction expects.
         if ($correction.HardCodedRule) {
             $hardCoded = $correction.HardCodedRule

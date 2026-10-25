@@ -353,7 +353,7 @@ Describe 'RuleCorrection.psd1' {
         @($warnings | Where-Object { $_ -is [System.Management.Automation.WarningRecord] }).Message | Should-BeNull
     }
 
-    # DISA's 2025 check text drops the colons after its labels, so PowerStig left these ManualRules (#227).
+    # PowerStig's 2025 .log forces these to ManualRules (#227).
     It 'sets each hard-coded registry value of <StigFile>' -ForEach $server2025Files {
         if (-not $Present) { Set-ItResult -Skipped -Because "$StigFile is not in the local PowerStig data" ; return }
 
