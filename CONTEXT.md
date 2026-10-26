@@ -8,6 +8,23 @@ tasks, variables and toggles an Ansible role is made of.
 
 ### STIG data
 
+**STIG name**:
+PowerStig's name for a STIG without its revision, the name its processed file starts with:
+`WindowsServer-2022-MS`. A product (`WindowsServer`), an optional release (`2022`) and an
+optional variant (`MS`, `DC`, `Instance`, `All`). What `-StigName` takes, matched exactly.
+_Avoid_: STIG id (that is the XML's `stigid`), STIG file
+
+**Revision**:
+The version a processed STIG file ends with (`2.8` in `WindowsServer-2022-MS-2.8.xml`).
+Conversion uses the newest present; corrections are keyed by the file name it completes.
+_Avoid_: version (DISA's V/R numbering), release
+
+**STIG profile**:
+What the converter derives from a STIG's name, revision and `stigid`: its target (OS family and
+major version, domain controller, member server or client, IIS server or site) and its naming
+(variable prefix, role name, OS assertion).
+_Avoid_: target, host, identity (the host is the machine a role runs on)
+
 **STIG rule**:
 One hardening requirement from a DISA STIG, as PowerStig has processed it into XML. Carries an
 id (`V-254343`), a severity, a rule type, and the properties that type needs.

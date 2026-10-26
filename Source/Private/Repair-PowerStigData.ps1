@@ -1,7 +1,8 @@
 function Repair-PowerStigData {
     <#
     .SYNOPSIS
-        Applies RuleCorrection.psd1 to one processed STIG and its org settings, in place.
+        Applies one processed STIG's corrections (its RuleCorrection.psd1 entry) to it and its org
+        settings, in place. Import-PowerStigData is the caller.
     .DESCRIPTION
         Corrects data PowerStig got wrong, rule by rule, before any generator sees it, so a
         generator never has to guess at bad input. Both arguments are this conversion's own
@@ -18,12 +19,16 @@ function Repair-PowerStigData {
         [AllowEmptyCollection()]
         [hashtable] $OrganizationalSetting,
 
-        # The processed file's base name, revision included: WindowsServer-2025-MS-1.1.
+        # The processed file's base name, revision included: WindowsServer-2025-MS-1.1. Names the
+        # file in a stale correction's warning.
         [Parameter(Mandatory)]
-        [string] $StigFile
+        [string] $StigFile,
+
+        # This file's corrections, keyed by rule id: RuleCorrection.psd1's entry for $StigFile.
+        [hashtable] $Correction
     )
 
-    $corrections = $script:ruleCorrection[$StigFile]
+    $corrections = $Correction
     if (-not $corrections) { return }
 
     $rules = @{}

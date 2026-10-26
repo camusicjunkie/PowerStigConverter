@@ -41,7 +41,7 @@ Import-Module -Name $built.FullName -Force
 
 <#
 .SYNOPSIS
-    Builds an org settings map the way Get-PowerStigOrgSetting does, from inline xml.
+    Builds an org settings map the way Import-PowerStigData does, from inline xml.
 .DESCRIPTION
     Lets a test state the exact OrganizationalSetting it is about - answered, blank, or absent
     entirely - without adding a fixture STIG for every shape.

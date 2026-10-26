@@ -23,32 +23,13 @@ function New-AnsiblePlaybook {
         $RoleName = Get-AnsibleRoleName -StigName $StigName
     }
 
-    $stigFile = Get-PowerStigFile -Type Name -Path $Path | Where-Object BaseName -like $StigName*
-    [xml] $xml = Get-Content $stigFile
-
-    $stigId = $xml.DISASTIG.stigid
-
-    # Read the org settings once and hand the same map to the check, the generators and the
-    # exporter. It used to be re-read and re-parsed once per rule from two places, which left
-    # nowhere to judge the inputs complete before writing anything.
-    $organizationalSetting = Get-PowerStigOrgSetting -StigName $StigName -Path $Path
-
-    # PowerStig's own data errors are corrected per rule before any generator sees them, so a
-    # generator never has to guess at bad input. Before the rules are gathered by type, since a
-    # correction can change a rule's type. See docs/adr/0020.
-    Repair-PowerStigData -Xml $xml -OrganizationalSetting $organizationalSetting -StigFile $stigFile.BaseName
-
-    $ruleNames = $xml.DISASTIG.psobject.Properties.Name -like '*Rule'
-    $rules = $ruleNames.Where({ $_ -notmatch 'Document|Manual' }).Foreach({
-        [pscustomobject] @{
-            PowerStigRule = $_
-            StigRule = $xml.DISASTIG.$_.Rule
-        }
-    })
+    # The STIG's rules, already corrected and grouped by type, and its org settings, read once
+    # and handed to the check, the generators and the exporter alike. See docs/adr/0002 and 0020.
+    $stig = Import-PowerStigData -StigName $StigName -Path $Path
 
     # Convert first and feed the gate and every exporter from the same tasks, so only a rule that
     # produced a task can refuse or declare anything. Converting writes nothing. See docs/adr/0016.
-    $tasks = @($rules | ConvertTo-AnsiblePlaybook -StigName $StigName -StigId $stigId -OrganizationalSetting $organizationalSetting)
+    $tasks = @($stig.Rules | ConvertTo-AnsiblePlaybook -StigName $StigName -StigId $stig.StigId -OrganizationalSetting $stig.OrganizationalSetting)
 
     # A value DISA leaves to the adopting organization is an outstanding decision, not a data
     # error. Refuse to write a role that would silently set an empty value, and do it before

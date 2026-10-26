@@ -62,15 +62,36 @@ Domain Admin Group</RawString>
             Correction = $Correction; Xml = $Xml; Setting = $Setting; StigFile = $StigFile
         } {
             param ($Correction, $Xml, $Setting, $StigFile)
-            $saved = $script:ruleCorrection
-            try {
-                $script:ruleCorrection = @{ $StigFile = $Correction }
-                Repair-PowerStigData -Xml $Xml -OrganizationalSetting $Setting -StigFile 'Test-1.0' 3>&1
-            }
-            finally { $script:ruleCorrection = $saved }
+            Repair-PowerStigData -Xml $Xml -OrganizationalSetting $Setting -StigFile $StigFile -Correction $Correction 3>&1
         }
 
         @{ Xml = $Xml; Setting = $Setting; Warning = @($warnings | Where-Object { $_ -is [System.Management.Automation.WarningRecord] }) }
+    }
+
+    # One processed file of PowerStig's fetched data, loaded and corrected as a conversion loads
+    # it, with the warnings its corrections raised.
+    function Import-FetchedStig {
+        param ([string] $StigFile)
+
+        $output = InModuleScope -ModuleName PowerStigConverter -Parameters @{ StigFile = $StigFile } {
+            param ($StigFile)
+            Import-PowerStigData -StigName ($StigFile -replace '-[\d.]+$') -Revision ($StigFile -replace '^.+-([\d.]+)$', '$1') 3>&1
+        }
+        @{
+            Stig = $output | Where-Object { $_ -isnot [System.Management.Automation.WarningRecord] }
+            Warning = @($output | Where-Object { $_ -is [System.Management.Automation.WarningRecord] })
+        }
+    }
+
+    # Converts the loaded STIG's rules of one type that carry one of the ids given.
+    function Convert-FetchedRule {
+        param ($Stig, [string] $RuleType, [string[]] $Id, $OrganizationalSetting = $Stig.OrganizationalSetting)
+
+        InModuleScope -ModuleName PowerStigConverter -Parameters @{ Stig = $Stig; RuleType = $RuleType; Id = $Id; Setting = $OrganizationalSetting } {
+            param ($Stig, $RuleType, $Id, $Setting)
+            ($Stig.Rules | Where-Object PowerStigRule -eq "${RuleType}Rule").StigRule | Where-Object { $_.id -in $Id } |
+                ConvertTo-AnsibleTask -RuleType $RuleType -StigName $Stig.StigName -OrganizationalSetting $Setting
+        }
     }
 }
 
@@ -340,34 +361,15 @@ Describe 'RuleCorrection.psd1' {
     It 'still matches the data of <StigFile>' -ForEach $stigFiles -Skip:(-not ($stigFiles | Where-Object Present)) {
         if (-not $Present) { Set-ItResult -Skipped -Because "$StigFile is not in the local PowerStig data" ; return }
 
-        [xml] $xml = Get-Content (Join-Path $processed "$StigFile.xml")
-        [xml] $org = Get-Content (Join-Path $processed "$StigFile.org.default.xml")
-        $settings = @{}
-        foreach ($node in $org.OrganizationalSettings.OrganizationalSetting) { if ($node) { $settings[$node.id] = $node } }
-
-        $warnings = InModuleScope -ModuleName PowerStigConverter -Parameters @{ Xml = $xml; Settings = $settings; StigFile = $StigFile } {
-            param ($Xml, $Settings, $StigFile)
-            Repair-PowerStigData -Xml $Xml -OrganizationalSetting $Settings -StigFile $StigFile 3>&1
-        }
-
-        @($warnings | Where-Object { $_ -is [System.Management.Automation.WarningRecord] }).Message | Should-BeNull
+        (Import-FetchedStig -StigFile $StigFile).Warning.Message | Should-BeNull
     }
 
     # PowerStig's 2025 .log forces these to ManualRules (#227).
     It 'sets each hard-coded registry value of <StigFile>' -ForEach $server2025Files {
         if (-not $Present) { Set-ItResult -Skipped -Because "$StigFile is not in the local PowerStig data" ; return }
 
-        [xml] $xml = Get-Content (Join-Path $processed "$StigFile.xml")
-        [xml] $org = Get-Content (Join-Path $processed "$StigFile.org.default.xml")
-        $settings = @{}
-        foreach ($node in $org.OrganizationalSettings.OrganizationalSetting) { if ($node) { $settings[$node.id] = $node } }
-
-        $tasks = InModuleScope -ModuleName PowerStigConverter -Parameters @{ Xml = $xml; Settings = $settings; StigFile = $StigFile; Ids = $Ids } {
-            param ($Xml, $Settings, $StigFile, $Ids)
-            Repair-PowerStigData -Xml $Xml -OrganizationalSetting $Settings -StigFile $StigFile 3>$null
-            $Xml.DISASTIG.RegistryRule.Rule | Where-Object id -in $Ids |
-                ConvertTo-AnsibleTask -RuleType Registry -StigName ($StigFile -replace '-[\d.]+$') -OrganizationalSetting $Settings
-        }
+        $stig = (Import-FetchedStig -StigFile $StigFile).Stig
+        $tasks = Convert-FetchedRule -Stig $stig -RuleType Registry -Id $Ids
 
         @($tasks | ForEach-Object { $_.Rule.id }) | Should-BeEquivalent $Ids
         foreach ($task in $tasks) {
@@ -385,20 +387,10 @@ Describe 'RuleCorrection.psd1' {
     # PowerStig's 2025 DC .log forces V-278133 to a ManualRule (#234). It and the four Kerberos
     # lifetimes beside it are set in the Default Domain Policy (docs/adr/0028).
     It 'sets every Kerberos policy of WindowsServer-2025-DC-1.1 in the Default Domain Policy' {
-        $path = Join-Path $processed 'WindowsServer-2025-DC-1.1.xml'
-        if (-not (Test-Path $path)) { Set-ItResult -Skipped -Because 'WindowsServer-2025-DC-1.1 is not in the local PowerStig data'; return }
+        if (-not (Test-Path (Join-Path $processed 'WindowsServer-2025-DC-1.1.xml'))) { Set-ItResult -Skipped -Because 'WindowsServer-2025-DC-1.1 is not in the local PowerStig data'; return }
 
-        [xml] $xml = Get-Content $path
-        [xml] $org = Get-Content (Join-Path $processed 'WindowsServer-2025-DC-1.1.org.default.xml')
-        $settings = @{}
-        foreach ($node in $org.OrganizationalSettings.OrganizationalSetting) { if ($node) { $settings[$node.id] = $node } }
-
-        $tasks = InModuleScope -ModuleName PowerStigConverter -Parameters @{ Xml = $xml; Settings = $settings } {
-            param ($Xml, $Settings)
-            Repair-PowerStigData -Xml $Xml -OrganizationalSetting $Settings -StigFile 'WindowsServer-2025-DC-1.1' 3>$null
-            $Xml.DISASTIG.AccountPolicyRule.Rule | Where-Object id -in 'V-278133', 'V-278134', 'V-278135', 'V-278136', 'V-278137' |
-                ConvertTo-AnsibleTask -RuleType AccountPolicy -StigName 'WindowsServer-2025-DC' -OrganizationalSetting $Settings
-        }
+        $stig = (Import-FetchedStig -StigFile 'WindowsServer-2025-DC-1.1').Stig
+        $tasks = Convert-FetchedRule -Stig $stig -RuleType AccountPolicy -Id V-278133, V-278134, V-278135, V-278136, V-278137
 
         @($tasks | ForEach-Object { $_.Rule.id }) | Should-BeEquivalent @('V-278133', 'V-278134', 'V-278135', 'V-278136', 'V-278137')
         foreach ($task in $tasks) {
@@ -412,22 +404,16 @@ Describe 'RuleCorrection.psd1' {
     It 'gathers each V-253430 certificate of <StigFile> once' -ForEach $clientFiles {
         if (-not $Present) { Set-ItResult -Skipped -Because "$StigFile is not in the local PowerStig data" ; return }
 
-        [xml] $xml = Get-Content (Join-Path $processed "$StigFile.xml")
         $store = New-ContractOrgSetting (-join @(
             foreach ($id in 'V-253430.a', 'V-253430.b', 'V-253430.c') {
                 '<OrganizationalSetting id="{0}" Location="Cert:\LocalMachine\Disallowed" />' -f $id
             }
         ))
 
-        $task = InModuleScope -ModuleName PowerStigConverter -Parameters @{ Xml = $xml; Store = $store; StigFile = $StigFile } {
-            param ($Xml, $Store, $StigFile)
-            Repair-PowerStigData -Xml $Xml -OrganizationalSetting @{} -StigFile $StigFile 3>$null
-            $rules = $Xml.DISASTIG.RootCertificateRule.Rule | Where-Object id -like 'V-253430.*'
-            @{
-                All = $rules | ConvertTo-AnsibleTask -RuleType RootCertificate -StigName 'WindowsClient-11' -OrganizationalSetting $Store
-                B = $rules | Where-Object id -eq 'V-253430.b' |
-                    ConvertTo-AnsibleTask -RuleType RootCertificate -StigName 'WindowsClient-11' -OrganizationalSetting $Store
-            }
+        $stig = (Import-FetchedStig -StigFile $StigFile).Stig
+        $task = @{
+            All = Convert-FetchedRule -Stig $stig -RuleType RootCertificate -Id V-253430.a, V-253430.b, V-253430.c -OrganizationalSetting $store
+            B = Convert-FetchedRule -Stig $stig -RuleType RootCertificate -Id V-253430.b -OrganizationalSetting $store
         }
         $thumbprints = @($task.All.Task.block | Where-Object { $_.Contains('ansible.windows.win_certificate_info') }) |
             ForEach-Object { $_.'ansible.windows.win_certificate_info'.thumbprint }

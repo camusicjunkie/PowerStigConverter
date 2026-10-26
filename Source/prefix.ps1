@@ -1,8 +1,9 @@
 Register-ArgumentCompleter -CommandName New-AnsiblePlaybook -ParameterName StigName -ScriptBlock {
     param( $commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters )
 
-    $stigFiles = (Get-PowerStigFile -Type Name).BaseName
-    $stigFiles | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
+    # STIG names, without the revision: -StigName is matched exactly against them. See #237.
+    $stigNames = (Get-PowerStigFile -Type Name).BaseName -replace '-[\d.]+$' | Sort-Object -Unique
+    $stigNames | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
         [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
     }
 }

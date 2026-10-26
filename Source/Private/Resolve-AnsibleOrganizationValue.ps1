@@ -30,7 +30,7 @@ function Resolve-AnsibleOrganizationValue {
 
         [string] $StigName,
 
-        # The org settings loaded once by Get-PowerStigOrgSetting, keyed by rule id.
+        # The org settings Import-PowerStigData loaded, keyed by rule id.
         [hashtable] $OrganizationalSetting = @{}
     )
 
