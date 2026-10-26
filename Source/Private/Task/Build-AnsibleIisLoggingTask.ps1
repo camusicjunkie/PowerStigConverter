@@ -3,13 +3,13 @@ function Build-AnsibleIisLoggingTask {
     .SYNOPSIS
         IIS logging, through win_dsc - there is no ansible module covering it.
     #>
-    param ($Rule, $StigName, $StigId, $Resolution)
+    param ($Rule, $StigProfile, $Resolution)
 
     $logging = $Resolution.Value
 
     # No org settings attribute feeds the log path, so it is a role variable the site fills in
     # rather than an organization value. See docs/adr/0004.
-    $logPath = Get-AnsibleRuleVariable -Name 'logpath' -TaskId $Rule.Id -StigName $StigName
+    $logPath = Get-AnsibleRuleVariable -Name 'logpath' -TaskId $Rule.Id -StigProfile $StigProfile
 
     $dsc = [ordered] @{
         'resource_name' = 'IISLogging'

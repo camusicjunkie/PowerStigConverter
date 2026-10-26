@@ -11,9 +11,9 @@ function Build-AnsibleWebAppPoolTask {
         The STIG asks for each application pool, not one, so the pool comes from a role-scoped
         list the site fills in rather than a per-rule variable.
     #>
-    param ($Rule, $StigName, $StigId, $Resolution)
+    param ($Rule, $StigProfile, $Resolution)
 
-    $pools = Get-AnsibleRoleVariable -Name 'webapppools' -StigName $StigName
+    $pools = Get-AnsibleRoleVariable -Name 'webapppools' -StigProfile $StigProfile
 
     # PowerStig writes a rule's own Value as PowerShell source for the resource block it builds as
     # a string, so a boolean arrives as the literal $true and rapidFailProtection is a [Boolean]

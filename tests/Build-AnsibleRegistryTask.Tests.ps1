@@ -183,7 +183,7 @@ Describe 'Build-AnsibleRegistryTask' {
                         Key = 'HKLM\Software\Policies\Alpha'; ValueName = 'Two'
                         ValueType = 'DWORD'; ValueData = '2'; OrganizationValueRequired = $false
                     }
-                ) | ConvertTo-AnsibleTask -RuleType 'Registry' -StigName 'WindowsServer-2022-MS'
+                ) | ConvertTo-AnsibleTask -RuleType 'Registry' -StigProfile (Get-PowerStigProfile -StigName 'WindowsServer-2022-MS')
             }
         }
 
@@ -223,7 +223,7 @@ Describe 'Build-AnsibleRegistryTask' {
                             Key = $h.Key; ValueName = $h.ValueName
                             ValueType = 'DWORD'; ValueData = '1'; OrganizationValueRequired = $false
                         }
-                    }) | ConvertTo-AnsibleTask -RuleType 'Registry' -StigName 'WindowsFirewall-All'
+                    }) | ConvertTo-AnsibleTask -RuleType 'Registry' -StigProfile (Get-PowerStigProfile -StigName 'WindowsFirewall-All')
                 }
             }
         }

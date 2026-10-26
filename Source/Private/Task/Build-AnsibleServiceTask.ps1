@@ -4,12 +4,12 @@ function Build-AnsibleServiceTask {
         Sets a service's startup type and state with win_service, after checking it is installed.
         See docs/adr/0022.
     #>
-    param ($Rule, $StigName, $StigId, $Resolution)
+    param ($Rule, $StigProfile, $Resolution)
 
     $service = $Resolution.Value
 
     # Named for the rule, because the service name may be a variable reference by now.
-    $registerName = Get-AnsibleRegisterName -TaskId $Rule.Id -StigName $StigName -Suffix 'service_info'
+    $registerName = Get-AnsibleRegisterName -TaskId $Rule.Id -StigProfile $StigProfile -Suffix 'service_info'
 
     # ServiceState is the STIG's own fixed answer, never left for the organization to decide -
     # unlike ServiceName/StartupType it carries no Required entry in OrganizationData.psd1, so it

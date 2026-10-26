@@ -3,7 +3,7 @@ function Build-AnsibleRootCertificateTask {
     .SYNOPSIS
         Gather a certificate by thumbprint and assert it is in the store the organization named.
     #>
-    param ($Rule, $StigName, $StigId, $Resolution)
+    param ($Rule, $StigProfile, $Resolution)
 
     $store = $Resolution.Value
     $baseId = Get-PowerStigBaseRuleId -Id $Rule.Id
@@ -15,7 +15,7 @@ function Build-AnsibleRootCertificateTask {
         $Rule.CertificateName
     }
 
-    $registerName = Get-AnsibleRegisterName -TaskId $baseId -StigName $StigName -Suffix 'certificate_info'
+    $registerName = Get-AnsibleRegisterName -TaskId $baseId -StigProfile $StigProfile -Suffix 'certificate_info'
 
     @{
         # Always a block: sub-rules of one requirement name several certificates.

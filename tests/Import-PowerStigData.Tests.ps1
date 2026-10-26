@@ -94,19 +94,19 @@ Describe 'Import-PowerStigData' {
         }
 
         It 'reads the org settings file of the same revision' {
-            $root = New-StigData -Name 'Pair-2.0' -Xml '<DISASTIG stigid="P" />' `
+            $root = New-StigData -Name 'Office-Pair-2.0' -Xml '<DISASTIG stigid="P" />' `
                 -Org '<OrganizationalSettings><OrganizationalSetting id="V-1" PolicyValue="2" /></OrganizationalSettings>'
             $processed = Join-Path $root 'source/StigData/Processed'
-            Set-Content -Path (Join-Path $processed 'Pair-1.0.xml') -Value '<DISASTIG stigid="P" />'
-            Set-Content -Path (Join-Path $processed 'Pair-1.0.org.default.xml') -Value '<OrganizationalSettings><OrganizationalSetting id="V-1" PolicyValue="1" /></OrganizationalSettings>'
+            Set-Content -Path (Join-Path $processed 'Office-Pair-1.0.xml') -Value '<DISASTIG stigid="P" />'
+            Set-Content -Path (Join-Path $processed 'Office-Pair-1.0.org.default.xml') -Value '<OrganizationalSettings><OrganizationalSetting id="V-1" PolicyValue="1" /></OrganizationalSettings>'
 
-            (Import-Stig -StigName 'Pair' -Path $root).OrganizationalSetting['V-1'].PolicyValue | Should-Be '2'
-            (Import-Stig -StigName 'Pair' -Path $root -Revision '1.0').OrganizationalSetting['V-1'].PolicyValue | Should-Be '1'
+            (Import-Stig -StigName 'Office-Pair' -Path $root).OrganizationalSetting['V-1'].PolicyValue | Should-Be '2'
+            (Import-Stig -StigName 'Office-Pair' -Path $root -Revision '1.0').OrganizationalSetting['V-1'].PolicyValue | Should-Be '1'
         }
 
         It 'returns an empty map for a file with no settings' {
-            $root = New-StigData -Name 'Empty-1.0' -Xml '<DISASTIG stigid="E" />' -Org '<OrganizationalSettings />'
-            $settings = (Import-Stig -StigName 'Empty' -Path $root).OrganizationalSetting
+            $root = New-StigData -Name 'Office-Empty-1.0' -Xml '<DISASTIG stigid="E" />' -Org '<OrganizationalSettings />'
+            $settings = (Import-Stig -StigName 'Office-Empty' -Path $root).OrganizationalSetting
 
             $settings -is [hashtable] | Should-BeTrue
             $settings.Count | Should-Be 0
@@ -114,12 +114,12 @@ Describe 'Import-PowerStigData' {
 
         # The same failure style as the completeness check this feeds. See docs/adr/0002.
         It 'refuses a STIG with no org settings file, with an error id a caller can trap on' {
-            $root = New-StigData -Name 'NoOrg-1.0' -Xml '<DISASTIG stigid="N" />'
-            $refusal = try { Import-Stig -StigName 'NoOrg' -Path $root } catch { $_ }
+            $root = New-StigData -Name 'Office-NoOrg-1.0' -Xml '<DISASTIG stigid="N" />'
+            $refusal = try { Import-Stig -StigName 'Office-NoOrg' -Path $root } catch { $_ }
 
             $refusal.FullyQualifiedErrorId | Should-BeLikeString 'OrgSettingsFileNotFound*'
-            $refusal.TargetObject | Should-Be 'NoOrg'
-            $refusal.Exception.Message | Should-BeLikeString '*NoOrg-1.0*'
+            $refusal.TargetObject | Should-Be 'Office-NoOrg'
+            $refusal.Exception.Message | Should-BeLikeString '*Office-NoOrg-1.0*'
         }
     }
 
@@ -128,7 +128,7 @@ Describe 'Import-PowerStigData' {
     Context 'corrections' {
 
         BeforeAll {
-            $script:manualRoot = New-StigData -Name 'Hard-1.0' -Xml @'
+            $script:manualRoot = New-StigData -Name 'Office-Hard-1.0' -Xml @'
 <DISASTIG stigid="H">
   <ManualRule>
     <Rule id="V-4" severity="medium" dscresource="None"><DuplicateOf /><RawString>Value NameX</RawString></Rule>
@@ -137,34 +137,34 @@ Describe 'Import-PowerStigData' {
 </DISASTIG>
 '@ -Org '<OrganizationalSettings />'
 
-            $script:hardCoded = @{ 'Hard-1.0' = @{ 'V-4' = @{ Reason = 'x'; HardCodedRule = @{
+            $script:hardCoded = @{ 'Office-Hard-1.0' = @{ 'V-4' = @{ Reason = 'x'; HardCodedRule = @{
                 From = 'ManualRule'; To = 'RegistryRule'
                 Field = @{ DscResource = 'Registry'; Ensure = 'Present'; Key = 'HKEY_LOCAL_MACHINE\SOFTWARE\Test'; ValueName = 'X'; ValueType = 'Dword'; ValueData = '1' }
             } } } }
         }
 
         It 'gathers a rule a correction hard-codes under its new type, and drops the Manual rules' {
-            $stig = Import-Stig -StigName 'Hard' -Path $manualRoot -Correction $hardCoded
+            $stig = Import-Stig -StigName 'Office-Hard' -Path $manualRoot -Correction $hardCoded
 
             @($stig.Rules.PowerStigRule) | Should-BeCollection @('RegistryRule')
             $stig.Rules[0].StigRule.id | Should-Be 'V-4'
         }
 
         It 'applies only the corrections of the file it loaded' {
-            $stig = Import-Stig -StigName 'Hard' -Path $manualRoot -Correction @{ 'Hard-2.0' = $hardCoded['Hard-1.0'] }
+            $stig = Import-Stig -StigName 'Office-Hard' -Path $manualRoot -Correction @{ 'Office-Hard-2.0' = $hardCoded['Office-Hard-1.0'] }
 
             @($stig.Rules).Count | Should-Be 0
         }
 
         It 'passes on the warning for a correction the data has outgrown' {
-            $stale = @{ 'Hard-1.0' = @{ 'V-9' = $hardCoded['Hard-1.0']['V-4'] } }
+            $stale = @{ 'Office-Hard-1.0' = @{ 'V-9' = $hardCoded['Office-Hard-1.0']['V-4'] } }
             $warnings = @(InModuleScope -ModuleName PowerStigConverter -Parameters @{ Root = $manualRoot; Correction = $stale } {
                 param ($Root, $Correction)
-                Import-PowerStigData -StigName 'Hard' -Path $Root -Correction $Correction 3>&1
+                Import-PowerStigData -StigName 'Office-Hard' -Path $Root -Correction $Correction 3>&1
             } | Where-Object { $_ -is [System.Management.Automation.WarningRecord] })
 
             @($warnings).Count | Should-Be 1
-            $warnings[0].Message | Should-BeLikeString '*Hard-1.0 V-9*'
+            $warnings[0].Message | Should-BeLikeString '*Office-Hard-1.0 V-9*'
         }
     }
 }

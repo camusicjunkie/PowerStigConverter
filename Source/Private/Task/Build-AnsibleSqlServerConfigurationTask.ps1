@@ -14,9 +14,9 @@ function Build-AnsibleSqlServerConfigurationTask {
         credentials and RestartTimeout are left off, the resource's own defaults being about the
         target rather than anything the rule says. See #66.
     #>
-    param ($Rule, $StigName, $StigId, $Resolution)
+    param ($Rule, $StigProfile, $Resolution)
 
-    $instances = Get-AnsibleRoleVariable -Name 'instances' -StigName $StigName
+    $instances = Get-AnsibleRoleVariable -Name 'instances' -StigProfile $StigProfile
 
     # PowerStig hands the value over as a string and powershell-yaml quotes that, so a
     # pass-through would emit OptionValue: "0". No fallback: the property is Required/SInt32, so a

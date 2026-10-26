@@ -14,7 +14,7 @@ BeforeAll {
 
         InModuleScope -ModuleName PowerStigConverter -Parameters @{ Items = $Items; StigName = $StigName } {
             param ($Items, $StigName)
-            $Items | Export-AnsibleConditionalValue -StigName $StigName
+            $Items | Export-AnsibleConditionalValue -StigProfile (Get-PowerStigProfile -StigName $StigName)
         }
     }
 }

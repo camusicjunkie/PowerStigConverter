@@ -12,11 +12,11 @@ function Build-AnsibleSqlLoginTask {
         passes it and the rule is about enforcing the password policy on logins that already exist,
         not creating or removing them. See #63.
     #>
-    param ($Rule, $StigName, $StigId, $Resolution)
+    param ($Rule, $StigProfile, $Resolution)
 
     # product() takes bare variable names, not {{ }} references, so neither list can come through
     # the reference the generators otherwise interpolate.
-    $instances = Get-AnsibleRoleVariable -Name 'instances' -StigName $StigName
+    $instances = Get-AnsibleRoleVariable -Name 'instances' -StigProfile $StigProfile
     $logins = $Resolution.Variable.Name
 
     @{

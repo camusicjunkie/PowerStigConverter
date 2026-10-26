@@ -9,7 +9,8 @@ function Export-AnsibleTaskBySeverity {
         [Parameter(Mandatory, ValueFromPipeline)]
         [object] $Task,
 
-        [string] $StigName
+        [Parameter(Mandatory)]
+        $StigProfile
     )
 
     begin {
@@ -35,7 +36,7 @@ function Export-AnsibleTaskBySeverity {
         $files = [ordered] @{}
         foreach ($category in (Group-AnsibleBySeverity -InputObject $items.ToArray()).GetEnumerator()) {
             $files[$category.Key] = Format-AnsibleSeverityFile -Task $category.Value.Item.Values `
-                -Severity $category.Value.Severity -Assert $asserts -StigName $StigName
+                -Severity $category.Value.Severity -Assert $asserts -StigProfile $StigProfile
         }
         $files
     }
@@ -56,7 +57,7 @@ function Export-AnsibleTaskBySeverity {
     the whole role rather than skipping the category. See #118.
 #>
 function Format-AnsibleSeverityFile {
-    param ($Task, [string[]] $Assert, [string] $Severity, [string] $StigName)
+    param ($Task, [string[]] $Assert, [string] $Severity, $StigProfile)
 
     $tasks = @($Task | ForEach-Object { ConvertTo-Yaml $_ -KeepArray })
 
@@ -64,7 +65,7 @@ function Format-AnsibleSeverityFile {
         # A valid, empty task list rather than an empty file, for the same reason
         # Export-AnsibleHandler writes one: yaml reads this as no tasks, where nothing at all is a
         # parse the import cannot be relied on to survive.
-        return @((Get-AnsibleEmptySeverityReason -StigName $StigName -Severity $Severity), '[]')
+        return @((Get-AnsibleEmptySeverityReason -StigProfile $StigProfile -Severity $Severity), '[]')
     }
 
     @($Assert) + $tasks

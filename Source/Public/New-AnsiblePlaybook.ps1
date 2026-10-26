@@ -19,17 +19,16 @@ function New-AnsiblePlaybook {
         [switch] $AllowIncompleteOrganizationValue
     )
 
-    if ([string]::IsNullOrWhiteSpace($RoleName)) {
-        $RoleName = Get-AnsibleRoleName -StigName $StigName
-    }
-
     # The STIG's rules, already corrected and grouped by type, and its org settings, read once
     # and handed to the check, the generators and the exporter alike. See docs/adr/0002 and 0020.
     $stig = Import-PowerStigData -StigName $StigName -Path $Path
+    $stigProfile = $stig.Profile
+
+    if ([string]::IsNullOrWhiteSpace($RoleName)) { $RoleName = $stigProfile.RoleName }
 
     # Convert first and feed the gate and every exporter from the same tasks, so only a rule that
     # produced a task can refuse or declare anything. Converting writes nothing. See docs/adr/0016.
-    $tasks = @($stig.Rules | ConvertTo-AnsiblePlaybook -StigName $StigName -StigId $stig.StigId -OrganizationalSetting $stig.OrganizationalSetting)
+    $tasks = @($stig.Rules | ConvertTo-AnsiblePlaybook -StigProfile $stigProfile -OrganizationalSetting $stig.OrganizationalSetting)
 
     # A value DISA leaves to the adopting organization is an outstanding decision, not a data
     # error. Refuse to write a role that would silently set an empty value, and do it before
@@ -53,13 +52,13 @@ function New-AnsiblePlaybook {
     }
 
     $resolvedOutputPath = Resolve-AnsibleOutputPath -Path $OutputPath
-    $role = New-AnsibleRoleScaffold -Path $resolvedOutputPath -RoleName $RoleName -StigName $StigName
+    $role = New-AnsibleRoleScaffold -Path $resolvedOutputPath -RoleName $RoleName -StigProfile $stigProfile
 
     # The exporters decide what the role declares; writing it is this function's job, so a test
     # can read their answer without a filesystem. See #19.
-    Save-AnsibleRoleFile -OutputPath $role.TaskPath -Content ($tasks | Export-AnsibleTaskBySeverity -StigName $StigName)
-    Save-AnsibleRoleFile -OutputPath $role.DefaultPath -Content ($tasks | Export-AnsibleConditionalValue -StigName $StigName)
-    Save-AnsibleRoleFile -OutputPath $role.DefaultPath -Content ($tasks | Export-AnsibleOrganizationValue -StigName $StigName)
+    Save-AnsibleRoleFile -OutputPath $role.TaskPath -Content ($tasks | Export-AnsibleTaskBySeverity -StigProfile $stigProfile)
+    Save-AnsibleRoleFile -OutputPath $role.DefaultPath -Content ($tasks | Export-AnsibleConditionalValue -StigProfile $stigProfile)
+    Save-AnsibleRoleFile -OutputPath $role.DefaultPath -Content ($tasks | Export-AnsibleOrganizationValue -StigProfile $stigProfile)
 
     Save-AnsibleRoleFile -OutputPath $role.HandlerPath -Content ($tasks | Export-AnsibleHandler)
 
@@ -73,7 +72,7 @@ function New-AnsiblePlaybook {
     # tasks/main.yml is written once too, so a role scaffolded before #196 tests its severity
     # toggles bare, and -e <toggle>=false fails there on ansible-core 2.19+ instead of skipping.
     $taskMain = Join-Path $role.TaskPath 'main.yml'
-    $bareToggle = '(?m)^\s*when:\s*{0}_cat[123]\s*$' -f [regex]::Escape((Get-AnsibleVariablePrefix -StigName $StigName))
+    $bareToggle = '(?m)^\s*when:\s*{0}_cat[123]\s*$' -f [regex]::Escape($stigProfile.VariablePrefix)
     if ((Test-Path -Path $taskMain) -and (Get-Content -Path $taskMain -Raw) -match $bareToggle) {
         Write-Warning ('{0} tests its severity toggles without "| bool", so -e <toggle>=false fails on ansible-core 2.19+ instead of skipping. Add "| bool" to each "when:" on the CAT imports.' -f $taskMain)
     }

@@ -8,9 +8,9 @@ function Build-AnsibleSqlDatabaseTask {
         variable. ServerName is left off: SqlServerDsc defaults it to the local machine, which is
         where win_dsc already runs. See #62.
     #>
-    param ($Rule, $StigName, $StigId, $Resolution)
+    param ($Rule, $StigProfile, $Resolution)
 
-    $instances = Get-AnsibleRoleVariable -Name 'instances' -StigName $StigName
+    $instances = Get-AnsibleRoleVariable -Name 'instances' -StigProfile $StigProfile
 
     @{
         RoleVariable = $instances

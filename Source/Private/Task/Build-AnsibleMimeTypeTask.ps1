@@ -3,11 +3,11 @@ function Build-AnsibleMimeTypeTask {
     .SYNOPSIS
         One IIS MIME type mapping, through win_dsc.
     #>
-    param ($Rule, $StigName, $StigId, $Resolution)
+    param ($Rule, $StigProfile, $Resolution)
 
     $parsedMimeType = if (Test-PowerStigSubRuleId -Id $Rule.Id) { Get-PowerStigPathLeaf -Path $Rule.MimeType } else { $Rule.MimeType }
 
-    $scope = Get-AnsibleIisScope -StigId $StigId -MachinePath 'MACHINE/WEBROOT/APPHOST' -StigName $StigName
+    $scope = Get-AnsibleIisScope -MachinePath 'MACHINE/WEBROOT/APPHOST' -StigProfile $StigProfile
 
     $body = [ordered] @{
         'ansible.windows.win_dsc' = [ordered] @{

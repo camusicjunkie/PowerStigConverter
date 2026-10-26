@@ -28,7 +28,9 @@ function Resolve-AnsibleOrganizationValue {
         })]
         [string] $RuleType,
 
-        [string] $StigName,
+        # The STIG profile (Get-PowerStigProfile); its variable prefix names the variables.
+        [Parameter(Mandatory)]
+        $StigProfile,
 
         # The org settings Import-PowerStigData loaded, keyed by rule id.
         [hashtable] $OrganizationalSetting = @{}
@@ -77,7 +79,7 @@ function Resolve-AnsibleOrganizationValue {
                         elseif ($data['Unquote'] -contains $field) { $node.$field -replace "^'(.*)'$", '$1' }
                         else { $node.$field }
 
-                    $navParams = @{ TaskId = $Rule.Id; TaskName = $taskName; StigName = $StigName }
+                    $navParams = @{ TaskId = $Rule.Id; TaskName = $taskName; StigProfile = $StigProfile }
 
                     [pscustomobject] @{
                         RuleId = $Rule.Id

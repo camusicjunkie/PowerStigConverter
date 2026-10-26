@@ -19,7 +19,7 @@ BeforeAll {
             Groups = $Groups; StigName = $StigName; StigId = $StigId; OrganizationalSetting = $OrganizationalSetting
         } {
             param ($Groups, $StigName, $StigId, $OrganizationalSetting)
-            @($Groups | ConvertTo-AnsiblePlaybook -StigName $StigName -StigId $StigId -OrganizationalSetting $OrganizationalSetting)
+            @($Groups | ConvertTo-AnsiblePlaybook -StigProfile (Get-PowerStigProfile -StigName $StigName -StigId $StigId)  -OrganizationalSetting $OrganizationalSetting)
         }
     }
 
@@ -147,7 +147,7 @@ Describe 'ConvertTo-AnsiblePlaybook' {
                 $saved = $script:ruleTypeOsFamily
                 $script:ruleTypeOsFamily = @{}
                 try {
-                    @($Groups | ConvertTo-AnsiblePlaybook -StigName 'RHEL-9' -StigId '' -OrganizationalSetting @{} -WarningAction Stop)
+                    @($Groups | ConvertTo-AnsiblePlaybook -StigProfile (Get-PowerStigProfile -StigName 'RHEL-9' -StigId '')  -OrganizationalSetting @{} -WarningAction Stop)
                 }
                 finally {
                     $script:ruleTypeOsFamily = $saved

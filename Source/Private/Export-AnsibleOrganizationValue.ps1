@@ -6,7 +6,8 @@ function Export-AnsibleOrganizationValue {
         [Parameter(Mandatory, ValueFromPipeline)]
         [object] $Task,
 
-        [string] $StigName
+        [Parameter(Mandatory)]
+        $StigProfile
     )
 
     begin {
@@ -25,7 +26,7 @@ function Export-AnsibleOrganizationValue {
         # Written even with nothing to declare, so a re-run cannot leave stale declarations. An empty
         # mapping rather than an empty file, which yaml would read as null. See #130.
         $content = if ($organization.Count -gt 0) { @($organization.Values) }
-            else { @(('# {0} declares no organization or role variables.' -f $StigName), '{}') }
+            else { @(('# {0} declares no organization or role variables.' -f $StigProfile.StigName), '{}') }
 
         [ordered] @{ main_default_org = $content }
     }

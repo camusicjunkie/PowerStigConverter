@@ -10,7 +10,7 @@ BeforeAll {
             Path = $Path; RoleName = $RoleName; StigName = $StigName
         } {
             param ($Path, $RoleName, $StigName)
-            New-AnsibleRoleScaffold -Path $Path -RoleName $RoleName -StigName $StigName 6>$null
+            New-AnsibleRoleScaffold -Path $Path -RoleName $RoleName -StigProfile (Get-PowerStigProfile -StigName $StigName) 6>$null
         }
     }
 }

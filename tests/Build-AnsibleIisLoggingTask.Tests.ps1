@@ -62,7 +62,7 @@ BeforeAll {
 
         InModuleScope -ModuleName PowerStigConverter -Parameters @{ Rule = $Rule } {
             param ($Rule)
-            ($Rule | ConvertTo-AnsibleTask -RuleType 'IisLogging' -StigName 'IISServer-10.0').Task
+            ($Rule | ConvertTo-AnsibleTask -RuleType 'IisLogging' -StigProfile (Get-PowerStigProfile -StigName 'IISServer-10.0')).Task
         }
     }
 }

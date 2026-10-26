@@ -15,7 +15,7 @@ BeforeAll {
             Rule = $Rule; RuleType = $RuleType; StigName = $StigName; OrganizationalSetting = $OrganizationalSetting
         } {
             param ($Rule, $RuleType, $StigName, $OrganizationalSetting)
-            @($Rule | ConvertTo-AnsibleTask -RuleType $RuleType -StigName $StigName -OrganizationalSetting $OrganizationalSetting)
+            @($Rule | ConvertTo-AnsibleTask -RuleType $RuleType -StigProfile (Get-PowerStigProfile -StigName $StigName) -OrganizationalSetting $OrganizationalSetting)
         }
     }
 
@@ -24,7 +24,7 @@ BeforeAll {
 
         InModuleScope -ModuleName PowerStigConverter -Parameters @{ TaskId = $TaskId; StigName = $StigName } {
             param ($TaskId, $StigName)
-            Get-AnsibleToggleCondition -TaskId $TaskId -StigName $StigName
+            Get-AnsibleToggleCondition -TaskId $TaskId -StigProfile (Get-PowerStigProfile -StigName $StigName)
         }
     }
 
@@ -207,11 +207,11 @@ Describe 'ConvertTo-AnsibleTask handler channel' {
 
                 # The adapter is reached by name, so one defined here stands in for a generator.
                 function Build-AnsibleHandlerProbeTask {
-                    param ($Rule, $StigName, $StigId, $Resolution)
+                    param ($Rule, $StigProfile, $Resolution)
                     $Built
                 }
 
-                @($Rule | ConvertTo-AnsibleTask -RuleType 'HandlerProbe' -StigName 'IISSite-10.0')
+                @($Rule | ConvertTo-AnsibleTask -RuleType 'HandlerProbe' -StigProfile (Get-PowerStigProfile -StigName 'IISSite-10.0'))
             }
         }
 
@@ -262,11 +262,11 @@ Describe 'ConvertTo-AnsibleTask merging a generator''s when' {
                 param ($Rule, $When)
 
                 function Build-AnsibleWhenProbeTask {
-                    param ($Rule, $StigName, $StigId, $Resolution)
+                    param ($Rule, $StigProfile, $Resolution)
                     @{ Task = @{ Detail = 'set it'; Body = [ordered] @{ 'ansible.windows.win_dsc' = @{}; 'when' = $When } } }
                 }
 
-                @($Rule | ConvertTo-AnsibleTask -RuleType 'WhenProbe' -StigName 'WindowsServer-2022-MS')
+                @($Rule | ConvertTo-AnsibleTask -RuleType 'WhenProbe' -StigProfile (Get-PowerStigProfile -StigName 'WindowsServer-2022-MS'))
             }
         }
     }
@@ -352,6 +352,15 @@ Describe 'ConvertTo-AnsibleTask conditioning a rule the STIG marks NA off a doma
         $task.when | Should-BeCollection @((Get-ExpectedToggle -TaskId 'V-100'), $member)
     }
 
+    # A member server's account policy runs only off a domain (ADR 0027); check text that also
+    # says NA off a domain would leave the rule able to run nowhere. See docs/adr/0029.
+    It 'fails the conversion, naming the rule, when it would run only on and off a domain at once' {
+        $rule = Add-RawString (New-AccountPolicyRule) "Verify the value.`n`nIf the system is not a member of a domain, this is NA."
+
+        { Convert-Task -Rule $rule -RuleType 'AccountPolicy' -StigName 'WindowsServer-2022-MS' } |
+            Should-Throw -ExceptionMessage '*WindowsServer-2022-MS V-100*never run*RuleCorrection.psd1*'
+    }
+
     # ADR 0025's split conditions a domain-only user right itself; Windows 11's V-253492 is both.
     It 'does not repeat a domain-membership condition the generator already set' {
         $rule = [pscustomobject] @{
@@ -362,11 +371,11 @@ Describe 'ConvertTo-AnsibleTask conditioning a rule the STIG marks NA off a doma
             param ($Rule, $Member)
 
             function Build-AnsibleMemberProbeTask {
-                param ($Rule, $StigName, $StigId, $Resolution)
+                param ($Rule, $StigProfile, $Resolution)
                 @{ Task = @{ Detail = 'set it'; Body = [ordered] @{ 'ansible.windows.win_dsc' = @{}; 'when' = $Member } } }
             }
 
-            @($Rule | ConvertTo-AnsibleTask -RuleType 'MemberProbe' -StigName 'WindowsServer-2022-MS')[0].Task
+            @($Rule | ConvertTo-AnsibleTask -RuleType 'MemberProbe' -StigProfile (Get-PowerStigProfile -StigName 'WindowsServer-2022-MS'))[0].Task
         }
 
         $task.when | Should-BeCollection @((Get-ExpectedToggle -TaskId 'V-310'), $member)
@@ -412,7 +421,7 @@ Describe 'ConvertTo-AnsibleTask block naming' {
                 })
 
                 function Build-AnsibleNamingProbeTask {
-                    param ($Rule, $StigName, $StigId, $Resolution)
+                    param ($Rule, $StigProfile, $Resolution)
 
                     @{
                         GroupDetail = $Rule.Detail
@@ -420,7 +429,7 @@ Describe 'ConvertTo-AnsibleTask block naming' {
                     }
                 }
 
-                @($rules | ConvertTo-AnsibleTask -RuleType 'NamingProbe' -StigName 'WindowsServer-2022-MS')
+                @($rules | ConvertTo-AnsibleTask -RuleType 'NamingProbe' -StigProfile (Get-PowerStigProfile -StigName 'WindowsServer-2022-MS'))
             }
         }
     }
@@ -518,7 +527,7 @@ Describe 'ConvertTo-AnsibleTask collapsing sub-rules into a block' {
                 param ($Rules)
 
                 function Build-AnsibleCollapseProbeTask {
-                    param ($Rule, $StigName, $StigId, $Resolution)
+                    param ($Rule, $StigProfile, $Resolution)
 
                     @{
                         GroupDetail = 'probe'
@@ -528,7 +537,7 @@ Describe 'ConvertTo-AnsibleTask collapsing sub-rules into a block' {
                     }
                 }
 
-                @($Rules | ConvertTo-AnsibleTask -RuleType 'CollapseProbe' -StigName 'WindowsServer-2022-MS')
+                @($Rules | ConvertTo-AnsibleTask -RuleType 'CollapseProbe' -StigProfile (Get-PowerStigProfile -StigName 'WindowsServer-2022-MS'))
             }
         }
     }

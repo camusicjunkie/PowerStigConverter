@@ -6,7 +6,7 @@ function Build-AnsibleAuditSettingTask {
         Compared as AuditSystemDsc does - desired value on the left, both sides strings - since
         PowerStig's data is written for that order. Not through win_dsc: see docs/adr/0024.
     #>
-    param ($Rule, $StigName, $StigId, $Resolution)
+    param ($Rule, $StigProfile, $Resolution)
 
     # Fixed text, so every rule carries the same script; the rule reaches it only as parameters.
     $script = @(
@@ -45,7 +45,7 @@ function Build-AnsibleAuditSettingTask {
     if ($Rule.Namespace) { $parameters.Namespace = $Rule.Namespace }
 
     $comparison = '{0} {1} {2}' -f $Rule.DesiredValue, $Rule.Operator, $Rule.Property
-    $registerName = Get-AnsibleRegisterName -TaskId $Rule.Id -StigName $StigName -Suffix 'noncompliant'
+    $registerName = Get-AnsibleRegisterName -TaskId $Rule.Id -StigProfile $StigProfile -Suffix 'noncompliant'
 
     @{
         GroupDetail = 'Audit {0}' -f $comparison

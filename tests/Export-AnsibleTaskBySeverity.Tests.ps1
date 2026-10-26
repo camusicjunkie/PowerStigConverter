@@ -12,7 +12,7 @@ BeforeAll {
             Rule = [pscustomobject] @{ Id = $Id; Severity = $Severity }
             Task = [ordered] @{ 'name' = $Name; 'ansible.windows.win_feature' = [ordered] @{ 'name' = 'TFTP-Client' } }
             RoleVariable = @(foreach ($variable in $RoleVariable) {
-                Invoke-PrivateCommand -Command 'Get-AnsibleRoleVariable' -Splat @{ Name = $variable; StigName = 'WindowsServer-2022-MS' }
+                Invoke-PrivateCommand -Command 'Get-AnsibleRoleVariable' -Splat @{ Name = $variable; StigProfile = (New-TestStigProfile -StigName 'WindowsServer-2022-MS') }
             })
         }
     }
@@ -23,7 +23,7 @@ BeforeAll {
 
         $item = New-TaskItem -Id $Id -Severity $Severity
         $item.RoleVariable = @(Invoke-PrivateCommand -Command 'Get-AnsibleRuleVariable' -Splat @{
-            Name = 'logpath'; TaskId = $Id; StigName = 'WindowsServer-2022-MS'
+            Name = 'logpath'; TaskId = $Id; StigProfile = (New-TestStigProfile -StigName 'WindowsServer-2022-MS')
         })
         $item
     }
@@ -33,7 +33,7 @@ BeforeAll {
 
         InModuleScope -ModuleName PowerStigConverter -Parameters @{ Items = $Items; StigName = $StigName } {
             param ($Items, $StigName)
-            $Items | Export-AnsibleTaskBySeverity -StigName $StigName
+            $Items | Export-AnsibleTaskBySeverity -StigProfile (Get-PowerStigProfile -StigName $StigName)
         }
     }
 }

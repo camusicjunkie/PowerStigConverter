@@ -21,12 +21,12 @@ BeforeAll {
         } {
             param ($Groups, $OrganizationalSetting, $StigName, $RoleVariable, $StigId)
             $tasks = @(
-                $Groups | ConvertTo-AnsiblePlaybook -StigName $StigName -StigId $StigId -OrganizationalSetting $OrganizationalSetting -WarningAction SilentlyContinue
+                $Groups | ConvertTo-AnsiblePlaybook -StigProfile (Get-PowerStigProfile -StigName $StigName -StigId $StigId)  -OrganizationalSetting $OrganizationalSetting -WarningAction SilentlyContinue
                 if ($RoleVariable) {
-                    @{ RoleVariable = @(foreach ($name in $RoleVariable) { Get-AnsibleRoleVariable -Name $name -StigName $StigName }) }
+                    @{ RoleVariable = @(foreach ($name in $RoleVariable) { Get-AnsibleRoleVariable -Name $name -StigProfile (Get-PowerStigProfile -StigName $StigName) }) }
                 }
             )
-            $tasks | Export-AnsibleOrganizationValue -StigName $StigName
+            $tasks | Export-AnsibleOrganizationValue -StigProfile (Get-PowerStigProfile -StigName $StigName)
         }
     }
 }

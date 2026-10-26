@@ -6,11 +6,12 @@ function Get-AnsibleEmptySeverityReason {
     [CmdletBinding()]
     [OutputType([string])]
     param (
-        [string] $StigName,
+        [Parameter(Mandatory)]
+        $StigProfile,
 
         [Parameter(Mandatory)]
         [string] $Severity
     )
 
-    '# No tasks were generated for {0} at {1} severity.' -f $StigName, $Severity
+    '# No tasks were generated for {0} at {1} severity.' -f $StigProfile.StigName, $Severity
 }

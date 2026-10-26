@@ -10,12 +10,12 @@ function Build-AnsibleSslSettingsTask {
         generated role has to defer the write until run time because a toggle is an operator's
         to flip. Hence: every rule contributes its flags to one list and notifies one handler.
     #>
-    param ($Rule, $StigName, $StigId, $Resolution)
+    param ($Rule, $StigProfile, $Resolution)
 
     $flags = @($Rule.Value -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 
-    $flagList = Get-AnsibleFactName -Name 'sslflags' -StigName $StigName
-    $websites = Get-AnsibleRoleVariable -Name 'websites' -StigName $StigName
+    $flagList = Get-AnsibleFactName -Name 'sslflags' -StigProfile $StigProfile
+    $websites = Get-AnsibleRoleVariable -Name 'websites' -StigProfile $StigProfile
 
     # default([]) rather than a declaration in defaults/: the list is the tasks' own running
     # total, not a blank for the site to fill in the way the website list is.

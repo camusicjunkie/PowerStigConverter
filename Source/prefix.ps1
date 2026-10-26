@@ -10,6 +10,8 @@ Register-ArgumentCompleter -CommandName New-AnsiblePlaybook -ParameterName StigN
 
 $script:organizationData = Import-PowerShellDataFile -Path $PSScriptRoot\Files\OrganizationData.psd1
 $script:ruleTypeOsFamily = Import-PowerShellDataFile -Path $PSScriptRoot\Files\RuleTypeOsFamily.psd1
+# Every STIG product the profile knows. See docs/adr/0029.
+$script:stigProduct = Import-PowerShellDataFile -Path $PSScriptRoot\Files\StigProduct.psd1
 $script:accountPolicyData = Import-PowerShellDataFile -Path $PSScriptRoot\Files\AccountPolicyData.psd1
 $script:securityOptionData = Import-PowerShellDataFile -Path $PSScriptRoot\Files\SecurityOptionData.psd1
 $script:ruleCorrection = Import-PowerShellDataFile -Path $PSScriptRoot\Files\RuleCorrection.psd1

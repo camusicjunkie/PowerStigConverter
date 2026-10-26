@@ -4,7 +4,8 @@ function Export-AnsibleConditionalValue {
         [Parameter(Mandatory, ValueFromPipeline)]
         [object] $InputObject,
 
-        [string] $StigName
+        [Parameter(Mandatory)]
+        $StigProfile
     )
 
     begin {
@@ -19,7 +20,7 @@ function Export-AnsibleConditionalValue {
         $null = $items.Add(@{
             Id = $baseId
             Severity = $rule.Severity
-            Value = New-AnsibleToggleLine -TaskId $baseId -StigName $StigName
+            Value = New-AnsibleToggleLine -TaskId $baseId -StigProfile $StigProfile
         })
     }
     end {
@@ -29,11 +30,11 @@ function Export-AnsibleConditionalValue {
             # An empty mapping, as main_default_org.yml is. See #131.
             $toggles = $category.Value
             $content = if ($toggles.Item.Count -gt 0) { @($toggles.Item.Values) }
-                else { @((Get-AnsibleEmptySeverityReason -StigName $StigName -Severity $toggles.Severity), '{}') }
+                else { @((Get-AnsibleEmptySeverityReason -StigProfile $StigProfile -Severity $toggles.Severity), '{}') }
             $files['main_default_{0}' -f $category.Key] = $content
             # tasks/main.yml guards each severity file's import on one, so all three are declared
             # whatever the STIG carries. See #130.
-            New-AnsibleSeverityToggleLine -Category $category.Key -StigName $StigName
+            New-AnsibleSeverityToggleLine -Category $category.Key -StigProfile $StigProfile
         }
         $files['main_default_severity'] = @($severityToggles)
         $files

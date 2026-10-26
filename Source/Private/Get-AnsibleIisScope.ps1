@@ -16,16 +16,16 @@ function Get-AnsibleIisScope {
     [CmdletBinding()]
     [OutputType([hashtable])]
     param (
-        [Parameter(Mandatory)] [string] $StigId,
         [Parameter(Mandatory)] [string] $MachinePath,
-        [Parameter(Mandatory)] [string] $StigName
+        # The STIG profile (Get-PowerStigProfile): its IisScope says server or site.
+        [Parameter(Mandatory)] $StigProfile
     )
 
-    if ($StigId -match 'IIS_.+_Server') {
+    if ($StigProfile.IisScope -eq 'Server') {
         return @{ Path = $MachinePath }
     }
 
-    $websites = Get-AnsibleRoleVariable -Name 'websites' -StigName $StigName
+    $websites = Get-AnsibleRoleVariable -Name 'websites' -StigProfile $StigProfile
 
     @{
         # item is the site name the loop is on, so the path is the same string for every site.

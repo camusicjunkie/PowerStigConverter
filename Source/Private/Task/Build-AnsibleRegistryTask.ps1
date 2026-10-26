@@ -3,7 +3,7 @@ function Build-AnsibleRegistryTask {
     .SYNOPSIS
         One registry value, as win_regedit takes it.
     #>
-    param ($Rule, $StigName, $StigId, $Resolution)
+    param ($Rule, $StigProfile, $Resolution)
 
     # Ensure alone decides whether the value is written or removed. The value fields cannot be
     # trusted to say it: PowerStig spells 'no value' as ValueType None on one product and as an
