@@ -3,13 +3,13 @@
 BeforeAll {
     . $PSScriptRoot/Initialize-TestModule.ps1
 
-    $script:splat = @{ StigId = 'IIS_10-0_Server'; MachinePath = 'MACHINE/WEBROOT/APPHOST'; StigName = 'IISSite-10.0' }
+    $script:splat = @{ MachinePath = 'MACHINE/WEBROOT/APPHOST' }
 
     function Get-Scope {
         param ($StigId)
 
         $siteSplat = $splat.Clone()
-        $siteSplat.StigId = $StigId
+        $siteSplat.StigProfile = New-TestStigProfile -StigName 'IISSite-10.0' -StigId $StigId
 
         Invoke-PrivateCommand -Command 'Get-AnsibleIisScope' -Splat $siteSplat
     }

@@ -4,28 +4,25 @@ function ConvertTo-AnsiblePlaybook {
         [Parameter(Mandatory, ValueFromPipeline)]
         [object] $InputObject,
 
-        [string] $StigName,
+        # The STIG profile (Get-PowerStigProfile). Every adapter takes it, and asks it what it
+        # needs; this used to be a StigId granted by matching the rule's dsc module against
+        # *WebAdministration*, which was rule data standing in for a parameter set. See #17.
+        [Parameter(Mandatory)]
+        $StigProfile,
 
-        [hashtable] $OrganizationalSetting = @{},
-
-        [string] $StigId
+        [hashtable] $OrganizationalSetting = @{}
     )
 
     begin {
-        # Every adapter takes -StigId; the two that configure IIS read it and the rest ignore it,
-        # so there is nothing to decide. This used to be granted by matching the rule's dsc module
-        # against *WebAdministration*, which was rule data standing in for a parameter set. See #17.
         $natParams = @{
-            StigName = $StigName
+            StigProfile = $StigProfile
             OrganizationalSetting = $OrganizationalSetting
-            StigId = $StigId
             ErrorAction = 'Stop'
         }
 
-        # The conversion's own OsFamily, read once - an adapter built for a different one is
-        # skipped below rather than asked to build a task for a host it was never meant for.
-        # See docs/adr/0010.
-        $osFamily = (Get-AnsibleOsAssertion -StigName $StigName).OsFamily
+        # The conversion's own OsFamily - an adapter built for a different one is skipped below
+        # rather than asked to build a task for a host it was never meant for. See docs/adr/0010.
+        $osFamily = $StigProfile.OsFamily
     }
     process {
         $ruleName = $InputObject.PowerStigRule -replace 'Rule'

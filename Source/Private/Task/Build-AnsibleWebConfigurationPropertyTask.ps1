@@ -3,13 +3,13 @@ function Build-AnsibleWebConfigurationPropertyTask {
     .SYNOPSIS
         One IIS web configuration property, through win_dsc.
     #>
-    param ($Rule, $StigName, $StigId, $Resolution)
+    param ($Rule, $StigProfile, $Resolution)
 
     $parsedConfigSection = if (Test-PowerStigSubRuleId -Id $Rule.Id) { Get-PowerStigPathLeaf -Path $Rule.ConfigSection } else { $Rule.ConfigSection }
 
     # A system.web section lives under the web root, everything else under the app host.
     $machinePath = if ($Rule.ConfigSection -match '/system.web/') { 'MACHINE/WEBROOT' } else { 'MACHINE/WEBROOT/APPHOST' }
-    $scope = Get-AnsibleIisScope -StigId $StigId -MachinePath $machinePath -StigName $StigName
+    $scope = Get-AnsibleIisScope -MachinePath $machinePath -StigProfile $StigProfile
 
     $body = [ordered] @{
         'ansible.windows.win_dsc' = [ordered] @{

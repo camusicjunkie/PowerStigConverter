@@ -74,8 +74,8 @@ BeforeAll {
             param ($Rules, $OrganizationalSetting)
 
             [pscustomobject] @{ PowerStigRule = 'WebAppPoolRule'; StigRule = $Rules } |
-                ConvertTo-AnsiblePlaybook -StigName 'IISSite-10.0' -StigId 'IIS_10_Site' -OrganizationalSetting $OrganizationalSetting |
-                    Export-AnsibleOrganizationValue -StigName 'IISSite-10.0'
+                ConvertTo-AnsiblePlaybook -StigProfile (Get-PowerStigProfile -StigName 'IISSite-10.0' -StigId 'IIS_10_Site')  -OrganizationalSetting $OrganizationalSetting |
+                    Export-AnsibleOrganizationValue -StigProfile (Get-PowerStigProfile -StigName 'IISSite-10.0')
         }
     }
 }

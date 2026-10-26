@@ -20,13 +20,13 @@ function Get-AnsibleVariableName {
     param (
         [Parameter(Mandatory)] [string] $TaskId,
         [Parameter(Mandatory)] [AllowEmptyString()] [string] $TaskName,
-        [Parameter(Mandatory)] [string] $StigName
+        [Parameter(Mandatory)] $StigProfile
     )
 
     $id = Get-AnsibleVariableIdFragment -TaskId $TaskId
     $name = Get-AnsibleVariableNameFragment -TaskName $TaskName
 
-    '{0}_{1}_{2}' -f (Get-AnsibleVariablePrefix -StigName $StigName), $id, $name
+    '{0}_{1}_{2}' -f $StigProfile.VariablePrefix, $id, $name
 }
 
 <#
@@ -43,10 +43,10 @@ function Get-AnsibleRoleVariable {
     [OutputType([pscustomobject])]
     param (
         [Parameter(Mandatory)] [string] $Name,
-        [Parameter(Mandatory)] [string] $StigName
+        [Parameter(Mandatory)] $StigProfile
     )
 
-    $variable = '{0}_{1}' -f (Get-AnsibleVariablePrefix -StigName $StigName), (Get-AnsibleVariableNameFragment -TaskName $Name)
+    $variable = '{0}_{1}' -f $StigProfile.VariablePrefix, (Get-AnsibleVariableNameFragment -TaskName $Name)
 
     [pscustomobject] @{
         Name = $variable
@@ -91,10 +91,10 @@ function Get-AnsibleRuleVariable {
     param (
         [Parameter(Mandatory)] [string] $Name,
         [Parameter(Mandatory)] [string] $TaskId,
-        [Parameter(Mandatory)] [string] $StigName
+        [Parameter(Mandatory)] $StigProfile
     )
 
-    $splat = @{ TaskId = $TaskId; TaskName = $Name; StigName = $StigName }
+    $splat = @{ TaskId = $TaskId; TaskName = $Name; StigProfile = $StigProfile }
 
     $variable = Get-AnsibleVariableName @splat
 
@@ -118,10 +118,10 @@ function Get-AnsibleFactName {
     [OutputType([string])]
     param (
         [Parameter(Mandatory)] [string] $Name,
-        [Parameter(Mandatory)] [string] $StigName
+        [Parameter(Mandatory)] $StigProfile
     )
 
-    '{0}_{1}' -f (Get-AnsibleVariablePrefix -StigName $StigName), (Get-AnsibleVariableNameFragment -TaskName $Name)
+    '{0}_{1}' -f $StigProfile.VariablePrefix, (Get-AnsibleVariableNameFragment -TaskName $Name)
 }
 
 <#
@@ -134,7 +134,7 @@ function Get-AnsibleVariableReference {
     param (
         [Parameter(Mandatory)] [string] $TaskId,
         [Parameter(Mandatory)] [AllowEmptyString()] [string] $TaskName,
-        [Parameter(Mandatory)] [string] $StigName
+        [Parameter(Mandatory)] $StigProfile
     )
 
     '{0} {1} {2}' -f '{{', (Get-AnsibleVariableName @PSBoundParameters), '}}'
@@ -150,7 +150,7 @@ function New-AnsibleVariableLine {
     param (
         [Parameter(Mandatory)] [string] $TaskId,
         [Parameter(Mandatory)] [AllowEmptyString()] [string] $TaskName,
-        [Parameter(Mandatory)] [string] $StigName,
+        [Parameter(Mandatory)] $StigProfile,
         [Parameter()] [object] $NodeValue
     )
 
@@ -163,7 +163,7 @@ function New-AnsibleVariableLine {
         Format-AnsibleYamlScalar -Value $NodeValue
     }
 
-    '{0}: {1}' -f (Get-AnsibleVariableName -TaskId $TaskId -TaskName $TaskName -StigName $StigName), $quoted
+    '{0}: {1}' -f (Get-AnsibleVariableName -TaskId $TaskId -TaskName $TaskName -StigProfile $StigProfile), $quoted
 }
 
 <#
@@ -195,12 +195,12 @@ function Get-AnsibleToggleName {
     [OutputType([string])]
     param (
         [Parameter(Mandatory)] [string] $TaskId,
-        [Parameter(Mandatory)] [string] $StigName
+        [Parameter(Mandatory)] $StigProfile
     )
 
     $id = Get-AnsibleVariableIdFragment -TaskId $TaskId
 
-    '{0}_{1}_when' -f (Get-AnsibleVariablePrefix -StigName $StigName), $id
+    '{0}_{1}_when' -f $StigProfile.VariablePrefix, $id
 }
 
 <#
@@ -215,7 +215,7 @@ function Get-AnsibleToggleCondition {
     [OutputType([string])]
     param (
         [Parameter(Mandatory)] [string] $TaskId,
-        [Parameter(Mandatory)] [string] $StigName
+        [Parameter(Mandatory)] $StigProfile
     )
 
     '{0} | bool' -f (Get-AnsibleToggleName @PSBoundParameters)
@@ -230,7 +230,7 @@ function New-AnsibleToggleLine {
     [OutputType([string])]
     param (
         [Parameter(Mandatory)] [string] $TaskId,
-        [Parameter(Mandatory)] [string] $StigName
+        [Parameter(Mandatory)] $StigProfile
     )
 
     '{0}: true' -f (Get-AnsibleToggleName @PSBoundParameters)
@@ -247,10 +247,10 @@ function New-AnsibleSeverityToggleLine {
     [OutputType([string])]
     param (
         [Parameter(Mandatory)] [string] $Category,
-        [Parameter(Mandatory)] [string] $StigName
+        [Parameter(Mandatory)] $StigProfile
     )
 
-    '{0}_{1}: true' -f (Get-AnsibleVariablePrefix -StigName $StigName), $Category
+    '{0}_{1}: true' -f $StigProfile.VariablePrefix, $Category
 }
 
 <#
@@ -282,10 +282,10 @@ function Get-AnsibleRegisterName {
     [OutputType([string])]
     param (
         [Parameter(Mandatory)] [string] $TaskId,
-        [Parameter(Mandatory)] [string] $StigName,
+        [Parameter(Mandatory)] $StigProfile,
         [Parameter(Mandatory)] [string] $Suffix
     )
 
-    '{0}_{1}_{2}' -f (Get-AnsibleVariablePrefix -StigName $StigName),
+    '{0}_{1}_{2}' -f $StigProfile.VariablePrefix,
         (Get-AnsibleVariableIdFragment -TaskId $TaskId), $Suffix
 }

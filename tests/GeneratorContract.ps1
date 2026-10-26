@@ -217,7 +217,10 @@ function Invoke-Generator {
     } {
         param ($Generator, $Rule, $StigName, $ExtraParams, $OrganizationalSetting)
 
-        $params = @{ StigName = $StigName; OrganizationalSetting = $OrganizationalSetting } + $ExtraParams
+        # The STIG profile the conversion would build; a StigId in ExtraParams goes into it.
+        $stigProfile = Get-PowerStigProfile -StigName $StigName -Revision '1.0' -StigId $ExtraParams['StigId']
+        $params = @{ StigProfile = $stigProfile; OrganizationalSetting = $OrganizationalSetting }
+        foreach ($key in $ExtraParams.Keys) { if ($key -ne 'StigId') { $params[$key] = $ExtraParams[$key] } }
 
         # A rule type with an adapter is driven through the shared module; the rest still carry
         # their own plumbing. The one place that knows the difference.
@@ -291,6 +294,6 @@ function Get-ExpectedRegisterName {
     } {
         param ($TaskId, $StigName, $Suffix)
 
-        Get-AnsibleRegisterName -TaskId $TaskId -StigName $StigName -Suffix $Suffix
+        Get-AnsibleRegisterName -TaskId $TaskId -StigProfile (Get-PowerStigProfile -StigName $StigName) -Suffix $Suffix
     }
 }

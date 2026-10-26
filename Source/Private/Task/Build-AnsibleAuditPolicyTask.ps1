@@ -3,7 +3,7 @@ function Build-AnsibleAuditPolicyTask {
     .SYNOPSIS
         The audit policy subcategory and flag, as win_audit_policy_system takes them.
     #>
-    param ($Rule, $StigName, $StigId, $Resolution)
+    param ($Rule, $StigProfile, $Resolution)
 
     @{
         Task = @(

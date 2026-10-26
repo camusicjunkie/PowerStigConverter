@@ -90,7 +90,7 @@ Domain Admin Group</RawString>
         InModuleScope -ModuleName PowerStigConverter -Parameters @{ Stig = $Stig; RuleType = $RuleType; Id = $Id; Setting = $OrganizationalSetting } {
             param ($Stig, $RuleType, $Id, $Setting)
             ($Stig.Rules | Where-Object PowerStigRule -eq "${RuleType}Rule").StigRule | Where-Object { $_.id -in $Id } |
-                ConvertTo-AnsibleTask -RuleType $RuleType -StigName $Stig.StigName -OrganizationalSetting $Setting
+                ConvertTo-AnsibleTask -RuleType $RuleType -StigProfile (Get-PowerStigProfile -StigName $Stig.StigName) -OrganizationalSetting $Setting
         }
     }
 }

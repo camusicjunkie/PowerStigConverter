@@ -183,7 +183,7 @@ Describe 'Build-AnsibleNxFileLineTask' {
                 Rules = New-GroupRuleSet -BaseId 'V-248828' -FilePathA '/bin/false' -FilePathB '/etc/modprobe.d/bluetooth.conf'
             } {
                 param ($Rules)
-                $Rules | ConvertTo-AnsibleTask -RuleType 'nxFileLine' -StigName 'OracleLinux-8'
+                $Rules | ConvertTo-AnsibleTask -RuleType 'nxFileLine' -StigProfile (Get-PowerStigProfile -StigName 'OracleLinux-8')
             }
 
             @($grouped).Count | Should-Be 1
@@ -195,7 +195,7 @@ Describe 'Build-AnsibleNxFileLineTask' {
                 Rules = New-GroupRuleSet -BaseId 'V-248828' -FilePathA '/bin/false' -FilePathB '/etc/modprobe.d/bluetooth.conf'
             } {
                 param ($Rules)
-                $Rules | ConvertTo-AnsibleTask -RuleType 'nxFileLine' -StigName 'OracleLinux-8'
+                $Rules | ConvertTo-AnsibleTask -RuleType 'nxFileLine' -StigProfile (Get-PowerStigProfile -StigName 'OracleLinux-8')
             }
 
             $grouped.Task.name | Should-Be 'V-248828 | MEDIUM | false, bluetooth.conf'
@@ -206,7 +206,7 @@ Describe 'Build-AnsibleNxFileLineTask' {
                 Rules = New-GroupRuleSet -BaseId 'V-171' -FilePathA '/etc/audit/rules.d/audit.rules' -FilePathB '/etc/audit/rules.d/audit.rules'
             } {
                 param ($Rules)
-                $Rules | ConvertTo-AnsibleTask -RuleType 'nxFileLine' -StigName 'OracleLinux-8'
+                $Rules | ConvertTo-AnsibleTask -RuleType 'nxFileLine' -StigProfile (Get-PowerStigProfile -StigName 'OracleLinux-8')
             }
 
             $grouped.Task.name | Should-Be 'V-171 | MEDIUM | audit.rules'

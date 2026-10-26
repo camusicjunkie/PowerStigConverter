@@ -3,7 +3,7 @@ function Build-AnsibleNxServiceTask {
     .SYNOPSIS
         One systemd unit, asserted directly - every in-scope product is systemd-era. See ADR 0008.
     #>
-    param ($Rule, $StigName, $StigId, $Resolution)
+    param ($Rule, $StigProfile, $Resolution)
 
     $enabled = $Rule.Enabled -eq 'True'
     $enabledWord = if ($enabled) { 'enabled' } else { 'disabled' }

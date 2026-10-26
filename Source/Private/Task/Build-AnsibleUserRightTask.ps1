@@ -10,7 +10,7 @@ function Build-AnsibleUserRightTask {
         A domain-only identity is added only on a domain member, and where the STIG says no one may
         hold the right off a domain, its holders are removed there. See docs/adr/0025.
     #>
-    param ($Rule, $StigName, $StigId, $Resolution)
+    param ($Rule, $StigProfile, $Resolution)
 
     $right = $Rule.Constant
     $users = $Resolution.Value
@@ -24,7 +24,7 @@ function Build-AnsibleUserRightTask {
         return @{
             Group = $true
             GroupDetail = 'Ensure no one holds {0}' -f $Rule.DisplayName
-            Task = New-AnsibleUserRightRemovalTask -Rule $Rule -StigName $StigName
+            Task = New-AnsibleUserRightRemovalTask -Rule $Rule -StigProfile $StigProfile
         }
     }
 
@@ -39,7 +39,7 @@ function Build-AnsibleUserRightTask {
     }
 
     # Only a literal list is split; an organization value is a reference. See docs/adr/0025.
-    $split = if ($users -is [array]) { Split-AnsibleUserRightIdentity -Rule $Rule -Identity $users -StigName $StigName }
+    $split = if ($users -is [array]) { Split-AnsibleUserRightIdentity -Rule $Rule -Identity $users -StigProfile $StigProfile }
     if ($split -and $split.Domain.Count -gt 0) {
         $member = $script:domainMemberCondition
         if ($split.All.Count -gt 0) {
@@ -50,7 +50,7 @@ function Build-AnsibleUserRightTask {
             # The STIG says no one may hold the right off a domain, so there it is emptied, not skipped.
             $body['when'] = $member
             $offDomain = "not $member"
-            $removal = @(New-AnsibleUserRightRemovalTask -Rule $Rule -StigName $StigName)
+            $removal = @(New-AnsibleUserRightRemovalTask -Rule $Rule -StigProfile $StigProfile)
             foreach ($task in $removal) {
                 $task.Body['when'] = if ($task.Body.Contains('when')) { @($offDomain, $task.Body['when']) } else { $offDomain }
             }
@@ -85,10 +85,10 @@ function Build-AnsibleUserRightTask {
     empty users list, so the right is never set to one. See #143.
 #>
 function New-AnsibleUserRightRemovalTask {
-    param ($Rule, [string] $StigName)
+    param ($Rule, $StigProfile)
 
     $right = $Rule.Constant
-    $registerName = Get-AnsibleRegisterName -TaskId $Rule.Id -StigName $StigName -Suffix 'holders'
+    $registerName = Get-AnsibleRegisterName -TaskId $Rule.Id -StigProfile $StigProfile -Suffix 'holders'
 
     # secedit omits the line for a right nobody holds; entries are *SID or an account name,
     # both of which win_user_right resolves.
@@ -137,7 +137,7 @@ function New-AnsibleUserRightRemovalTask {
     fails the conversion: the fix is RuleCorrection.psd1 (ADR 0020).
 #>
 function Split-AnsibleUserRightIdentity {
-    param ($Rule, [string[]] $Identity, [string] $StigName)
+    param ($Rule, [string[]] $Identity, $StigProfile)
 
     $domainHeading, $allHeading = 'Domain Systems Only:', 'All Systems:'
     $lines = @(([string] $Rule.RawString) -split '\r?\n' | ForEach-Object { $_.Trim() })
@@ -148,7 +148,7 @@ function Split-AnsibleUserRightIdentity {
     if ($lines -notcontains $domainHeading) {
         if ($noneOffDomain) {
             throw ("{0} {1}: the check text says no one may hold the right off a domain but names no domain-only identities. Correct the rule in RuleCorrection.psd1 (docs/adr/0020)." -f
-                $StigName, $Rule.Id)
+                $StigProfile.StigName, $Rule.Id)
         }
         return
     }
@@ -172,14 +172,14 @@ function Split-AnsibleUserRightIdentity {
         if ($inDomain -eq $inAll) {
             $where = if ($inDomain) { 'both' } else { 'neither' }
             throw ("{0} {1}: identity '{2}' is under {3} of the check text's '{4}' and '{5}' headings. Correct the rule in RuleCorrection.psd1 (docs/adr/0020)." -f
-                $StigName, $Rule.Id, $name, $where, $domainHeading, $allHeading)
+                $StigProfile.StigName, $Rule.Id, $name, $where, $domainHeading, $allHeading)
         }
         if ($inDomain) { $domain += $name } else { $all += $name }
     }
 
     if ($noneOffDomain -and $all.Count -gt 0) {
         throw ("{0} {1}: the check text says no one may hold the right off a domain, yet lists identities for all systems. Correct the rule in RuleCorrection.psd1 (docs/adr/0020)." -f
-            $StigName, $Rule.Id)
+            $StigProfile.StigName, $Rule.Id)
     }
 
     @{ Domain = $domain; All = $all; NoneOffDomain = $noneOffDomain }

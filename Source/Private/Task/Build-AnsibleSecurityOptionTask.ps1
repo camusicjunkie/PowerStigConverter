@@ -3,7 +3,7 @@ function Build-AnsibleSecurityOptionTask {
     .SYNOPSIS
         One security option, as win_security_policy takes it.
     #>
-    param ($Rule, $StigName, $StigId, $Resolution)
+    param ($Rule, $StigProfile, $Resolution)
 
     $infOption = Resolve-AnsibleInfOption -OptionName $Rule.OptionName
 

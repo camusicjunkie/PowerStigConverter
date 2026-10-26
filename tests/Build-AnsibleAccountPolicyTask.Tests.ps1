@@ -198,7 +198,7 @@ Describe 'Account policy in PowerStig''s data' {
 
         $yaml = InModuleScope -ModuleName PowerStigConverter -Parameters @{ Rules = $rules; StigName = ($StigFile -replace '-[\d.]+$') } {
             param ($Rules, $StigName)
-            $files = $Rules | ConvertTo-AnsibleTask -RuleType AccountPolicy -StigName $StigName | Export-AnsibleTaskBySeverity -StigName $StigName
+            $files = $Rules | ConvertTo-AnsibleTask -RuleType AccountPolicy -StigProfile (Get-PowerStigProfile -StigName $StigName) | Export-AnsibleTaskBySeverity -StigProfile (Get-PowerStigProfile -StigName $StigName)
             ($files.cat1, $files.cat2, $files.cat3 | ForEach-Object { $_ }) -join "`n"
         }
 

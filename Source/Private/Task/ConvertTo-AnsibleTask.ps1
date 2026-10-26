@@ -25,12 +25,11 @@ function ConvertTo-AnsibleTask {
         [Parameter(Mandatory)]
         [string] $RuleType,
 
+        # The STIG profile (Get-PowerStigProfile), handed to every adapter.
         [Parameter(Mandatory)]
-        [string] $StigName,
+        $StigProfile,
 
-        [hashtable] $OrganizationalSetting = @{},
-
-        [string] $StigId
+        [hashtable] $OrganizationalSetting = @{}
     )
 
     begin {
@@ -51,11 +50,11 @@ function ConvertTo-AnsibleTask {
             # Guarded on the data, not on the type name - a rule type OrganizationData.psd1 says
             # nothing about has no organization value to resolve.
             $resolution = if ($script:organizationData.ContainsKey($RuleType)) {
-                Resolve-AnsibleOrganizationValue -Rule $rule -RuleType $RuleType -StigName $StigName `
+                Resolve-AnsibleOrganizationValue -Rule $rule -RuleType $RuleType -StigProfile $StigProfile `
                     -OrganizationalSetting $OrganizationalSetting
             }
 
-            $built = & $adapter -Rule $rule -StigName $StigName -StigId $StigId -Resolution $resolution
+            $built = & $adapter -Rule $rule -StigProfile $StigProfile -Resolution $resolution
             if ($null -eq $built) { continue }
 
             # What this rule declares in defaults/ and leaves unanswered - carried on its output, so
@@ -105,7 +104,7 @@ function ConvertTo-AnsibleTask {
             # A condition the adapter set is kept, ANDed after the toggle as a when list. A grouped
             # rule carries its toggle on the block instead.
             if (-not $group) {
-                $tasks[0]['when'] = Get-AnsibleRequirementCondition -TaskId $rule.Id -Rule $rule -StigName $StigName -Existing $tasks[0]['when']
+                $tasks[0]['when'] = Get-AnsibleRequirementCondition -TaskId $rule.Id -Rule $rule -StigProfile $StigProfile -Existing $tasks[0]['when']
             }
             if ($resolution) { $tasks[0] = Add-AnsibleOrganizationValueAssert -Task $tasks[0] -Resolution $resolution }
 
@@ -123,7 +122,7 @@ function ConvertTo-AnsibleTask {
         }
     }
     end {
-        Merge-AnsibleRequirement -Converted $converted -StigName $StigName
+        Merge-AnsibleRequirement -Converted $converted -StigProfile $StigProfile
     }
 }
 
@@ -137,7 +136,7 @@ function ConvertTo-AnsibleTask {
     own is the one-member case and passes through. See #125 and ADR 0015.
 #>
 function Merge-AnsibleRequirement {
-    param ([System.Collections.ArrayList] $Converted, [string] $StigName)
+    param ([System.Collections.ArrayList] $Converted, $StigProfile)
 
     $requirements = [System.Collections.Generic.List[object]]::new()
     $blocks = @{}
@@ -172,7 +171,7 @@ function Merge-AnsibleRequirement {
         $output.Task = [ordered] @{
             'name' = '{0} | {1} | {2}' -f $first.BaseId, $first.Severity, (Get-AnsibleBlockDetail -Candidate $candidate)
             'block' = @(foreach ($member in $members) { $member.Task })
-            'when' = Get-AnsibleRequirementCondition -TaskId $first.BaseId -Rule $first.Rule -StigName $StigName
+            'when' = Get-AnsibleRequirementCondition -TaskId $first.BaseId -Rule $first.Rule -StigProfile $StigProfile
         }
         Write-Verbose "  TaskGroup: $($output.Task.name)"
         $output
@@ -182,14 +181,20 @@ function Merge-AnsibleRequirement {
 <#
 .SYNOPSIS
     A requirement's when: its toggle, then where its check text says it applies (ADR 0026), then
-    any condition the adapter set, a scalar when only the toggle remains.
+    any condition the adapter set, a scalar when only the toggle remains. One that would run only
+    on and off a domain at once fails the conversion, since it could never run. See ADR 0029.
 #>
 function Get-AnsibleRequirementCondition {
-    param ([string] $TaskId, $Rule, [string] $StigName, $Existing)
+    param ([string] $TaskId, $Rule, $StigProfile, $Existing)
 
-    $when = @(Get-AnsibleToggleCondition -TaskId $TaskId -StigName $StigName) + @(Get-AnsibleApplicabilityCondition -Rule $Rule)
+    $when = @(Get-AnsibleToggleCondition -TaskId $TaskId -StigProfile $StigProfile) + @(Get-AnsibleApplicabilityCondition -Rule $Rule)
     # ADR 0025's split may already have conditioned the task on the same fact.
     $when += @($Existing) | Where-Object { $null -ne $_ -and $when -notcontains $_ }
+
+    if ($when -contains $script:domainMemberCondition -and $when -contains "not $script:domainMemberCondition") {
+        throw ("{0} {1}: the rule would run only on a domain member and only off one, so it would never run. Correct the rule in RuleCorrection.psd1 (docs/adr/0020)." -f
+            $StigProfile.StigName, $Rule.Id)
+    }
 
     if ($when.Count -eq 1) { $when[0] } else { $when }
 }

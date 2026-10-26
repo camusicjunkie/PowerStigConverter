@@ -108,7 +108,7 @@ Describe 'Build-AnsibleSqlDatabaseTask' {
             $item = InModuleScope -ModuleName PowerStigConverter -Parameters @{ Rules = Get-SqlDatabaseFixture } {
                 param ($Rules)
 
-                $Rules | ConvertTo-AnsibleTask -RuleType 'SqlDatabase' -StigName 'SqlServer-2016-Instance'
+                $Rules | ConvertTo-AnsibleTask -RuleType 'SqlDatabase' -StigProfile (Get-PowerStigProfile -StigName 'SqlServer-2016-Instance')
             }
 
             @($item).Count | Should-Be 1

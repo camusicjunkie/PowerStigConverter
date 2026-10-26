@@ -13,9 +13,9 @@ function Build-AnsibleSqlProtocolTask {
         match it by encoding service names this converter has no business asserting (ADR-0005).
         See #64.
     #>
-    param ($Rule, $StigName, $StigId, $Resolution)
+    param ($Rule, $StigProfile, $Resolution)
 
-    $instances = Get-AnsibleRoleVariable -Name 'instances' -StigName $StigName
+    $instances = Get-AnsibleRoleVariable -Name 'instances' -StigProfile $StigProfile
 
     # PowerStig hands the flag over as the text 'True'/'False', which powershell-yaml would quote.
     # An explicit comparison, never a cast - [bool] 'False' is $true. See #64 and #69.

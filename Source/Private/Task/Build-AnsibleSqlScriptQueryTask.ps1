@@ -15,9 +15,9 @@ function Build-AnsibleSqlScriptQueryTask {
         No handler and no union: the rules that share a SetScript share it byte for byte, so the
         first whose Test fails satisfies them all and the rest skip.
     #>
-    param ($Rule, $StigName, $StigId, $Resolution)
+    param ($Rule, $StigProfile, $Resolution)
 
-    $instances = Get-AnsibleRoleVariable -Name 'instances' -StigName $StigName
+    $instances = Get-AnsibleRoleVariable -Name 'instances' -StigProfile $StigProfile
 
     $body = [ordered] @{
         'resource_name' = 'SqlScriptQuery'

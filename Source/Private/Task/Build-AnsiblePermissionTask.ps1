@@ -14,7 +14,7 @@ function Build-AnsiblePermissionTask {
         A rule left with no entry builds nothing - RuleCorrection.psd1 removes an entry PowerStig
         misparsed, such as '(RX)'. See docs/adr/0020.
     #>
-    param ($Rule, $StigName, $StigId, $Resolution)
+    param ($Rule, $StigProfile, $Resolution)
 
     $entries = @($Rule.AccessControlEntry.Entry | Where-Object { $_ })
     if ($entries.Count -eq 0) { return }
@@ -22,7 +22,7 @@ function Build-AnsiblePermissionTask {
     # Windows resolves these service accounts only under NT SERVICE (issue #144).
     $servicePrincipal = @{ trustedinstaller = 'NT SERVICE\TrustedInstaller'; eventlog = 'NT SERVICE\EventLog' }
 
-    $fact = Get-AnsibleFactName -Name 'env' -StigName $StigName
+    $fact = Get-AnsibleFactName -Name 'env' -StigProfile $StigProfile
     $resolve = {
         param ($text)
         [regex]::Replace($text, '%([^%]+)%', {
@@ -36,7 +36,7 @@ function Build-AnsiblePermissionTask {
     $wildcard = $Rule.Path.Substring($split + 1) -match '[*?]'
     $path = & $resolve $(if ($wildcard) { $Rule.Path.Substring(0, $split) } else { $Rule.Path })
 
-    $filesName = Get-AnsibleRegisterName -TaskId $Rule.Id -StigName $StigName -Suffix 'files'
+    $filesName = Get-AnsibleRegisterName -TaskId $Rule.Id -StigProfile $StigProfile -Suffix 'files'
 
     # SECURITY and SAM are readable only by SYSTEM, and the rule's path says so (issue #147).
     $systemOnly = $Rule.Path -match '^(HKLM:|HKEY_LOCAL_MACHINE)\\(?<key>(SECURITY|SAM)(\\.*)?)$'

@@ -14,7 +14,7 @@ BeforeAll {
             Rule = $Rule; RuleType = $RuleType; StigName = $StigName; OrganizationalSetting = $OrganizationalSetting
         } {
             param ($Rule, $RuleType, $StigName, $OrganizationalSetting)
-            Resolve-AnsibleOrganizationValue -Rule $Rule -RuleType $RuleType -StigName $StigName `
+            Resolve-AnsibleOrganizationValue -Rule $Rule -RuleType $RuleType -StigProfile (Get-PowerStigProfile -StigName $StigName) `
                 -OrganizationalSetting $OrganizationalSetting
         }
     }

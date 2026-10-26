@@ -11,8 +11,9 @@ function Import-PowerStigData {
         are loaded first because a correction can add or change one.
     .OUTPUTS
         One object carrying StigName, StigFile (the processed file's base name, revision
-        included), StigId, Rules (one entry per converted rule type, PowerStigRule and StigRule)
-        and OrganizationalSetting (the org settings keyed by rule id).
+        included), StigId, Profile (Get-PowerStigProfile's STIG profile), Rules (one entry per
+        converted rule type, PowerStigRule and StigRule) and OrganizationalSetting (the org
+        settings keyed by rule id).
     #>
     [CmdletBinding()]
     param (
@@ -91,6 +92,7 @@ function Import-PowerStigData {
         StigName = $StigName
         StigFile = $stigFile.BaseName
         StigId = $xml.DISASTIG.stigid
+        Profile = Get-PowerStigProfile -StigName $StigName -Revision ($stigFile.BaseName -replace '^.+-([\d.]+)$', '$1') -StigId $xml.DISASTIG.stigid
         Rules = $rules
         OrganizationalSetting = $settings
     }

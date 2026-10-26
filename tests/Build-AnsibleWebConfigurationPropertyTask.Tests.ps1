@@ -120,7 +120,7 @@ Describe 'Build-AnsibleWebConfigurationPropertyTask' {
                         ConfigSection = '/system.webServer/security/requestFiltering'
                         Key = 'allowHighBitCharacters'; Value = 'false'
                     }
-                ) | ConvertTo-AnsibleTask -RuleType 'WebConfigurationProperty' -StigName 'IISServer-10.0' -StigId 'IIS_10-0_Server'
+                ) | ConvertTo-AnsibleTask -RuleType 'WebConfigurationProperty' -StigProfile (Get-PowerStigProfile -StigName 'IISServer-10.0' -StigId 'IIS_10-0_Server') 
             }
         }
 

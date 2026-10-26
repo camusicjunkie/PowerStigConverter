@@ -148,7 +148,7 @@ Describe 'Build-AnsibleWindowsFeatureTask' {
 
             $tasks = InModuleScope -ModuleName PowerStigConverter -Parameters @{ Rules = @($first, $second) } {
                 param ($Rules)
-                $Rules | ConvertTo-AnsibleTask -RuleType 'WindowsFeature' -StigName 'WindowsServer-2022-MS'
+                $Rules | ConvertTo-AnsibleTask -RuleType 'WindowsFeature' -StigProfile (Get-PowerStigProfile -StigName 'WindowsServer-2022-MS')
             }
 
             $tasks[1].Task.when | Should-Be 'stig_server_2022_131_when | bool'

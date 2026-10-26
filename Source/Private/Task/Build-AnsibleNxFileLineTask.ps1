@@ -4,7 +4,7 @@ function Build-AnsibleNxFileLineTask {
         One config line, through lineinfile - or, for the one rule whose ContainsLine is a
         multi-line banner, the whole file through copy. See ADR 0009.
     #>
-    param ($Rule, $StigName, $StigId, $Resolution)
+    param ($Rule, $StigProfile, $Resolution)
 
     $skipReason = Get-AnsibleNxFileLineSkipReason -Rule $Rule
     if ($skipReason) {

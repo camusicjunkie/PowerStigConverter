@@ -60,6 +60,20 @@ function New-TestOrgSetting {
 
 <#
 .SYNOPSIS
+    The STIG profile a conversion of this STIG would build, for a test that hands one to a
+    function directly.
+#>
+function New-TestStigProfile {
+    param ([string] $StigName = 'WindowsServer-2022-MS', [string] $StigId, [string] $Revision = '1.0')
+
+    InModuleScope -ModuleName PowerStigConverter -Parameters @{ StigName = $StigName; StigId = $StigId; Revision = $Revision } {
+        param ($StigName, $StigId, $Revision)
+        Get-PowerStigProfile -StigName $StigName -StigId $StigId -Revision $Revision
+    }
+}
+
+<#
+.SYNOPSIS
     Calls a private function by name, splatting its parameters.
 .DESCRIPTION
     A test of a private function needs InModuleScope and has to hand its arguments across the

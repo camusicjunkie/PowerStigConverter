@@ -115,7 +115,7 @@ Describe 'Build-AnsibleMimeTypeTask' {
                         Extension = '.dll'; MimeType = 'binary/octet-stream'; Ensure = 'Absent'
                         OrganizationValueRequired = $false
                     }
-                ) | ConvertTo-AnsibleTask -RuleType 'MimeType' -StigName 'IISServer-10.0' -StigId 'IIS_10-0_Server'
+                ) | ConvertTo-AnsibleTask -RuleType 'MimeType' -StigProfile (Get-PowerStigProfile -StigName 'IISServer-10.0' -StigId 'IIS_10-0_Server') 
             }
         }
 
