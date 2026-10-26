@@ -26,7 +26,7 @@ BeforeAll {
 
         InModuleScope -ModuleName PowerStigConverter -Parameters @{ StigName = $StigName; Path = $Path } {
             param ($StigName, $Path)
-            Get-PowerStigOrgSetting -StigName $StigName -Path $Path
+            (Import-PowerStigData -StigName $StigName -Path $Path).OrganizationalSetting
         }
     }
 }

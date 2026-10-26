@@ -261,7 +261,7 @@ function Test-TaskCarriesModule {
 
 <#
 .SYNOPSIS
-    Builds an org settings map from inline xml, the way Get-PowerStigOrgSetting does.
+    Builds an org settings map from inline xml, the way Import-PowerStigData does.
 .DESCRIPTION
     The same helper Initialize-TestModule.ps1 defines, repeated here because a generator test
     dot-sources this file at discovery time and that one only at run time.

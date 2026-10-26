@@ -459,52 +459,32 @@ Describe 'New-AnsiblePlaybook' {
         }
     }
 
-    # A correction can move a rule out of ManualRule (#227), so the rules are gathered by type only
-    # after it runs. See docs/adr/0020.
-    Context 'a rule a correction hard-codes' {
+    # -StigName is matched exactly. A prefix used to match the DC and MS files both, and the
+    # conversion died parsing them as one document. See #237.
+    Context 'a STIG name that is not exact' {
 
-        BeforeAll {
-            $hardRoot = Join-Path $TestDrive 'hard_source'
-            $processed = Join-Path $hardRoot 'source/StigData/Processed'
-            $null = New-Item -ItemType Directory -Path $processed -Force
+        It 'refuses it, naming the STIGs it could mean, and writes nothing' {
+            $output = Join-Path $TestDrive 'partial'
+            $refusal = try {
+                New-AnsiblePlaybook -StigName 'WindowsServer-2022' -Path $fixtureRoot -OutputPath $output -WarningAction SilentlyContinue 6>$null
+            } catch { $_ }
 
-            Set-Content -Path (Join-Path $processed 'WindowsServer-2025-MS-9.9.xml') -Value @'
-<?xml version="1.0" encoding="utf-8"?>
-<DISASTIG version="9" stigid="MS_Windows_Server_2025_MS_STIG" title="Windows Server 2025" fullversion="9.9">
-  <ManualRule dscresourcemodule="None">
-    <Rule id="V-910" severity="medium" conversionstatus="pass" title="SRG" dscresource="None">
-      <DuplicateOf />
-      <OrganizationValueRequired>False</OrganizationValueRequired>
-      <RawString>Value NameHardCodedValue</RawString>
-    </Rule>
-  </ManualRule>
-</DISASTIG>
-'@
-            Set-Content -Path (Join-Path $processed 'WindowsServer-2025-MS-9.9.org.default.xml') -Value @'
-<?xml version="1.0" encoding="utf-8"?>
-<OrganizationalSettings fullversion="9.9" />
-'@
-
-            $script:hardCodedRole = InModuleScope -ModuleName PowerStigConverter -Parameters @{
-                Root = $hardRoot; OutputPath = (Join-Path $TestDrive 'hard_coded')
-            } {
-                param ($Root, $OutputPath)
-                $saved = $script:ruleCorrection
-                $script:ruleCorrection = @{ 'WindowsServer-2025-MS-9.9' = @{ 'V-910' = @{ Reason = 'x'; HardCodedRule = @{
-                    From = 'ManualRule'; To = 'RegistryRule'
-                    Field = @{ DscResource = 'Registry'; Ensure = 'Present'; Key = 'HKEY_LOCAL_MACHINE\SOFTWARE\Test'; ValueName = 'HardCodedValue'; ValueType = 'Dword'; ValueData = '1' }
-                } } } }
-                try {
-                    New-AnsiblePlaybook -StigName 'WindowsServer-2025-MS' -Path $Root -OutputPath $OutputPath `
-                        -RoleName 'hard_coded_role' -WarningAction SilentlyContinue 6>$null
-                }
-                finally { $script:ruleCorrection = $saved }
-            }
+            $refusal.FullyQualifiedErrorId | Should-BeLikeString 'StigNotFound*'
+            $refusal.Exception.Message | Should-BeLikeString '*WindowsServer-2022-DC, WindowsServer-2022-MS*'
+            Test-Path $output | Should-BeFalse
         }
 
-        It 'sets the value the correction hard-codes' {
-            Get-Content -Path (Join-Path $hardCodedRole.TaskPath 'cat2.yml') -Raw |
-                Should-BeLikeString '*V-910*win_regedit*HardCodedValue*'
+        # Tab completion reads the default data location, so this needs PowerStig's data fetched.
+        It 'completes -StigName to STIG names, which it then accepts' {
+            if (-not (Test-Path (Join-Path $env:LOCALAPPDATA 'PowerStig/source/StigData/Processed'))) {
+                Set-ItResult -Skipped -Because 'PowerStig''s data has not been fetched'; return
+            }
+
+            $line = 'New-AnsiblePlaybook -StigName WindowsServer-20'
+            $completions = (TabExpansion2 -inputScript $line -cursorColumn $line.Length).CompletionMatches.CompletionText
+
+            $completions | Should-ContainCollection 'WindowsServer-2022-MS'
+            $completions | Should-All { $_ -notmatch '-\d+\.\d+$' }
         }
     }
 
