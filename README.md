@@ -290,8 +290,8 @@ loses the tag.
 
 ### Releasing
 
-CI (`.github/workflows/ci.yml`) runs `Analyze`, `Build` and `Test` on Windows PowerShell 5.1 and
-PowerShell 7 for every push and pull request.
+CI (`.github/workflows/ci.yml`) runs `Build` and `Test` on Windows PowerShell 5.1 and PowerShell 7,
+and `Analyze` on 7, for every push and pull request.
 
 To release, tag `main` with the version and push the tag:
 
