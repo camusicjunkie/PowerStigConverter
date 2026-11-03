@@ -75,6 +75,10 @@ jobs:
               Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Analyze
+        # Once, on 7: PSScriptAnalyzer checks verbs against the running engine's list, and 5.1's
+        # predates Build, so the same source gets different findings. The 5.1 leg still builds
+        # and runs every test.
+        if: matrix.shell == 'pwsh'
         run: .\build.ps1 -Task Analyze
 
       - name: Build

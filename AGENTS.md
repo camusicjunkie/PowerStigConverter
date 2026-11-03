@@ -28,7 +28,8 @@ Requires `powershell-yaml` and `Plaster` at runtime (both declared in the manife
 `ModuleBuilder` and `InvokeBuild` to build and `Pester` 6.2.0+ to test; the depend file covers
 all of them. `git` must be on `PATH` for `Copy-PowerStigFile`.
 
-CI runs Analyze, Build and Test under both PowerShell 7 and Windows PowerShell 5.1. A branch with
+CI runs Build and Test under both PowerShell 7 and Windows PowerShell 5.1, and Analyze under 7
+(5.1's approved-verb list predates `Build`, so it flags every generator). A branch with
 an open PR is not done until `gh pr checks` is green. Pushing a `vX.Y.Z` tag on `main` runs
 `.github/workflows/release.yml`, which publishes that version to the PowerShell Gallery (secret
 `NUGET_API_KEY`) and creates the GitHub release.
