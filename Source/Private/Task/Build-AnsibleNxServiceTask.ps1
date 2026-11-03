@@ -3,6 +3,7 @@ function Build-AnsibleNxServiceTask {
     .SYNOPSIS
         One systemd unit, asserted directly - every in-scope product is systemd-era. See ADR 0008.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Every generator takes the parameters ConvertTo-AnsibleTask passes all of them')]
     param ($Rule, $StigProfile, $Resolution)
 
     $enabled = $Rule.Enabled -eq 'True'

@@ -1,6 +1,6 @@
 @{
     ModuleManifest  = 'PowerStigConverter.psd1'
     OutputDirectory = '../build'
-    CopyPaths       = 'files', 'roles'
+    CopyPaths       = 'Files', 'Roles', '../README.md', '../LICENSE'
     Prefix          = 'prefix.ps1'
 }

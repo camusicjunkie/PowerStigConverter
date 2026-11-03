@@ -1,11 +1,7 @@
+# Passes the completer's arguments on: prefix.ps1 runs before the module's functions are defined,
+# so the function itself cannot be handed over here
 Register-ArgumentCompleter -CommandName New-AnsiblePlaybook -ParameterName StigName -ScriptBlock {
-    param( $commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters )
-
-    # STIG names, without the revision: -StigName is matched exactly against them. See #237.
-    $stigNames = (Get-PowerStigFile -Type Name).BaseName -replace '-[\d.]+$' | Sort-Object -Unique
-    $stigNames | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
-        [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
-    }
+    Get-StigNameCompletion @args
 }
 
 $script:organizationData = Import-PowerShellDataFile -Path $PSScriptRoot\Files\OrganizationData.psd1

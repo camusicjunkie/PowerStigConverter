@@ -6,6 +6,7 @@ function Build-AnsibleAuditSettingTask {
         Compared as AuditSystemDsc does - desired value on the left, both sides strings - since
         PowerStig's data is written for that order. Not through win_dsc: see docs/adr/0024.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Every generator takes the parameters ConvertTo-AnsibleTask passes all of them')]
     param ($Rule, $StigProfile, $Resolution)
 
     # Fixed text, so every rule carries the same script; the rule reaches it only as parameters.

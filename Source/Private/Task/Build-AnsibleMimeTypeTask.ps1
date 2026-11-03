@@ -3,6 +3,7 @@ function Build-AnsibleMimeTypeTask {
     .SYNOPSIS
         One IIS MIME type mapping, through win_dsc.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Every generator takes the parameters ConvertTo-AnsibleTask passes all of them')]
     param ($Rule, $StigProfile, $Resolution)
 
     $parsedMimeType = if (Test-PowerStigSubRuleId -Id $Rule.Id) { Get-PowerStigPathLeaf -Path $Rule.MimeType } else { $Rule.MimeType }
