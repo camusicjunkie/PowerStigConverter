@@ -1,4 +1,6 @@
 Register-ArgumentCompleter -CommandName New-AnsiblePlaybook -ParameterName StigName -ScriptBlock {
+    # PowerShell passes a completer all five, whichever it uses
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'The argument completer signature')]
     param( $commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters )
 
     # STIG names, without the revision: -StigName is matched exactly against them. See #237.

@@ -14,6 +14,7 @@ function Build-AnsibleSqlServerConfigurationTask {
         credentials and RestartTimeout are left off, the resource's own defaults being about the
         target rather than anything the rule says. See #66.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Every generator takes the parameters ConvertTo-AnsibleTask passes all of them')]
     param ($Rule, $StigProfile, $Resolution)
 
     $instances = Get-AnsibleRoleVariable -Name 'instances' -StigProfile $StigProfile

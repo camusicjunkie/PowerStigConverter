@@ -3,6 +3,7 @@ function Build-AnsibleRegistryTask {
     .SYNOPSIS
         One registry value, as win_regedit takes it.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Every generator takes the parameters ConvertTo-AnsibleTask passes all of them')]
     param ($Rule, $StigProfile, $Resolution)
 
     # Ensure alone decides whether the value is written or removed. The value fields cannot be

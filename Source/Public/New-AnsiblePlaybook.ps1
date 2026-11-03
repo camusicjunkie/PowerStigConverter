@@ -1,4 +1,5 @@
 function New-AnsiblePlaybook {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = '-WhatIf support for the files it writes is not implemented yet')]
     [CmdletBinding()]
     param (
         [Parameter(Mandatory)]

@@ -64,6 +64,7 @@ function Get-AnsibleRoleVariable {
     drift apart. See docs/adr/0018.
 #>
 function New-AnsibleRoleVariableAssert {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Builds and returns a value; changes no state')]
     [CmdletBinding()]
     [OutputType([System.Collections.Specialized.OrderedDictionary])]
     param (
@@ -145,6 +146,7 @@ function Get-AnsibleVariableReference {
     The defaults/ line declaring an organization variable with its value.
 #>
 function New-AnsibleVariableLine {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Builds and returns a value; changes no state')]
     [CmdletBinding()]
     [OutputType([string])]
     param (
@@ -226,6 +228,7 @@ function Get-AnsibleToggleCondition {
     The defaults/ line declaring a conditional toggle, on.
 #>
 function New-AnsibleToggleLine {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Builds and returns a value; changes no state')]
     [CmdletBinding()]
     [OutputType([string])]
     param (
@@ -243,6 +246,7 @@ function New-AnsibleToggleLine {
     tasks/main.yml guards each severity file's import on one, by category (cat1, cat2, cat3).
 #>
 function New-AnsibleSeverityToggleLine {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Builds and returns a value; changes no state')]
     [CmdletBinding()]
     [OutputType([string])]
     param (

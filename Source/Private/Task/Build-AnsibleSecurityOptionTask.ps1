@@ -3,6 +3,7 @@ function Build-AnsibleSecurityOptionTask {
     .SYNOPSIS
         One security option, as win_security_policy takes it.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Every generator takes the parameters ConvertTo-AnsibleTask passes all of them')]
     param ($Rule, $StigProfile, $Resolution)
 
     $infOption = Resolve-AnsibleInfOption -OptionName $Rule.OptionName

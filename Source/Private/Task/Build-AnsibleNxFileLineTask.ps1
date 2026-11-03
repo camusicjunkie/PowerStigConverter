@@ -4,6 +4,7 @@ function Build-AnsibleNxFileLineTask {
         One config line, through lineinfile - or, for the one rule whose ContainsLine is a
         multi-line banner, the whole file through copy. See ADR 0009.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Every generator takes the parameters ConvertTo-AnsibleTask passes all of them')]
     param ($Rule, $StigProfile, $Resolution)
 
     $skipReason = Get-AnsibleNxFileLineSkipReason -Rule $Rule
