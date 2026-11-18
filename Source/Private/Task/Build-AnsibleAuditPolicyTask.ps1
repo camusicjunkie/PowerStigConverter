@@ -3,6 +3,7 @@ function Build-AnsibleAuditPolicyTask {
     .SYNOPSIS
         The audit policy subcategory and flag, as win_audit_policy_system takes them.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Every generator takes the parameters ConvertTo-AnsibleTask passes all of them')]
     param ($Rule, $StigProfile, $Resolution)
 
     @{

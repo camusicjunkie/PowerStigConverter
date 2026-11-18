@@ -1,4 +1,4 @@
-# PowerSTIGConverter
+# PowerStigConverter
 
 Convert Microsoft's [PowerStig](https://github.com/microsoft/PowerStig/) STIG data into Ansible roles.
 
@@ -25,7 +25,7 @@ instead of a DSC one.
 - [`Plaster`](https://www.powershellgallery.com/packages/Plaster) — scaffolds the role directories
 
 The version floor and both modules are declared in the module manifest, so `Import-Module` will
-not load PowerSTIGConverter without them.
+not load PowerStigConverter without them.
 
 ```powershell
 Install-Module -Name powershell-yaml, Plaster -Scope CurrentUser
@@ -58,19 +58,11 @@ says it is NA off a domain: its task runs only when `ansible_facts['windows_doma
 
 ## Installation
 
-The module is laid out as source and assembled with
-[ModuleBuilder](https://github.com/PoshCode/ModuleBuilder) — `Source/build.psd1` holds the build
-configuration.
-
 ```powershell
-Install-Module -Name ModuleBuilder -Scope CurrentUser
-
-git clone https://github.com/camusicjunkie/PowerStigConverter.git
-cd PowerStigConverter/Source
-Build-Module
-
-Import-Module ../build/PowerStigConverter/*/PowerStigConverter.psd1
+Install-Module -Name PowerStigConverter -Scope CurrentUser
 ```
+
+Or build it from source — see [Building](#building).
 
 ## Usage
 
@@ -251,35 +243,67 @@ A rule type with no matching generator is skipped with a warning rather than fai
 adding support for a new type means adding one `Build-Ansible<Type>Task` adapter, which supplies
 the ansible module and the fields mapped into it. `ConvertTo-AnsibleTask` does the rest.
 
-## Tests
+## Building
 
-The suite runs on [Pester](https://pester.dev/) 6.2.0 or later — 6.2.0 is the first release
-carrying the whole `Should-*` assertion family the tests use.
-
-```powershell
-Install-Module -Name Pester -MinimumVersion 6.2.0 -Scope CurrentUser -SkipPublisherCheck
-
-./Invoke-Tests.ps1
-```
-
-The runner builds the module from `Source` and runs the tests against the build output, so what
-is tested is what ships. The build is skipped when it is already newer than every source file.
+The module source lives in `Source/`, one function per file under `Public/` and `Private/`.
+[ModuleBuilder](https://github.com/PoshCode/ModuleBuilder) combines them into a single `.psm1` in
+`build/PowerStigConverter/<version>/` and fills in the exported functions. Tests are in `tests/`,
+one file per function under test, and run against the built module, so what is tested is what
+ships.
 
 ```powershell
-./Invoke-Tests.ps1 -Defects            # only the known-defect tests
-./Invoke-Tests.ps1 -All                # everything, defects included
-./Invoke-Tests.ps1 -CodeCoverage       # writes build/coverage.xml
-./Invoke-Tests.ps1 -CI                 # writes build/testResults.xml, exits non-zero on failure
+git clone https://github.com/camusicjunkie/PowerStigConverter.git
+cd PowerStigConverter
+
+# First time: install the build dependencies into build/modules
+./build.ps1 -ResolveDependency -Task Noop
+
+# Build at 0.0.0 and run some or all of the tests, without coverage
+./build.ps1 -Task QuickTest -TestPath ./tests/Get-PowerStigFile.Tests.ps1
+./build.ps1 -Task QuickTest
+
+# Lint, build at the GitVersion version, and run every test with coverage
+./build.ps1
+
+Import-Module ./build/PowerStigConverter/*/PowerStigConverter.psd1
 ```
 
-Tests live in `tests/`, one file per function under test, and read from hand-written STIG
-fixtures in `tests/fixtures/` rather than from downloaded PowerStig data — so they are
-deterministic and run on a machine that has never run `Copy-PowerStigFile`.
+| Task | What it does |
+| --- | --- |
+| `.` (default) | `Clean`, `Analyze`, `Build`, `Test` |
+| `Analyze` | PSScriptAnalyzer over `Source/Public`, `Source/Private` and `prefix.ps1`; on PowerShell 7, also checks Windows PowerShell 5.1 can parse every script |
+| `Build` | Builds at the version [GitVersion](https://gitversion.net) derives (needs `gitversion` on `PATH`) |
+| `DevBuild` | Builds at `0.0.0`, no GitVersion needed |
+| `Test` | Runs every test against the built module, with code coverage and NUnit results in `build/` |
+| `QuickTest` | `DevBuild`, then the tests in `-TestPath` (or all of them), without coverage |
+| `Defects` | `DevBuild`, then only the `KnownDefect` tests |
+| `Publish` | Publishes the built module to the PowerShell Gallery, using `-NuGetApiKey` or `$env:NuGetApiKey` |
+
+Tests read from hand-written STIG fixtures in `tests/fixtures/` rather than from downloaded
+PowerStig data — so they are deterministic and run on a machine that has never run
+`Copy-PowerStigFile`.
 
 A test for a defect that has not been fixed yet should be tagged `KnownDefect`, which excludes
-it from the default run. There are none at present, so a clean run currently means what it
-says. As a defect is fixed its test moves into the file for the function it belongs to and
+it from every task but `Defects`. There are none at present, so a clean run currently means what
+it says. As a defect is fixed its test moves into the file for the function it belongs to and
 loses the tag.
+
+### Releasing
+
+CI (`.github/workflows/ci.yml`) runs `Build` and `Test` on Windows PowerShell 5.1 and PowerShell 7,
+and `Analyze` on 7, for every push and pull request.
+
+To release, tag `main` with the version and push the tag:
+
+```powershell
+git tag v0.3.0
+git push origin v0.3.0
+```
+
+`.github/workflows/release.yml` then builds, tests, checks that the tag matches the version
+GitVersion derives, publishes to the PowerShell Gallery, and creates a GitHub release with
+generated notes. Publishing needs a Gallery API key stored as the `NUGET_API_KEY` repository
+secret.
 
 ## Authors and acknowledgment
 

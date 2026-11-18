@@ -3,6 +3,7 @@ function Build-AnsibleWebConfigurationPropertyTask {
     .SYNOPSIS
         One IIS web configuration property, through win_dsc.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Every generator takes the parameters ConvertTo-AnsibleTask passes all of them')]
     param ($Rule, $StigProfile, $Resolution)
 
     $parsedConfigSection = if (Test-PowerStigSubRuleId -Id $Rule.Id) { Get-PowerStigPathLeaf -Path $Rule.ConfigSection } else { $Rule.ConfigSection }

@@ -14,6 +14,7 @@ function Build-AnsiblePermissionTask {
         A rule left with no entry builds nothing - RuleCorrection.psd1 removes an entry PowerStig
         misparsed, such as '(RX)'. See docs/adr/0020.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Every generator takes the parameters ConvertTo-AnsibleTask passes all of them')]
     param ($Rule, $StigProfile, $Resolution)
 
     $entries = @($Rule.AccessControlEntry.Entry | Where-Object { $_ })

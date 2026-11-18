@@ -3,6 +3,7 @@ function Build-AnsibleWindowsFeatureTask {
     .SYNOPSIS
         One windows feature, as win_feature takes it on Server and win_optional_feature on a client.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Every generator takes the parameters ConvertTo-AnsibleTask passes all of them')]
     param ($Rule, $StigProfile, $Resolution)
 
     # win_feature is a native module, so it is handed Ansible's own lowercase state words rather

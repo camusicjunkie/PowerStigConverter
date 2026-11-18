@@ -13,6 +13,7 @@ function Build-AnsibleSqlProtocolTask {
         match it by encoding service names this converter has no business asserting (ADR-0005).
         See #64.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Every generator takes the parameters ConvertTo-AnsibleTask passes all of them')]
     param ($Rule, $StigProfile, $Resolution)
 
     $instances = Get-AnsibleRoleVariable -Name 'instances' -StigProfile $StigProfile

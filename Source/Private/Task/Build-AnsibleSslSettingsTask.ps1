@@ -10,6 +10,7 @@ function Build-AnsibleSslSettingsTask {
         generated role has to defer the write until run time because a toggle is an operator's
         to flip. Hence: every rule contributes its flags to one list and notifies one handler.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Every generator takes the parameters ConvertTo-AnsibleTask passes all of them')]
     param ($Rule, $StigProfile, $Resolution)
 
     $flags = @($Rule.Value -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })

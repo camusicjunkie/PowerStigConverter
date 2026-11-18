@@ -1,0 +1,4 @@
+# Tags drive releases: tagging main as vX.Y.Z publishes that version to the PowerShell Gallery.
+# next-version only applies until the first tag exists; the hand-kept manifest stood at 0.2.0.
+workflow: GitHubFlow/v1
+next-version: 0.3.0

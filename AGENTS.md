@@ -6,26 +6,42 @@ Converts Microsoft PowerStig's processed STIG XML data into Ansible roles.
 
 The module is laid out as source under `Source/` and assembled with
 [ModuleBuilder](https://github.com/PoshCode/ModuleBuilder); `Source/build.psd1` is the build
-configuration and the output lands in `build/` (gitignored).
+configuration and the output lands in `build/PowerStigConverter/<version>/` (gitignored).
+`build.ps1` drives [InvokeBuild](https://github.com/nightroman/Invoke-Build) tasks defined in
+`PowerStigConverter.build.ps1`; [PSDepend](https://github.com/RamblingCookieMonster/PSDepend)
+installs what `PowerStigConverter.depend.psd1` lists into `build/modules`.
 
 ```powershell
-Build-Module -SourcePath ./Source/build.psd1     # assemble
-./Invoke-Tests.ps1                              # build if stale, then run the suite
-./Invoke-Tests.ps1 -Defects                     # only the known-defect tests
-./Invoke-Tests.ps1 -CI -CodeCoverage            # pipeline form
+./build.ps1 -ResolveDependency -Task Noop                          # first time: dependencies
+./build.ps1 -Task QuickTest                                        # build at 0.0.0, run the suite
+./build.ps1 -Task QuickTest -TestPath ./tests/Get-PowerStigFile.Tests.ps1
+./build.ps1 -Task Defects                                          # only the known-defect tests
+./build.ps1                                                        # Clean, Analyze, Build, Test
 ```
 
-Requires `powershell-yaml` and `Plaster` at runtime (both declared in the manifest), plus
-`ModuleBuilder` to build and `Pester` 6.2.0+ to test. `git` must be on `PATH` for
-`Copy-PowerStigFile`.
+`Build` and the default task version the module with [GitVersion](https://gitversion.net), which
+must be on `PATH`; `DevBuild` and `QuickTest` build at `0.0.0` without it. `Analyze` runs
+PSScriptAnalyzer over `Source/Public`, `Source/Private` and `prefix.ps1`, and on PowerShell 7 with
+Windows PowerShell beside it also checks that 5.1 can parse every script.
 
-CI runs the suite under both PowerShell 7 and Windows PowerShell 5.1; locally only the parse is
-checked under 5.1. A branch with an open PR is not done until `gh pr checks` is green.
+Requires `powershell-yaml` and `Plaster` at runtime (both declared in the manifest), plus
+`ModuleBuilder` and `InvokeBuild` to build and `Pester` 6.2.0+ to test; the depend file covers
+all of them. `git` must be on `PATH` for `Copy-PowerStigFile`.
+
+CI runs Build and Test under both PowerShell 7 and Windows PowerShell 5.1, and Analyze under 7
+(5.1's approved-verb list predates `Build`, so it flags every generator). A branch with
+an open PR is not done until `gh pr checks` is green. Pushing a `vX.Y.Z` tag on `main` runs
+`.github/workflows/release.yml`, which publishes that version to the PowerShell Gallery (secret
+`NUGET_API_KEY`) and creates the GitHub release.
+
+The manifest in `Source/` keeps `ModuleVersion` at `0.0.0` and the export lists empty: the build
+sets the version and fills the exports from `Source/Public`. Do not edit them by hand.
 
 Tests import the **built** module, not `Source/*.ps1`, which is what lets `InModuleScope` reach
 the private functions and reproduces the script-scope data `Source/prefix.ps1` sets up. Code
 coverage has to be measured over the build output for the same reason — pointed at `Source/` it
-reports 0%.
+reports 0%. `tests/Initialize-TestModule.ps1` builds the module itself when there is no build
+or the build is older than `Source/`, so a single test file can still be run with bare `Invoke-Pester`.
 
 Tests tagged `KnownDefect` are excluded by default and are expected to fail; none exist at
 present. Tag a test that way when it describes a defect you are not fixing in that pass, and

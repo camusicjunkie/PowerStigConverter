@@ -85,6 +85,7 @@ function Build-AnsibleUserRightTask {
     empty users list, so the right is never set to one. See #143.
 #>
 function New-AnsibleUserRightRemovalTask {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Builds and returns a task; changes no state')]
     param ($Rule, $StigProfile)
 
     $right = $Rule.Constant

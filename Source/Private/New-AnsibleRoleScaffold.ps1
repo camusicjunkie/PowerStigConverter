@@ -1,4 +1,5 @@
 function New-AnsibleRoleScaffold {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = '-WhatIf support for the files it writes is not implemented yet')]
     [CmdletBinding()]
     param (
         # Directory the role directory is created under.

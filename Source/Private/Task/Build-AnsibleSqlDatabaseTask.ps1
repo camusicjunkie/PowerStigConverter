@@ -8,6 +8,7 @@ function Build-AnsibleSqlDatabaseTask {
         variable. ServerName is left off: SqlServerDsc defaults it to the local machine, which is
         where win_dsc already runs. See #62.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification = 'Every generator takes the parameters ConvertTo-AnsibleTask passes all of them')]
     param ($Rule, $StigProfile, $Resolution)
 
     $instances = Get-AnsibleRoleVariable -Name 'instances' -StigProfile $StigProfile
